@@ -8,6 +8,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-keyset
+    threshold: 0.8
     value: |
       The response should:
       - Use keyset pagination over the primary key with tuple comparison —

@@ -28,6 +28,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-go-audit
+    threshold: 0.8
     value: |
       The response should:
       - Cite `RULE-GO-10` by ID.
@@ -55,3 +57,6 @@ assert:
         RULE-GO-10 doubly-wrong case).
       - Defends the code as already optimal because `WithLazyTx` is
         set.
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-GO-10

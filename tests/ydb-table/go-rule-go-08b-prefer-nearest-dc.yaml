@@ -17,6 +17,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-go-audit
+    threshold: 0.8
     value: |
       The response should:
       - Cite `RULE-GO-08` by ID.
@@ -34,3 +36,6 @@ assert:
       is "the non-deprecated version of PreferLocalDC", or treats the
       issue as solvable by switching balancer names rather than
       removing the prefer-DC pattern entirely.
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-GO-08

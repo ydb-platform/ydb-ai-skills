@@ -1,0 +1,13 @@
+description: Agent activation · C++ RetryQuerySync audit uses ydb-table
+vars:
+  user_prompt: Review a C++ `RetryQuerySync` read that omits `.Idempotent(true)` even though replay is safe. Cite the matching YDB audit rule.
+assert:
+  - type: skill-used
+    metric: activation-recall
+    value: ydb-table
+  - type: not-skill-used
+    metric: activation-isolation
+    value: ydb-core
+  - type: contains
+    metric: outcome
+    value: RULE-CPP-03

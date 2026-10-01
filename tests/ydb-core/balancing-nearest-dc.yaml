@@ -1,0 +1,24 @@
+description: Core · Client-side balancing and prefer-nearest-DC boundary
+
+vars:
+  user_prompt: |
+    Our YDB clients connect through a multi-endpoint discovery result. Should we
+    always force the local data center, and is holding one session a valid way
+    to keep traffic close to the application?
+
+assert:
+  - type: llm-rubric
+    metric: core-balancing
+    threshold: 0.8
+    value: |
+      The response should:
+      - Explain that the SDK pool and balancer distribute work across discovered
+        endpoints and that a stored session defeats that mechanism.
+      - Describe prefer-nearest/local-DC as a preference for locality, not a
+        correctness requirement or a reason to pin one session.
+      - Recommend per-operation pool checkout through the SDK retry/session scope.
+      - Mention that topology and API names are SDK-specific and should be checked
+        against the target SDK rather than invented.
+
+      Full fail if the response recommends one process-wide session or claims
+      every request must use a single fixed node.

@@ -17,6 +17,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-java-audit
+    threshold: 0.8
     value: |
       The response should:
       - Cite `RULE-JV-01` by ID (the rule about findById in a loop).
@@ -25,3 +27,6 @@ assert:
       - Not invent a different RULE-JV-XX ID that isn't in the loaded rules file.
 
       Full fail if the response defends the loop as correct or invents a different rule ID.
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-JV-01

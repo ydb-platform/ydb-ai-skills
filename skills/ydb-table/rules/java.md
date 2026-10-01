@@ -1,6 +1,6 @@
 # Java SDK / JDBC / Hibernate / Spring Data — anti-patterns
 
-Audit rules for application code talking to YDB via the Java stack. Each rule is self-contained: the surface skill must produce correct audit output on its own. For positive patterns, see [`../../references/embed/java.md`](../../references/embed/java.md).
+Audit rules for application code talking to YDB via the Java stack. Each rule is self-contained: the surface skill must produce correct audit output on its own. Positive patterns are in `embed/java.md`, loaded directly from `SKILL.md`.
 
 ### RULE-JV-01: `findById` in a loop instead of `findAllById`
 

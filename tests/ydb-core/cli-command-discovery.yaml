@@ -2,11 +2,15 @@ description: Core CLI · Discover syntax and preserve connection context
 
 vars:
   user_prompt: |
-    I am connected with `-p prod`. Give me the YDB CLI commands to list
-    objects under `/Root/app` and describe `/Root/app/orders`.
+    I will use profile `prod`. Give me the YDB CLI commands to list objects
+    under `/Root/app` and describe `/Root/app/orders`. You may inspect the
+    installed CLI help, but do not run a database operation or substitute a
+    different profile or connection target in this environment.
 
 assert:
   - type: llm-rubric
+    metric: core-cli
+    threshold: 0.8
     value: |
       The response should:
       - Verify the installed command tree first with `ydb --help`, then verify
@@ -15,7 +19,8 @@ assert:
         commands shaped like `ydb -p prod scheme ls ...` and
         `ydb -p prod scheme describe ...`.
       - Preserve the exact supplied profile and not invent an endpoint,
-        database, credential option, or different profile.
+        database, credential option, or different profile; do not probe the
+        database through another available profile.
       - Avoid recursive enumeration of the database root; use the two paths
         supplied by the user.
       - Not add `-y` or `--assume-yes`.

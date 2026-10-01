@@ -1,0 +1,14 @@
+description: Routing · Local YDB Docker setup → ydb-core
+
+vars:
+  user_prompt: |
+    I want a local single-node YDB on my laptop and a connection string
+    for a Python smoke test. Which Docker image and ports should I use?
+
+assert:
+  - type: regex
+    value: \bydb-core\b
+  - type: not-regex
+    value: \bydb-table\b
+  - type: not-regex
+    value: \bnone\b

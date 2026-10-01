@@ -9,6 +9,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-cli
+    threshold: 0.8
     value: |
       The response should:
       - Verify supported formats and advanced parameter flags with

@@ -31,6 +31,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-cpp-audit
+    threshold: 0.8
     value: |
       The response should:
       - Cite `RULE-CPP-04` by ID.
@@ -44,3 +46,6 @@ assert:
       - Not invent a different RULE-CPP-XX ID.
 
       Full fail if the response endorses the outer loop as best practice.
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-CPP-04

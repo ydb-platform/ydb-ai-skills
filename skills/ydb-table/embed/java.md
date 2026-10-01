@@ -8,7 +8,7 @@ Source: <https://ydb.tech/docs/en/recipes/ydb-sdk/vector-search?version=main> (J
 
 ## Stack
 
-YDB Java app code typically layers as: **ydb-java-sdk** → **ydb-jdbc-driver** → **Hibernate** → **Spring Data JPA**. Most application code uses the JDBC driver as the entry point. Connection-string format and authentication environment variables: see [`../../../ydb-core/SKILL.md#connecting`](../../../ydb-core/SKILL.md#connecting). Setup and connection examples: <https://github.com/ydb-platform/ydb-jdbc-driver>. Worked Spring Data JDBC / JPA / Flyway / jOOQ / Liquibase examples: <https://github.com/ydb-platform/ydb-java-examples/tree/master/jdbc>.
+YDB Java app code typically layers as: **ydb-java-sdk** → **ydb-jdbc-driver** → **Hibernate** → **Spring Data JPA**. Most application code uses the JDBC driver as the entry point. Connection-string format and authentication environment variables: see <https://ydb.tech/docs/en/concepts/connect>. Setup and connection examples: <https://github.com/ydb-platform/ydb-jdbc-driver>. Worked Spring Data JDBC / JPA / Flyway / jOOQ / Liquibase examples: <https://github.com/ydb-platform/ydb-java-examples/tree/master/jdbc>.
 
 ## Bulk operations
 
@@ -46,7 +46,7 @@ spring.jpa.properties.hibernate.order_updates=true
 
 Why: each method issues one statement instead of N. Batches form only when `batch_size` is set *and* statements are ordered — without `order_inserts` / `order_updates`, the session can't group like statements together. `deleteAllByIdInBatch` is the only delete variant that emits a single `DELETE … WHERE id IN (?, ?, …)`; `deleteAllById` does a SELECT per id before deleting.
 
-For the underlying YDB-level mechanisms (`AS_TABLE`, `BulkUpsert`), see [`../working-with-data.md`](../working-with-data.md).
+For the underlying YDB-level mechanisms (`AS_TABLE`, `BulkUpsert`), see `references/working-with-data.md`.
 
 ## Retries
 
@@ -158,8 +158,8 @@ Source: <https://github.com/ydb-platform/ydb-java-sdk/blob/master/query/src/main
 
 ## Transactions
 
-YDB Query Service defaults to `SerializableRW`. Conflicting transactions are detected by the server and surface as retryable `SQLRecoverableException` (`ABORTED`). For the full mode list and the consequence for application-level optimistic locking, see [`../working-with-data.md`](../working-with-data.md).
+YDB Query Service defaults to `SerializableRW`. Conflicting transactions are detected by the server and surface as retryable `SQLRecoverableException` (`ABORTED`). For the full mode list and the consequence for application-level optimistic locking, see `references/working-with-data.md`.
 
 ## Connection
 
-See [`../../../ydb-core/SKILL.md#connecting`](../../../ydb-core/SKILL.md#connecting).
+See <https://ydb.tech/docs/en/concepts/connect>.

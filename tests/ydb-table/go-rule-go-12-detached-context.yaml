@@ -24,6 +24,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-go-audit
+    threshold: 0.8
     value: |
       The response should:
       - Cite `RULE-GO-12` by ID.
@@ -41,3 +43,6 @@ assert:
 
       Full fail if the response recommends `context.Background()` for the YDB
       call or creates a fresh full timeout inside every retry attempt.
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-GO-12

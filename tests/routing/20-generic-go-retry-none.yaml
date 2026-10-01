@@ -1,0 +1,12 @@
+description: Routing · Generic Go HTTP retries → none
+
+vars:
+  user_prompt: |
+    Review this Go HTTP client retry loop. It retries 503 responses with
+    exponential backoff and does not use any database SDK.
+
+assert:
+  - type: regex
+    value: \bnone\b
+  - type: not-regex
+    value: \bydb-(core|table)\b

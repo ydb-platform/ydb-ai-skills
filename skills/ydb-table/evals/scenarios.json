@@ -1,0 +1,858 @@
+{
+  "skill_name": "ydb-table",
+  "description": "Generated from the promptfoo cases under tests/ydb-table; edit the YAML sources, then regenerate.",
+  "evals": [
+    {
+      "id": 1591237128,
+      "name": "batch-as-table",
+      "category": "batch",
+      "prompt": "I need to upsert 500 typed rows into YDB and then update an aggregate in the\nsame transaction. Show the recommended YQL shape and explain why calling one\nUPSERT per row is the wrong approach.",
+      "expected_output": "A correct response for “Table writes · Transactional batch with AS_TABLE”, including this primary requirement: Declare one `List<Struct<...>>` parameter and use `UPSERT INTO ... SELECT ... FROM AS_TABLE($items)` or an equivalent parameterized batch statement.",
+      "files": [],
+      "expectations": [
+        "Declare one `List<Struct<...>>` parameter and use `UPSERT INTO ... SELECT ... FROM AS_TABLE($items)` or an equivalent parameterized batch statement.",
+        "Keep the batch and aggregate update in the same surrounding transaction so they commit or roll back atomically.",
+        "Explain that one statement avoids per-row round trips and allows plan reuse.",
+        "Avoid recommending `BulkUpsert` for this requirement because the caller explicitly needs one transaction with the aggregate update."
+      ],
+      "covers": "Table writes · Transactional batch with AS_TABLE"
+    },
+    {
+      "id": 1000337133,
+      "name": "bulk-upsert-boundaries",
+      "category": "bulk",
+      "prompt": "We are loading millions of rows into YDB. The target table has a synchronous\nsecondary index and a changefeed, and the whole load must be atomic. Can we\nswitch from parameterized YQL batches to SDK BulkUpsert for speed?",
+      "expected_output": "A correct response for “Table writes · BulkUpsert eligibility and transactional boundary”, including this primary requirement: Reject `BulkUpsert` for this target and requirement.",
+      "files": [],
+      "expectations": [
+        "Reject `BulkUpsert` for this target and requirement.",
+        "Explain that BulkUpsert is non-transactional across partitions and can expose partial progress, so it cannot provide an atomic all-or-nothing load.",
+        "State that synchronous secondary indexes and attached changefeeds each independently disqualify BulkUpsert.",
+        "Recommend parameterized `AS_TABLE($items)` plus YQL `UPSERT` in the required transaction, with bounded batches if needed."
+      ],
+      "covers": "Table writes · BulkUpsert eligibility and transactional boundary"
+    },
+    {
+      "id": 614764536,
+      "name": "cli-explain-analyze",
+      "category": "cli",
+      "prompt": "Is this a safe, read-only way to inspect the plan before I run the update?\n\n```bash\nydb -p prod sql --explain-analyze -s '\n  UPDATE items SET processed = true WHERE processed = false;\n'\n```",
+      "expected_output": "A correct response for “Table CLI · Explain-analyze is real execution”, including this primary requirement: State clearly that `--explain-analyze` executes the query and the UPDATE changes will be applied even though result rows are ignored.",
+      "files": [],
+      "expectations": [
+        "State clearly that `--explain-analyze` executes the query and the UPDATE changes will be applied even though result rows are ignored.",
+        "Recommend `--explain` (or `--explain-ast` if AST is needed) for non-executing validation.",
+        "Treat any later `--explain-analyze` use as a real mutating execution, requiring the exact target/query to be shown and explicitly confirmed.",
+        "Not run or recommend running the shown command as a read-only check."
+      ],
+      "covers": "Table CLI · Explain-analyze is real execution"
+    },
+    {
+      "id": 1732126178,
+      "name": "cli-explain-before-execute",
+      "category": "cli",
+      "prompt": "I have `query.sql` locally and will run it against profile `prod`; it has a\nmulti-statement query with a join and window function. Show me the exact\nsafe validation and execution sequence, including what to do with YQL\nerrors. Do not execute it from this environment.",
+      "expected_output": "A correct response for “Table CLI · Explain a complex query before execution”, including this primary requirement: Verify `ydb sql` syntax through local help before composing the database commands.",
+      "files": [],
+      "expectations": [
+        "Verify `ydb sql` syntax through local help before composing the database commands.",
+        "Show `ydb -p prod sql --explain -f query.sql` as the first database action, before any execution attempt.",
+        "Iterate on parser or semantic errors with `--explain`, not by running broken queries repeatedly.",
+        "Show `ydb -p prod sql -f query.sql` as the execution command only after validation succeeds.",
+        "Not execute the query, substitute `--explain-analyze` for validation, or add `-y`."
+      ],
+      "covers": "Table CLI · Explain a complex query before execution"
+    },
+    {
+      "id": 854960366,
+      "name": "cli-file-parameter-formats",
+      "category": "cli",
+      "prompt": "I have `rows.csv`, `rows.tsv`, and `rows.arrow` with many rows of typed\nvalues. Show how to feed each file to `query.sql` as parameters through\n`ydb sql` using profile `prod`. Explain whether the query runs once per row\nor once per batch. Do not execute anything.",
+      "expected_output": "A correct response for “Table CLI · Handle CSV, TSV, and Arrow parameter files”, including this primary requirement: Verify supported formats and advanced parameter flags with `ydb sql -hh` rather than assuming them.",
+      "files": [],
+      "expectations": [
+        "Verify supported formats and advanced parameter flags with `ydb sql -hh` rather than assuming them.",
+        "For a non-TTY agent subprocess, feed multi-row CSV and TSV with `--input-file - < file`, the matching `--input-format`, and `--input-framing newline-delimited`; explain that the default iterative mode executes once per row and transaction.",
+        "Explain that headers map to declared parameter names. If a header is absent, show comma-delimited `--input-columns` for CSV and a literal-tab form for TSV; type conversion is driven by `DECLARE`.",
+        "Show that one execution containing all rows requires a declared `List<...>` or `List<Struct<...>>` parameter plus `--input-param-name` and `--input-batch full`.",
+        "Describe `adaptive` as multiple independent batch executions and transactions; do not claim it provides one atomic execution.",
+        "State that Arrow IPC/Feather is not a supported `ydb sql` parameter input format and not invent `--input-format arrow`.",
+        "Keep `-p prod` before `sql`, not execute anything, and not add `-y`."
+      ],
+      "covers": "Table CLI · Handle CSV, TSV, and Arrow parameter files"
+    },
+    {
+      "id": 1084889249,
+      "name": "cli-safe-exploration",
+      "category": "cli",
+      "prompt": "Using profile `prod`, find the latest 20 paid orders in\n`/Root/app/orders` with `ydb sql`. I do not know the table schema or the\nexact stored status values. Run whatever reads you need.",
+      "expected_output": "A correct response for “Table CLI · Inspect schema and values before filtering”, including this primary requirement: Verify the installed CLI and relevant command help before composing database commands.",
+      "files": [],
+      "expectations": [
+        "Verify the installed CLI and relevant command help before composing database commands.",
+        "Inspect `/Root/app/orders` with `ydb scheme describe` before naming columns, types, or primary keys.",
+        "Avoid assuming the stored status is `paid` or `PAID`; after learning the real column name, constrain discovery through a suitable key range or index when one is available.",
+        "Inspect the plan before a distinct-values query that may scan the full table, and warn or obtain approval before a potentially large scan.",
+        "Use a small `LIMIT` to bound returned rows, without claiming that it bounds scan volume or server work.",
+        "Parameterize the final status value with `DECLARE` plus `--param` rather than interpolating it into SQL text.",
+        "Keep `-p prod` before each subcommand and add no other connection target or `--assume-yes` option."
+      ],
+      "covers": "Table CLI · Inspect schema and values before filtering"
+    },
+    {
+      "id": 1826272827,
+      "name": "cli-typed-parameters",
+      "category": "cli",
+      "prompt": "Using profile `prod`, show me the exact `ydb sql` command and a\n`params.json` file for `query.sql`. Do not execute it. The query declares\n`$id AS Uint64`, `$at AS Timestamp`, `$price AS Decimal(22,9)`,\n`$metadata AS JsonDocument`, `$tags AS List<Utf8>`, and\n`$deleted_at AS Timestamp?`. Use id 42, timestamp\n2026-08-28T12:34:56.123456Z, price 123.45, metadata\n{\"source\":\"cli\"}, tags blue and green, and a null deleted_at.",
+      "expected_output": "A correct response for “Table CLI · Encode typed YDB parameters in JSON”, including this primary requirement: Verify the installed `ydb sql` parameter interface with `-hh` before relying on advanced input options.",
+      "files": [],
+      "expectations": [
+        "Verify the installed `ydb sql` parameter interface with `-hh` before relying on advanced input options.",
+        "For a non-TTY agent subprocess, use `ydb -p prod sql -f query.sql --input-file - --input-format json < params.json`, with global connection options before `sql`.",
+        "Encode id as JSON number 42, timestamp as an ISO-8601 JSON string, Decimal as a JSON string compatible with Decimal(22,9), tags as a JSON array, and deleted_at as JSON null.",
+        "Encode the JsonDocument value as a JSON string containing serialized JSON, not as an unquoted nested object.",
+        "Use parameter-file keys without `$` and not interpolate values into SQL.",
+        "Not execute the query or add `-y`."
+      ],
+      "covers": "Table CLI · Encode typed YDB parameters in JSON"
+    },
+    {
+      "id": 80621573,
+      "name": "cpp-rule-cpp-01-unbounded-read",
+      "category": "cpp",
+      "prompt": "Review this C++ function. It should process every log row where\n`processed = false`. Works in dev, but in prod we only ever see\nthe first chunk of rows. Is the YDB call correct?\n\n```cpp\nvoid processPendingLogs(NYdb::NTable::TTableClient& client) {\n    client.RetryOperationSync([&](NYdb::NTable::TSession session) {\n        auto result = session.ExecuteDataQuery(\n            \"SELECT id, payload FROM logs WHERE processed = false\",\n            NYdb::NTable::TTxControl::BeginTx(\n                NYdb::NTable::TTxSettings::SerializableRW()).CommitTx()\n        ).GetValueSync();\n        if (!result.IsSuccess()) {\n            return result;\n        }\n        TResultSetParser parser(result.GetResultSet(0));\n        while (parser.TryNextRow()) {\n            auto id = *parser.ColumnParser(\"id\").GetOptionalUint64();\n            handleLog(id);\n        }\n        return TStatus(EStatus::SUCCESS, NYdb::NIssue::TIssues());\n    });\n}\n```",
+      "expected_output": "A correct response for “C++ audit · Unbounded Table read without pagination (RULE-CPP-01)”, including this primary requirement: Cite `RULE-CPP-01` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-CPP-01` by ID.",
+        "Identify that `ExecuteDataQuery` with an unbounded range read and no `Truncated()` check, no keyset pagination, and no `StreamExecuteScanQuery` cannot exhaust the full match.",
+        "Recommend a structural fix: keyset pagination, Query Service streaming, or `StreamExecuteScanQuery`.",
+        "Not invent a different RULE-CPP-XX ID."
+      ],
+      "covers": "C++ audit · Unbounded Table read without pagination (RULE-CPP-01)"
+    },
+    {
+      "id": 528195731,
+      "name": "cpp-rule-cpp-02-closure-mutation",
+      "category": "cpp",
+      "prompt": "Review this C++ read helper. Under load we sometimes get duplicate\nrows in `out` after transient YDB errors. Is the retry usage correct?\n\n```cpp\nstd::vector<Row> loadUsers(NYdb::NQuery::TQueryClient& client) {\n    std::vector<Row> out;\n    ThrowOnError(client.RetryQuerySync([&out](NYdb::NQuery::TSession session) {\n        auto result = session.ExecuteQuery(\n            \"SELECT id, name FROM users\",\n            TTxControl::BeginTx(TTxSettings::SnapshotRO()).CommitTx()\n        ).GetValueSync();\n        if (!result.IsSuccess()) {\n            return result;\n        }\n        TResultSetParser parser(result.GetResultSet(0));\n        while (parser.TryNextRow()) {\n            out.push_back({\n                *parser.ColumnParser(\"id\").GetOptionalUint64(),\n                *parser.ColumnParser(\"name\").GetOptionalUtf8(),\n            });\n        }\n        return result;\n    }));\n    return out;\n}\n```",
+      "expected_output": "A correct response for “C++ audit · External state mutation in retry lambda (RULE-CPP-02)”, including this primary requirement: Cite `RULE-CPP-02` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-CPP-02` by ID.",
+        "Explain that `push_back` on an outer vector inside `RetryQuerySync` survives across retry attempts and duplicates rows on replay.",
+        "Recommend building a local vector inside the lambda and assigning to `out` only on the success path.",
+        "Not invent a different RULE-CPP-XX ID."
+      ],
+      "covers": "C++ audit · External state mutation in retry lambda (RULE-CPP-02)"
+    },
+    {
+      "id": 1174797477,
+      "name": "cpp-rule-cpp-03-missing-idempotent",
+      "category": "cpp",
+      "prompt": "Review this C++ function. It UPSERTs an event keyed by client-side\n`eventId`. During cluster upgrades we see sporadic errors, but the\nrow is already in the table when we check. Is the SDK call correct?\n\n```cpp\nTStatus recordEvent(NYdb::NQuery::TQueryClient& client, uint64_t eventId,\n                    const std::string& payload) {\n    return client.RetryQuerySync([eventId, payload](TSession session) {\n        auto params = TParamsBuilder()\n            .AddParam(\"$id\").Uint64(eventId).Build()\n            .AddParam(\"$payload\").Utf8(payload).Build()\n            .Build();\n        return session.ExecuteQuery(\n            R\"(UPSERT INTO events (id, payload) VALUES ($id, $payload))\",\n            TTxControl::BeginTx(TTxSettings::SerializableRW()).CommitTx(),\n            params\n        ).GetValueSync();\n    });\n}\n```",
+      "expected_output": "A correct response for “C++ audit · Missing Idempotent on RetryQuerySync (RULE-CPP-03)”, including this primary requirement: Cite `RULE-CPP-03` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-CPP-03` by ID.",
+        "Identify missing `TRetryOperationSettings().Idempotent(true)` on `RetryQuerySync`.",
+        "Explain that `UNDETERMINED` / `TRANSPORT_UNAVAILABLE` are only retried when idempotent is set, matching the user's symptom of committed writes after client-side failure.",
+        "Recommend adding `.Idempotent(true)` because the UPSERT is keyed on a client-generated id.",
+        "Not invent a different RULE-CPP-XX ID."
+      ],
+      "covers": "C++ audit · Missing Idempotent on RetryQuerySync (RULE-CPP-03)"
+    },
+    {
+      "id": 163952103,
+      "name": "cpp-rule-cpp-04-outer-retry-loop",
+      "category": "cpp",
+      "prompt": "Review this C++ retry wrapper around a YDB update. We added it\nafter seeing `ABORTED` under contention. Is this the right pattern?\n\n```cpp\nTStatus updateBalance(NYdb::NQuery::TQueryClient& client, uint64_t userId,\n                      int64_t delta) {\n    TStatus status(EStatus::SUCCESS, NYdb::NIssue::TIssues());\n    for (int attempt = 0; attempt < 5; ++attempt) {\n        status = client.RetryQuerySync([userId, delta](TSession session) {\n            auto params = TParamsBuilder()\n                .AddParam(\"$id\").Uint64(userId).Build()\n                .AddParam(\"$delta\").Int64(delta).Build()\n                .Build();\n            return session.ExecuteQuery(\n                \"UPDATE accounts SET balance = balance + $delta WHERE id = $id\",\n                TTxControl::BeginTx(TTxSettings::SerializableRW()).CommitTx(),\n                params\n            ).GetValueSync();\n        });\n        if (status.IsSuccess()) {\n            break;\n        }\n    }\n    return status;\n}\n```",
+      "expected_output": "A correct response for “C++ audit · Outer for loop around RetryQuerySync (RULE-CPP-04)”, including this primary requirement: Cite `RULE-CPP-04` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-CPP-04` by ID.",
+        "Explain that `RetryQuerySync` already retries internally and an outer `for` multiplies backoff / retry budget.",
+        "Recommend removing the outer loop and tuning `TRetryOperationSettings` instead.",
+        "Note the inner write is non-idempotent (`balance + $delta`) so `.Idempotent(true)` must not be set blindly — separate from but compatible with RULE-CPP-04.",
+        "Not invent a different RULE-CPP-XX ID."
+      ],
+      "covers": "C++ audit · Outer for loop around RetryQuerySync (RULE-CPP-04)"
+    },
+    {
+      "id": 564204647,
+      "name": "cpp-rule-cpp-05-custom-sleep-retrier",
+      "category": "cpp",
+      "prompt": "Review this C++ helper. We retry YDB ourselves with exponential\nbackoff when the cluster is flaky. Any issues?\n\n```cpp\nTStatus runQueryWithBackoff(NYdb::NQuery::TQueryClient& client,\n                            const std::string& sql) {\n    auto session = client.GetSession().GetValueSync().GetSession();\n    TStatus status(EStatus::GENERIC_ERROR, NYdb::NIssue::TIssues());\n    for (int i = 0; i < 10; ++i) {\n        status = session.ExecuteQuery(\n            sql,\n            TTxControl::BeginTx(TTxSettings::SnapshotRO()).CommitTx()\n        ).GetValueSync();\n        if (status.IsSuccess()) {\n            return status;\n        }\n        std::this_thread::sleep_for(std::chrono::milliseconds(50 * (1 << i)));\n    }\n    return status;\n}\n```",
+      "expected_output": "A correct response for “C++ audit · Custom Sleep retrier around YDB calls (RULE-CPP-05)”, including this primary requirement: Cite `RULE-CPP-05` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-CPP-05` by ID.",
+        "Flag the hand-rolled `sleep_for` loop around bare `ExecuteQuery` instead of `RetryQuerySync`.",
+        "Explain that custom retriers miss SDK error classification and idempotency gating.",
+        "Recommend `RetryQuerySync` with `TRetryOperationSettings`.",
+        "Not invent a different RULE-CPP-XX ID."
+      ],
+      "covers": "C++ audit · Custom Sleep retrier around YDB calls (RULE-CPP-05)"
+    },
+    {
+      "id": 30597435,
+      "name": "cpp-rule-cpp-06-driver-per-call",
+      "category": "cpp",
+      "prompt": "Review this C++ HTTP handler. Latency feels high under load even\nfor tiny queries. Is the YDB setup right?\n\n```cpp\nvoid handleGetUser(const HttpRequest& req, HttpResponse& res) {\n    auto cfg = NYdb::TDriverConfig()\n        .SetEndpoint(\"grpcs://ydb.example.net:2135\")\n        .SetDatabase(\"/prod/users\")\n        .SetAuthToken(std::getenv(\"YDB_TOKEN\"));\n    NYdb::TDriver driver(cfg);\n    NYdb::NQuery::TQueryClient client(driver);\n\n    auto queryResult = client.RetryQuerySync([&](NYdb::NQuery::TSession session) {\n        auto params = NYdb::TParamsBuilder()\n            .AddParam(\"$id\").Uint64(req.userId).Build()\n            .Build();\n        return session.ExecuteQuery(\n            \"SELECT name FROM users WHERE id = $id\",\n            NYdb::NQuery::TTxControl::BeginTx(\n                NYdb::NQuery::TTxSettings::SnapshotRO()).CommitTx(),\n            params\n        ).GetValueSync();\n    });\n    ThrowOnError(queryResult);\n    writeUserToResponse(queryResult, res);\n\n    driver.Stop(true);\n}\n```",
+      "expected_output": "A correct response for “C++ audit · TDriver constructed per request instead of once per process (RULE-CPP-06)”, including this primary requirement: Cite `RULE-CPP-06` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-CPP-06` by ID.",
+        "Identify that `NYdb::TDriver` is constructed inside the per-request handler rather than once at process startup.",
+        "Explain the cost: endpoint discovery, gRPC channel setup, and TLS handshake on every request, with corresponding latency and connection churn at the cluster.",
+        "Recommend holding one long-lived `TDriver` for the process and passing it to per-request `TQueryClient` construction, with `driver.Stop(true)` at shutdown (not per request).",
+        "Not invent a different RULE-CPP-XX ID."
+      ],
+      "covers": "C++ audit · TDriver constructed per request instead of once per process (RULE-CPP-06)"
+    },
+    {
+      "id": 191728377,
+      "name": "cpp-rule-cpp-07-string-built-yql",
+      "category": "cpp",
+      "prompt": "Review this C++ lookup. User ids come from an HTTP request.\n\n```cpp\nTStatus fetchUser(NYdb::NQuery::TQueryClient& client, uint64_t userId) {\n    auto sql = std::format(\"SELECT name FROM users WHERE id = {}\", userId);\n    return client.RetryQuerySync([&sql](TSession session) {\n        return session.ExecuteQuery(\n            sql,\n            TTxControl::BeginTx(TTxSettings::SnapshotRO()).CommitTx()\n        ).GetValueSync();\n    }, NYdb::NRetry::TRetryOperationSettings().Idempotent(true));\n}\n```",
+      "expected_output": "A correct response for “C++ audit · Non-parametrized YQL via std::format (RULE-CPP-07)”, including this primary requirement: Cite `RULE-CPP-07` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-CPP-07` by ID.",
+        "Identify `std::format` embedding `userId` into query text instead of `TParamsBuilder` binding.",
+        "Explain injection risk and plan-cache churn from distinct query strings.",
+        "Show or describe binding via `TParamsBuilder` and a parameterized query with `$id`.",
+        "Not invent a different RULE-CPP-XX ID."
+      ],
+      "covers": "C++ audit · Non-parametrized YQL via std::format (RULE-CPP-07)"
+    },
+    {
+      "id": 1118325144,
+      "name": "cpp-rule-cpp-08-explicit-begin-commit",
+      "category": "cpp",
+      "prompt": "Review this single-statement C++ update. Latency seems high — extra\nround trips?\n\n```cpp\nTStatus markProcessed(NYdb::NQuery::TQueryClient& client, uint64_t id) {\n    return client.RetryQuerySync([id](NYdb::NQuery::TSession session) -> TStatus {\n        auto begin = session.BeginTransaction(TTxSettings::SerializableRW())\n            .GetValueSync();\n        if (!begin.IsSuccess()) {\n            return begin;\n        }\n        auto tx = begin.GetTransaction();\n        auto params = TParamsBuilder()\n            .AddParam(\"$id\").Uint64(id).Build().Build();\n        auto result = session.ExecuteQuery(\n            \"UPDATE logs SET processed = true WHERE id = $id\",\n            TTxControl::Tx(tx),\n            params\n        ).GetValueSync();\n        if (!result.IsSuccess()) {\n            return result;\n        }\n        return tx.Commit().GetValueSync();\n    });\n}\n```",
+      "expected_output": "A correct response for “C++ audit · Explicit BeginTransaction when fused TTxControl suffices (RULE-CPP-08)”, including this primary requirement: Cite `RULE-CPP-08` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-CPP-08` by ID.",
+        "Identify separate `BeginTransaction` + `Commit` for a single `ExecuteQuery` where `TTxControl::BeginTx(...).CommitTx()` would fuse round trips.",
+        "Reference YDB C++ example app docs (Managing transactions) that fused transaction control on `ExecuteQuery` is preferable for most single-statement work.",
+        "Not flag multi-step `MultiStep`-style flows (this snippet is single-statement).",
+        "Not invent a different RULE-CPP-XX ID."
+      ],
+      "covers": "C++ audit · Explicit BeginTransaction when fused TTxControl suffices (RULE-CPP-08)"
+    },
+    {
+      "id": 278884327,
+      "name": "cpp-rule-cpp-09-stream-duplicates",
+      "category": "cpp",
+      "prompt": "Review this C++ export job. It streams seasons for billing. We\noccasionally double-charge after network blips. Is the stream\nhandling correct?\n\n```cpp\nvoid billSeasons(NYdb::NQuery::TQueryClient& client) {\n    ThrowOnError(client.RetryQuerySync([&](NYdb::NQuery::TSession session) -> TStatus {\n        auto stream = session.StreamExecuteQuery(\n            \"SELECT series_id, season_id FROM seasons\",\n            TTxControl::NoTx()\n        ).GetValueSync();\n        if (!stream.IsSuccess()) {\n            return stream;\n        }\n        bool eos = false;\n        while (!eos) {\n            auto part = stream.ReadNext().ExtractValueSync();\n            if (!part.IsSuccess()) {\n                eos = true;\n                if (!part.EOS()) {\n                    return part;\n                }\n                continue;\n            }\n            if (part.HasResultSet()) {\n                TResultSetParser parser(part.ExtractResultSet());\n                while (parser.TryNextRow()) {\n                    auto seriesId = *parser.ColumnParser(\"series_id\")\n                        .GetOptionalUint64();\n                    auto seasonId = *parser.ColumnParser(\"season_id\")\n                        .GetOptionalUint64();\n                    chargeCustomer(seriesId, seasonId);\n                }\n            }\n        }\n        return TStatus(EStatus::SUCCESS, NYdb::NIssue::TIssues());\n    }));\n}\n```",
+      "expected_output": "A correct response for “C++ audit · StreamExecuteQuery without duplicate handling (RULE-CPP-09)”, including this primary requirement: Cite `RULE-CPP-09` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-CPP-09` by ID.",
+        "Explain that `StreamExecuteQuery` inside a retrier can emit duplicate rows on replay (per YDB docs — stream queries / retry recipe).",
+        "Connect this to double-charging via `chargeCustomer` with no dedupe / idempotent sink.",
+        "Recommend idempotent billing (keyed UPSERT, dedup table) or cursor-based skip of already-seen keys.",
+        "Not invent a different RULE-CPP-XX ID."
+      ],
+      "covers": "C++ audit · StreamExecuteQuery without duplicate handling (RULE-CPP-09)"
+    },
+    {
+      "id": 285413356,
+      "name": "cpp-rule-cpp-10-insert-with-idempotent",
+      "category": "cpp",
+      "prompt": "Review this C++ event-recording function. During cluster upgrades\nwe get sporadic errors here even when the event row turns out to\nalready be in the table. Is the SDK call correct?\n\n```cpp\nTStatus recordEvent(NYdb::NQuery::TQueryClient& client, uint64_t eventId,\n                    const std::string& payload) {\n    return client.RetryQuerySync(\n        [eventId, payload](NYdb::NQuery::TSession session) {\n            auto params = NYdb::TParamsBuilder()\n                .AddParam(\"$id\").Uint64(eventId).Build()\n                .AddParam(\"$payload\").Utf8(payload).Build()\n                .Build();\n            return session.ExecuteQuery(\n                R\"(INSERT INTO events (id, payload) VALUES ($id, $payload))\",\n                NYdb::NQuery::TTxControl::BeginTx(\n                    NYdb::NQuery::TTxSettings::SerializableRW()).CommitTx(),\n                params\n            ).GetValueSync();\n        },\n        NYdb::NRetry::TRetryOperationSettings().Idempotent(true));\n}\n```",
+      "expected_output": "A correct response for “C++ audit · INSERT INTO inside .Idempotent(true) retry (RULE-CPP-10)”, including this primary requirement: Cite `RULE-CPP-10` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-CPP-10` by ID.",
+        "Identify the combination of `INSERT INTO` plus `.Idempotent(true)` on `RetryQuerySync` as the antipattern.",
+        "Explain that `INSERT` is not idempotent under retry: a replay after `UNDETERMINED` / `TRANSPORT_UNAVAILABLE` (which the idempotent flag unlocks) hits `PRECONDITION_FAILED` (`insert_pk` constraint violation) when the first attempt actually committed, surfacing a hard failure for a write that did land.",
+        "Recommend one of: switch to `UPSERT INTO` (replay-safe by construction), drop `.Idempotent(true)` and accept the propagated `UNDETERMINED`, or add a server-side idempotency guard (dedup table / existence check) before opting back in.",
+        "Not invent a different RULE-CPP-XX ID. May also mention RULE-CPP-03 if discussing the wider idempotency story, but the primary citation should be CPP-10."
+      ],
+      "covers": "C++ audit · INSERT INTO inside .Idempotent(true) retry (RULE-CPP-10)"
+    },
+    {
+      "id": 841837434,
+      "name": "cpp-rule-cpp-11-ddl-in-retry",
+      "category": "cpp",
+      "prompt": "Review this C++ helper. We use it to make sure a per-tenant\nevents table exists before writing the first row. It runs on the\nhot write path. Is the YDB usage correct?\n\n```cpp\nTStatus ensureTenantTableAndInsert(NYdb::NTable::TTableClient& client,\n                                   const std::string& tablePath,\n                                   uint64_t eventId,\n                                   const std::string& payload) {\n    return client.RetryOperationSync(\n        [&](NYdb::NTable::TSession session) -> NYdb::TStatus {\n            auto createStatus = session.ExecuteSchemeQuery(\n                \"CREATE TABLE IF NOT EXISTS `\" + tablePath + \"` (\"\n                \"  id Uint64,\"\n                \"  payload Utf8,\"\n                \"  PRIMARY KEY (id))\"\n            ).GetValueSync();\n            if (!createStatus.IsSuccess()) {\n                return createStatus;\n            }\n\n            auto params = NYdb::TParamsBuilder()\n                .AddParam(\"$id\").Uint64(eventId).Build()\n                .AddParam(\"$payload\").Utf8(payload).Build()\n                .Build();\n            return session.ExecuteDataQuery(\n                \"UPSERT INTO `\" + tablePath + \"` (id, payload) \"\n                \"VALUES ($id, $payload)\",\n                NYdb::NTable::TTxControl::BeginTx(\n                    NYdb::NTable::TTxSettings::SerializableRW()).CommitTx(),\n                params\n            ).GetValueSync();\n        },\n        NYdb::NTable::TRetryOperationSettings().Idempotent(true));\n}\n```",
+      "expected_output": "A correct response for “C++ audit · DDL (ExecuteSchemeQuery) inside RetryOperationSync lambda (RULE-CPP-11)”, including this primary requirement: Cite `RULE-CPP-11` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-CPP-11` by ID.",
+        "Identify that DDL (`session.ExecuteSchemeQuery` with a `CREATE TABLE` payload) sits inside the `RetryOperationSync` lambda alongside DML, so the SDK's query retry classifier governs schema operations it was not designed for.",
+        "Explain the failure mode: a retried DDL after `BAD_SESSION` / `UNAVAILABLE` can land twice, an `ALTER`/`CREATE` can be partially applied, and DML retry semantics do not translate to schema mutations.",
+        "Recommend moving table creation to dedicated startup / migration code (run once, outside the SDK retrier) and keeping the `RetryOperationSync` lambda DML-only.",
+        "Not invent a different RULE-CPP-XX ID."
+      ],
+      "covers": "C++ audit · DDL (ExecuteSchemeQuery) inside RetryOperationSync lambda (RULE-CPP-11)"
+    },
+    {
+      "id": 1696120207,
+      "name": "cpp-rule-cpp-12-missing-cancel-deadline",
+      "category": "cpp",
+      "prompt": "Review this C++ request path. `requestStop` is requested when the upstream\ncaller disconnects, `callerDeadline` is its absolute deadline, and\n`remainingBudget` is the time left until that deadline.\n\n```cpp\nNYdb::NQuery::TExecuteQueryResult loadUser(\n        NYdb::NQuery::TQueryClient& client,\n        std::stop_token requestStop,\n        TDeadline callerDeadline,\n        TDuration remainingBudget) {\n    auto settings = NYdb::NQuery::TExecuteQuerySettings()\n        .ClientTimeout(TDuration::Seconds(30))\n        .RetrySettings(NYdb::NRetry::TRetryOperationSettings()\n            .MaxTimeout(TDuration::Seconds(30))\n            .Idempotent(true));\n\n    auto params = NYdb::TParamsBuilder()\n        .AddParam(\"$id\").Uint64(42).Build()\n        .Build();\n\n    return client.ExecuteQuery(\n        \"SELECT name FROM users WHERE id = $id\",\n        NYdb::NQuery::TTxControl::NoTx(),\n        params,\n        settings).GetValueSync();\n}\n```",
+      "expected_output": "A correct response for “C++ audit · caller stop and deadline omitted from retries (RULE-CPP-12)”, including this primary requirement: Use the C++ audit format and cite `RULE-CPP-12` in sentence 1.",
+      "files": [],
+      "expectations": [
+        "Use the C++ audit format and cite `RULE-CPP-12` in sentence 1.",
+        "Identify both missing propagation paths: the retry settings omit `.CancellationToken(requestStop)`, while request settings omit `.Deadline(callerDeadline)` and fixed 30-second `ClientTimeout` / `MaxTimeout` ignore `remainingBudget`.",
+        "Explain that `MaxTimeout` is the shared retry budget and `ClientTimeout` bounds the RPC; neither should exceed the caller's remaining budget.",
+        "Recommend `TRetryOperationSettings().CancellationToken(requestStop)` plus `.Deadline(callerDeadline)` and caller-derived `MaxTimeout` and `ClientTimeout` values.",
+        "Preserve the exact SDK contract: the stop token stops retry orchestration but does not cancel an already running RPC; `CLIENT_CANCELLED` may replace a successful result and does not imply rollback."
+      ],
+      "covers": "C++ audit · caller stop and deadline omitted from retries (RULE-CPP-12)"
+    },
+    {
+      "id": 983386500,
+      "name": "cpp-rule-cpp-13-client-floatvector",
+      "category": "cpp",
+      "prompt": "Review this YDB C++ query path. The application already has the embedding\nas `std::vector<float>`, binds it as a YQL `List<Float>` parameter, and\nruns:\n\n```yql\nDECLARE $embedding AS List<Float>;\nSELECT id FROM documents\nORDER BY Knn::CosineDistance(\n    embedding, Knn::ToBinaryStringFloat($embedding))\nLIMIT 10;\n```",
+      "expected_output": "A correct response for “C++ audit · client FloatVector list converted in YQL (RULE-CPP-13)”, including this primary requirement: Cite `RULE-CPP-13` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-CPP-13` by ID.",
+        "Identify the application-provided `std::vector<float>` bound as `List<Float>` plus server-side `Knn::ToBinaryStringFloat` as the anti-pattern.",
+        "Link to the current YDB vector-search recipe and its C++ tab for client-side serialization instead of inventing a serialization snippet.",
+        "Bind the serialized result as YQL `String` and use it directly in `Knn::CosineDistance`.",
+        "Explain that the YQL conversion remains valid for a vector constructed within YQL."
+      ],
+      "covers": "C++ audit · client FloatVector list converted in YQL (RULE-CPP-13)"
+    },
+    {
+      "id": 516099876,
+      "name": "go-rule-go-01-table-service-read",
+      "category": "go",
+      "prompt": "Review this Go function that runs in our billing pipeline once a day.\nIt reads all unbilled usage items and charges the customer for each.\nTell me if anything is wrong.\n\n```go\nfunc loadUnbilled(ctx context.Context, db *ydb.Driver) ([]UsageItem, error) {\n    var items []UsageItem\n    err := db.Table().Do(ctx, func(ctx context.Context, s table.Session) error {\n        local := make([]UsageItem, 0, 1000)\n        _, res, err := s.Execute(ctx, table.DefaultTxControl(),\n            `SELECT user_id, amount FROM usage_items WHERE billed = false`, nil)\n        if err != nil {\n            return err\n        }\n        defer res.Close()\n        for res.NextResultSet(ctx) {\n            for res.NextRow() {\n                var item UsageItem\n                if err := res.ScanWithDefaults(&item.UserID, &item.Amount); err != nil {\n                    return err\n                }\n                local = append(local, item)\n            }\n        }\n        if err := res.Err(); err != nil {\n            return err\n        }\n        items = local\n        return nil\n    }, table.WithIdempotent())\n    return items, err\n}\n\n// caller later does:\n//   items, err := loadUnbilled(ctx, db)\n//   for _, it := range items { chargeCustomer(ctx, it.UserID, it.Amount) }\n```",
+      "expected_output": "A correct response for “Go audit · Reading all matching rows through Table Service (RULE-GO-01)”, including this primary requirement: Cite `RULE-GO-01` by ID (Table Service read without pagination).",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-GO-01` by ID (Table Service read without pagination).",
+        "State that Table Service `s.Execute` caps query results at 1000 rows by default, and characterise the v3 behaviour correctly: a truncated result surfaces as a non-retryable error. It is acceptable to also note that passing `ydb.WithIgnoreTruncated` to the driver restores v2-style silent truncation where the call returns `err == nil` with the excess rows dropped. (Scan queries via `s.StreamExecuteScanQuery` are the streaming path for large result sets and are not the target of this rule.)",
+        "Explain the consequence specifically in the billing context: the function works in dev with a small data set, but in production once the match exceeds 1000 it either errors out and stops billing or — if `WithIgnoreTruncated` is set — silently under-charges. The bug is data-dependent and not catchable by tests on a small dev dataset.",
+        "Recommend redesigning the read to exhaust the result set — keyset pagination over the table's primary key, wrapped in an outer loop that terminates when a page comes back empty, or the Query Service streaming path. The fix is structural, not a knob.",
+        "Not invent a different RULE-GO-XX ID that isn't in the loaded rules file.",
+        "Avoids this failure condition: Only suggests adding an explicit `LIMIT` clause without an outer pagination loop.",
+        "Avoids this failure condition: Recommends `ydb.WithIgnoreTruncated` or \"raising the cap\" as a fix.",
+        "Avoids this failure condition: Treats the issue as performance / memory rather than as a correctness bug.",
+        "Avoids this failure condition: Defends the code as correct on the grounds that \"Table Service works fine for SELECT queries\"."
+      ],
+      "covers": "Go audit · Reading all matching rows through Table Service (RULE-GO-01)"
+    },
+    {
+      "id": 1537712763,
+      "name": "go-rule-go-01b-ignore-truncated",
+      "category": "go",
+      "prompt": "Our team kept hitting \"result truncated\" errors on this report\nquery in production, so we silenced them at the driver. The error\nis gone; the dashboard still looks fine. Anything to worry about?\n\n```go\ndb, err := ydb.Open(ctx,\n    \"grpcs://ydb.example.internal:2135/?database=/prod/main\",\n    ydb.WithIgnoreTruncated(), // shuts up the \"truncated\" error\n    ydb.WithCredentials(...),\n)\n// ...\nvar totals []Total\nerr = db.Table().Do(ctx, func(ctx context.Context, s table.Session) error {\n    _, res, err := s.Execute(ctx, table.DefaultTxControl(),\n        `SELECT customer_id, SUM(amount) AS total\n         FROM usage_items WHERE billed = false\n         GROUP BY customer_id`, nil)\n    if err != nil {\n        return err\n    }\n    defer res.Close()\n    local := totals[:0]\n    for res.NextResultSet(ctx) {\n        for res.NextRow() {\n            var t Total\n            if err := res.ScanWithDefaults(&t.CustomerID, &t.Amount); err != nil {\n                return err\n            }\n            local = append(local, t)\n        }\n    }\n    if err := res.Err(); err != nil { return err }\n    totals = local\n    return nil\n}, table.WithIdempotent())\n```",
+      "expected_output": "A correct response for “Go audit · `ydb.WithIgnoreTruncated` masking Table Service truncation (RULE-GO-01)”, including this primary requirement: Cite `RULE-GO-01` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-GO-01` by ID.",
+        "Identify `ydb.WithIgnoreTruncated()` on the driver as the trap: it restores v2-style silent truncation where `s.Execute` returns `err == nil` with the first 1000 matching rows and everything beyond the cap dropped. The dashboard \"looks fine\" is consistent with silently under-counting / under-billing once production data crosses the cap.",
+        "Explain the architectural issue: the 1000-row cap is a design constraint, not a knob; the v3 error was the signal that the read assumption is wrong and code needs to paginate / move to the Query Service streaming path.",
+        "Recommend removing `WithIgnoreTruncated()` AND restructuring the read — keyset pagination (`WHERE customer_id > $cursor ORDER BY customer_id LIMIT N` wrapped in an outer loop until a page comes back empty) or `db.Query()` which streams without the row cap.",
+        "Avoids this failure condition: Endorses `WithIgnoreTruncated()` as a valid production setting.",
+        "Avoids this failure condition: Treats the issue as a logging / observability problem (silence the error, alert when truncated) rather than as silent data loss.",
+        "Avoids this failure condition: Recommends only raising `LIMIT` without an outer pagination loop."
+      ],
+      "covers": "Go audit · `ydb.WithIgnoreTruncated` masking Table Service truncation (RULE-GO-01)"
+    },
+    {
+      "id": 1106811321,
+      "name": "go-rule-go-02-retry-closure-mutation",
+      "category": "go",
+      "prompt": "Review this Go function. It collects active orders for a periodic\nreport. Anything wrong with how it accumulates the result?\n\n```go\nfunc collectActiveOrders(ctx context.Context, db *ydb.Driver) ([]Order, error) {\n    var orders []Order\n    err := db.Query().Do(ctx, func(ctx context.Context, s query.Session) error {\n        res, err := s.Query(ctx, `SELECT id, customer_id, total FROM orders WHERE status = 'active'`)\n        if err != nil {\n            return err\n        }\n        defer res.Close(ctx)\n        for rs, err := range res.ResultSets(ctx) {\n            if err != nil { return err }\n            for row, err := range rs.Rows(ctx) {\n                if err != nil { return err }\n                var o Order\n                if err := row.Scan(&o.ID, &o.CustomerID, &o.Total); err != nil {\n                    return err\n                }\n                orders = append(orders, o)\n            }\n        }\n        return nil\n    }, query.WithIdempotent())\n    if err != nil {\n        return nil, err\n    }\n    return orders, nil\n}\n```",
+      "expected_output": "A correct response for “Go audit · External state mutation from Do retry closure (RULE-GO-02)”, including this primary requirement: Cite `RULE-GO-02` by ID (external state mutation from inside Do retry closure).",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-GO-02` by ID (external state mutation from inside Do retry closure).",
+        "Explain that the `Do` closure is the unit of work — the SDK re-invokes it on retryable errors (transaction conflict, network transient, session loss). The closure is NOT a one-shot function.",
+        "Identify the specific failure: `orders = append(orders, o)` mutates the outer slice on every attempt, so on retry the accumulator carries entries from the previous failed attempt plus the current attempt — duplicate rows in the final result.",
+        "Recommend the structural fix: build a per-attempt local slice inside the closure, and assign it to the outer variable only at the end of the closure (on the path that returns `nil`). The closure must own all data processing; only the success decision crosses the boundary.",
+        "Not invent a different RULE-GO-XX ID that isn't in the loaded rules file.",
+        "Avoids this failure condition: Defends the code as correct on the grounds that \"the closure only runs once on success\" (it may run many times).",
+        "Avoids this failure condition: Suggests adding a `orders = nil` reset at the *start* of the closure as the fix — that masks the symptom but still violates the contract that data is built inside and committed at the end.",
+        "Avoids this failure condition: Misses the retry-closure semantics entirely and only comments on the SQL or the scan code."
+      ],
+      "covers": "Go audit · External state mutation from Do retry closure (RULE-GO-02)"
+    },
+    {
+      "id": 1652677557,
+      "name": "go-rule-go-03-missing-idempotent",
+      "category": "go",
+      "prompt": "Review this Go function. It writes an event into YDB; `e.ID` is\ngenerated client-side and is unique per event (we deduplicate\nupstream by this id). We've seen sporadic errors during cluster\nupgrades that surface to the caller — but when we re-check the\ntable after the failure, the event is actually there. Is the SDK\ncall correct?\n\n```go\nfunc recordEvent(ctx context.Context, db *ydb.Driver, e Event) error {\n    return db.Query().Do(ctx, func(ctx context.Context, s query.Session) error {\n        _, err := s.Query(ctx,\n            `DECLARE $id AS Uint64;\n             DECLARE $payload AS String;\n             UPSERT INTO events (id, payload) VALUES ($id, $payload)`,\n            query.WithParameters(ydb.ParamsBuilder().\n                Param(\"$id\").Uint64(e.ID).\n                Param(\"$payload\").Bytes(e.Payload).Build()),\n        )\n        return err\n    })\n}\n```",
+      "expected_output": "A correct response for “Go audit · Missing WithIdempotent on Do (RULE-GO-03)”, including this primary requirement: Cite `RULE-GO-03` by ID (missing WithIdempotent).",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-GO-03` by ID (missing WithIdempotent).",
+        "Identify that the `db.Query().Do(...)` call has no `query.WithIdempotent()` option.",
+        "Explain the conditional-retry semantics: without the flag, the SDK does not retry conditionally-retryable failures — the transport-class errors where the server may have already committed the write before the client saw the failure.",
+        "Connect this directly to the user's reported symptom: the write is observed to have succeeded server-side after the error, which is the exact \"committed before the client saw the failure\" pattern. Adding the flag would let the SDK replay the closure and return success.",
+        "Explain WHY it is safe to set the flag for THIS specific write: the `UPSERT` is keyed on an externally-generated `id`, so a replay either UPSERTs the same row again (no-op semantically) or completes the original write. The rule is about declaring the write idempotent, not about retrying SELECTs.",
+        "Recommend adding `query.WithIdempotent()` as the last argument to `Do`.",
+        "Not invent a different RULE-GO-XX ID that isn't in the loaded rules file.",
+        "Avoids this failure condition: Says the code is fine.",
+        "Avoids this failure condition: Recommends wrapping `Do` in an outer manual retry loop instead of using the flag.",
+        "Avoids this failure condition: Suggests `WithIdempotent` should be set on every `Do` call unconditionally regardless of inner semantics.",
+        "Avoids this failure condition: Frames the rule around `SELECT` safety (the test snippet is an UPSERT, and SELECTs are not where this rule earns its keep — the design tension is around writes that *might* have committed before failure surfaced)."
+      ],
+      "covers": "Go audit · Missing WithIdempotent on Do (RULE-GO-03)"
+    },
+    {
+      "id": 354496144,
+      "name": "go-rule-go-04-outer-loop-around-do",
+      "category": "go",
+      "prompt": "Review this Go code. We noticed transient errors during cluster\nupgrades and added a retry wrapper around the YDB call. Anything\nwrong with this approach?\n\n```go\nfunc loadUser(ctx context.Context, db *ydb.Driver, id uint64) (User, error) {\n    var u User\n    var lastErr error\n    for attempt := 0; attempt < 5; attempt++ {\n        err := db.Query().Do(ctx, func(ctx context.Context, s query.Session) error {\n            res, err := s.Query(ctx,\n                `DECLARE $id AS Uint64;\n                 SELECT id, name FROM users WHERE id = $id`,\n                query.WithParameters(ydb.ParamsBuilder().\n                    Param(\"$id\").Uint64(id).Build()),\n            )\n            if err != nil { return err }\n            defer res.Close(ctx)\n            // scan into u\n            return nil\n        }, query.WithIdempotent())\n        if err == nil { return u, nil }\n        lastErr = err\n        time.Sleep(time.Duration(attempt+1) * 100 * time.Millisecond)\n    }\n    return u, lastErr\n}\n```",
+      "expected_output": "A correct response for “Go audit · for-loop wrapping Do (RULE-GO-04)”, including this primary requirement: Cite `RULE-GO-04` by ID (outer for-loop wrapping Do).",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-GO-04` by ID (outer for-loop wrapping Do).",
+        "Explain that `db.Query().Do(...)` already implements the retry loop internally — it classifies errors, applies backoff, and replays the closure on retryable failures. The outer for-loop is redundant retry on top of retry.",
+        "Explain the harm: the outer loop will re-run work that the SDK has already correctly decided is non-retryable, multiplying wait time and possibly side effects. It also breaks the SDK's retry-budget accounting.",
+        "Recommend deleting the outer for-loop and relying on Do's built-in retry. If the goal is to extend the retry budget for a specific error class, that's done via retry options, not by wrapping."
+      ],
+      "covers": "Go audit · for-loop wrapping Do (RULE-GO-04)"
+    },
+    {
+      "id": 1662096440,
+      "name": "go-rule-go-05-custom-retrier",
+      "category": "go",
+      "prompt": "Review this Go helper. It's used across the codebase to retry YDB\ncalls. Is this the right way to do retries?\n\n```go\nfunc withRetry(ctx context.Context, fn func(ctx context.Context) error) error {\n    const maxAttempts = 10\n    var lastErr error\n    for i := 0; i < maxAttempts; i++ {\n        if err := fn(ctx); err == nil {\n            return nil\n        } else {\n            lastErr = err\n        }\n        time.Sleep(time.Duration(i+1) * 200 * time.Millisecond)\n    }\n    return lastErr\n}\n\n// usage\nerr := withRetry(ctx, func(ctx context.Context) error {\n    _, err := db.Table().CreateSession(ctx)\n    if err != nil { return err }\n    // ... use session ...\n    return nil\n})\n```",
+      "expected_output": "A correct response for “Go audit · Custom retrier with time.Sleep (RULE-GO-05)”, including this primary requirement: Cite `RULE-GO-05` by ID (custom retrier wrapping YDB calls).",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-GO-05` by ID (custom retrier wrapping YDB calls).",
+        "Explain that ydb-go-sdk ships its own retrier (`db.Query().Do`, `db.Table().Do`, `retry.Retry` from the `retry/` package) which knows YDB's error classification: non-retryable, unconditionally-retryable, and conditionally-retryable (idempotency-gated). A hand-rolled for/Sleep loop can't see this — it replays every non-nil error: it burns the budget retrying non-retryable failures (e.g. `PRECONDITION_FAILED`, schema mismatch) and replays conditionally-retryable ones (transport drops where the server may have committed) without an idempotency check, which can double-apply a non-idempotent write.",
+        "Identify additional things the SDK retrier provides that the custom one doesn't: exponential backoff with jitter, session-pool integration, idempotency-aware retry of conditional failures via `WithIdempotent`.",
+        "Recommend deleting the helper and replacing it with the SDK retrier appropriate to the surface — for this Table Service snippet, `db.Table().Do(ctx, func(ctx, s table.Session) error { ... }, table.WithIdempotent())`; on Query Service code, `db.Query().Do(ctx, ..., query.WithIdempotent())`; or the lower-level `retry.Retry(...)` from the `retry/` package when neither client-level helper applies."
+      ],
+      "covers": "Go audit · Custom retrier with time.Sleep (RULE-GO-05)"
+    },
+    {
+      "id": 1918031969,
+      "name": "go-rule-go-06-nested-do",
+      "category": "go",
+      "prompt": "Review this Go code. The outer Do loads a user; the inner helper\n`loadOrdersFor` reads their orders. Is this composition correct?\n\n```go\nfunc loadUserWithOrders(ctx context.Context, db *ydb.Driver, id uint64) (User, []Order, error) {\n    var u User\n    var orders []Order\n    err := db.Query().Do(ctx, func(ctx context.Context, s query.Session) error {\n        res, err := s.Query(ctx,\n            `DECLARE $id AS Uint64;\n             SELECT id, name FROM users WHERE id = $id`,\n            query.WithParameters(ydb.ParamsBuilder().Param(\"$id\").Uint64(id).Build()),\n        )\n        if err != nil { return err }\n        defer res.Close(ctx)\n        // scan u\n\n        orders, err = loadOrdersFor(ctx, db, u.ID)\n        return err\n    }, query.WithIdempotent())\n    return u, orders, err\n}\n\nfunc loadOrdersFor(ctx context.Context, db *ydb.Driver, userID uint64) ([]Order, error) {\n    var os []Order\n    err := db.Query().Do(ctx, func(ctx context.Context, s query.Session) error {\n        // s.Query(...) reads orders WHERE user_id = $userID\n        return nil\n    }, query.WithIdempotent())\n    return os, err\n}\n```",
+      "expected_output": "A correct response for “Go audit · Nested Do call (RULE-GO-06)”, including this primary requirement: Cite `RULE-GO-06` by ID (nested Do call).",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-GO-06` by ID (nested Do call).",
+        "Identify the nesting: `loadOrdersFor` calls `db.Query().Do(...)` from inside the outer `Do` lambda, opening a second retry scope with an independent session checkout from the pool.",
+        "Explain at least one of the concrete harms: (a) the inner Do races for a pool slot, starving the caller under load, or (b) on retry the inner and outer scopes retry independently, multiplying attempts combinatorially, or (c) the inner Do's own retries replay work that the outer Do was about to abandon.",
+        "Recommend restructuring `loadOrdersFor` to take a `query.Session` parameter and use the passed session directly — sharing the outer Do's session instead of opening a new one."
+      ],
+      "covers": "Go audit · Nested Do call (RULE-GO-06)"
+    },
+    {
+      "id": 174893634,
+      "name": "go-rule-go-07-non-parametrized",
+      "category": "go",
+      "prompt": "Review this Go function. It builds a search query for an admin\npanel. Any issues?\n\n```go\nfunc searchUsers(ctx context.Context, db *ydb.Driver, namePrefix string, minAge int) ([]User, error) {\n    var users []User\n    sql := fmt.Sprintf(\n        \"SELECT id, name, age FROM users WHERE name LIKE '%s%%' AND age >= %d ORDER BY id LIMIT 100\",\n        namePrefix, minAge,\n    )\n    err := db.Query().Do(ctx, func(ctx context.Context, s query.Session) error {\n        res, err := s.Query(ctx, sql)\n        if err != nil { return err }\n        defer res.Close(ctx)\n        // scan rows into users\n        return nil\n    }, query.WithIdempotent())\n    return users, err\n}\n```",
+      "expected_output": "A correct response for “Go audit · Non-parametrized YQL via fmt.Sprintf (RULE-GO-07)”, including this primary requirement: Cite `RULE-GO-07` by ID (non-parametrized YQL).",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-GO-07` by ID (non-parametrized YQL).",
+        "Identify the `fmt.Sprintf` building the query text with the caller-controlled `namePrefix` and `minAge` values inlined.",
+        "Explain at least two failure modes: (a) SQL injection — a caller can put YQL syntax into `namePrefix` to break out of the string literal and add their own predicates; and (b) plan-cache miss — the server keeps a plan keyed by the query text; with values inlined, every distinct call produces a new text and a new plan compilation.",
+        "Recommend binding the values via `ydb.ParamsBuilder().Param(\"$namePrefix\").Text(namePrefix + \"%\"). Param(\"$minAge\").Int32(int32(minAge)).Build()` (or an equivalent matching-type call — `minAge` in the prompt is a Go `int` and the typed parameter builder is type-strict, so a cast or a parameter-type choice that accepts `int` is required) passed to `query.WithParameters(...)`. The trailing `%` of the prefix-LIKE predicate must be preserved — either by appending it to the bound `Text` value (as above) or by keeping the `%` in the YQL itself (`name LIKE $namePrefix || \"%\"u`)."
+      ],
+      "covers": "Go audit · Non-parametrized YQL via fmt.Sprintf (RULE-GO-07)"
+    },
+    {
+      "id": 804159973,
+      "name": "go-rule-go-08-prefer-dc-balancer",
+      "category": "go",
+      "prompt": "Review this Go driver initialization. We're seeing higher latency\nthan expected on a multi-DC YDB cluster. The team set the balancer\nto prefer the local DC to reduce cross-DC RTT. Is this the right\nchoice for production?\n\n```go\ndb, err := ydb.Open(ctx,\n    \"grpcs://ydb.example.internal:2135/?database=/prod/main\",\n    ydb.WithBalancer(balancers.PreferLocalDC(balancers.RandomChoice())),\n    ydb.WithCredentials(...),\n)\nif err != nil { return nil, err }\n```",
+      "expected_output": "A correct response for “Go audit · PreferLocalDC / PreferNearestDC balancer (RULE-GO-08)”, including this primary requirement: Cite `RULE-GO-08` by ID (PreferLocalDC / PreferNearestDC in production).",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-GO-08` by ID (PreferLocalDC / PreferNearestDC in production).",
+        "Explain that prefer-DC balancers concentrate ALL client traffic on nodes in one datacenter — the chosen DC saturates while the other DC's nodes sit idle as hot-standbys. The cross-DC RTT savings on individual requests are dwarfed by the throughput cliff once the chosen DC saturates.",
+        "Identify that `balancers.PreferLocalDC` is also marked `// Deprecated` upstream — `PreferNearestDC` is the current name with identical balancing behavior; both should be avoided in production.",
+        "Recommend `balancers.RandomChoice()` (the default) which spreads load evenly across all DCs — what the cluster topology is designed for."
+      ],
+      "covers": "Go audit · PreferLocalDC / PreferNearestDC balancer (RULE-GO-08)"
+    },
+    {
+      "id": 561057399,
+      "name": "go-rule-go-08b-prefer-nearest-dc",
+      "category": "go",
+      "prompt": "Review this Go driver initialization for a multi-DC YDB cluster.\nThe team picked the \"nearest DC\" balancer to keep request latency\nlow. Is this safe for production traffic?\n\n```go\ndb, err := ydb.Open(ctx,\n    \"grpcs://ydb.example.internal:2135/?database=/prod/main\",\n    ydb.WithBalancer(balancers.PreferNearestDC(balancers.RandomChoice())),\n    ydb.WithCredentials(...),\n)\nif err != nil { return nil, err }\n```",
+      "expected_output": "A correct response for “Go audit · PreferNearestDC balancer (RULE-GO-08, current API name)”, including this primary requirement: Cite `RULE-GO-08` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-GO-08` by ID.",
+        "Explain that prefer-DC balancers concentrate ALL client traffic on nodes in one datacenter — the chosen DC saturates while the other DC's nodes sit idle as hot-standbys. The cross-DC RTT savings on individual requests are dwarfed by the throughput cliff once the chosen DC saturates.",
+        "Recommend dropping `WithBalancer(...)` (or passing `balancers.RandomChoice()` explicitly — that's what `balancers.Default()` returns). RandomChoice spreads load evenly across every available node in the cluster."
+      ],
+      "covers": "Go audit · PreferNearestDC balancer (RULE-GO-08, current API name)"
+    },
+    {
+      "id": 1186700665,
+      "name": "go-rule-go-09-explicit-begin",
+      "category": "go",
+      "prompt": "Review this Go transaction code. High-frequency OLTP path,\n~10k req/s. Any round-trip tuning?\n\n```go\nfunc transferFunds(ctx context.Context, db *ydb.Driver, fromID, toID uint64, amount int64) error {\n    return db.Table().Do(ctx, func(ctx context.Context, s table.Session) error {\n        tx, err := s.BeginTransaction(ctx, table.TxSettings(table.WithSerializableReadWrite()))\n        if err != nil { return err }\n        _, err = tx.Execute(ctx,\n            `DECLARE $from AS Uint64; DECLARE $amt AS Int64;\n             UPDATE accounts SET balance = balance - $amt WHERE id = $from`,\n            table.NewQueryParameters(\n                table.ValueParam(\"$from\", types.Uint64Value(fromID)),\n                table.ValueParam(\"$amt\", types.Int64Value(amount)),\n            ),\n        )\n        if err != nil { return err }\n        _, err = tx.Execute(ctx,\n            `DECLARE $to AS Uint64; DECLARE $amt AS Int64;\n             UPDATE accounts SET balance = balance + $amt WHERE id = $to`,\n            table.NewQueryParameters(\n                table.ValueParam(\"$to\", types.Uint64Value(toID)),\n                table.ValueParam(\"$amt\", types.Int64Value(amount)),\n            ),\n        )\n        if err != nil { return err }\n        _, err = tx.CommitTx(ctx)\n        return err\n    })\n}\n```",
+      "expected_output": "A correct response for “Go audit · Explicit BeginTransaction before first query (RULE-GO-09)”, including this primary requirement: Cite `RULE-GO-09` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-GO-09` by ID.",
+        "Identify this as an interactive transaction (developer-written `s.BeginTransaction(...)` + `tx.Execute(...)` + `tx.CommitTx`) and call out the explicit `BeginTransaction` as a separate RPC before the first write.",
+        "Recommend one of two precise fixes — both valid in this code path: (a) Stay on Table Service interactive: replace the explicit `BeginTransaction` with a first `s.Execute(ctx, txControl, sql, params)` whose positional `txControl` is built with `table.TxControl(table.BeginTx(table.WithSerializableReadWrite()))` so begin rides on the first query's RPC. (Note: Table Service `s.Execute` takes `txControl` as its positional second argument — there is no `table.WithTxControl(...)` ExecuteOption.) OR (b) Migrate to non-interactive: rewrite using `db.Query().DoTx(ctx, func(ctx, tx query.TxActor) error { ... })` with the driver opened using `ydb.WithLazyTx(true)` so the begin is deferred to the first query inside the closure.",
+        "Make clear that the gain is one fewer round-trip per transaction.",
+        "Avoids this failure condition: Defends the explicit `BeginTransaction` as needed.",
+        "Avoids this failure condition: Only flags the separate `CommitTx` issue (that's RULE-GO-10) without addressing the explicit Begin.",
+        "Avoids this failure condition: Recommends `DoTx` as the *sole* fix while omitting `ydb.WithLazyTx(true)` (a partial response that gets fix (a) right and only mentions `DoTx` in passing without LazyTx is not a full fail — the rubric only triggers when LazyTx is missing from the response's primary recommendation)."
+      ],
+      "covers": "Go audit · Explicit BeginTransaction before first query (RULE-GO-09)"
+    },
+    {
+      "id": 1232289677,
+      "name": "go-rule-go-09b-dotx-without-lazytx",
+      "category": "go",
+      "prompt": "Review this Go transaction code. OLTP path, ~10k req/s. The driver\nis opened with the defaults we use everywhere else. Any tuning we\ncan do on this hot path?\n\n```go\ndb, err := ydb.Open(ctx,\n    \"grpcs://ydb.example.internal:2135/?database=/prod/main\",\n    ydb.WithCredentials(...),\n)\nif err != nil { return err }\ndefer db.Close(ctx)\n\n// ... later, on every request:\nerr = db.Query().DoTx(ctx, func(ctx context.Context, tx query.TxActor) error {\n    if _, err := tx.Exec(ctx,\n        \"UPDATE inventory SET qty = qty - $n WHERE sku = $sku\",\n        query.WithParameters(ydb.ParamsBuilder().\n            Param(\"$sku\").Text(sku).\n            Param(\"$n\").Int64(1).Build()),\n    ); err != nil {\n        return err\n    }\n    _, err := tx.Exec(ctx,\n        \"INSERT INTO reservations (request_id, sku) VALUES ($rid, $sku)\",\n        query.WithParameters(ydb.ParamsBuilder().\n            Param(\"$rid\").Text(reqID).\n            Param(\"$sku\").Text(sku).Build()),\n        query.WithCommit(),\n    )\n    return err\n})\n```",
+      "expected_output": "A correct response for “Go audit · Non-interactive DoTx without `ydb.WithLazyTx(true)` (RULE-GO-09)”, including this primary requirement: Cite `RULE-GO-09` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-GO-09` by ID.",
+        "Identify this as a non-interactive transaction (`db.Query().DoTx(...)`): the SDK manages begin and commit, the developer influences them via options. The closure already fuses commit into the last write via `query.WithCommit()` (RULE-GO-10 territory, addressed), but the begin is still a separate RPC because the driver was opened without `ydb.WithLazyTx(true)`.",
+        "Recommend opening the driver with `ydb.WithLazyTx(true)` (or passing `query.WithLazyTx(true)` as a per-`DoTx` option). With the lazy-tx flag, `DoTx` defers begin to the first query inside the closure — the begin then rides on the first `tx.Exec` RPC and the transaction takes two round-trips instead of three.",
+        "Frame the win in round-trip terms specifically (one fewer RPC per transaction), which matters at ~10k req/s.",
+        "Avoids this failure condition: Suggests rewriting to `s.BeginTransaction(...)` + `tx.Execute` (going back to interactive) instead of enabling lazy-tx on the DoTx path.",
+        "Avoids this failure condition: Treats the existing `query.WithCommit()` as the begin-side fix.",
+        "Avoids this failure condition: Misses the `ydb.WithLazyTx(true)` driver-option name entirely."
+      ],
+      "covers": "Go audit · Non-interactive DoTx without `ydb.WithLazyTx(true)` (RULE-GO-09)"
+    },
+    {
+      "id": 1850951406,
+      "name": "go-rule-go-10-separate-commit",
+      "category": "go",
+      "prompt": "Review this Go transaction code. OLTP path, ~10k req/s. Any\nround-trip tuning possible here?\n\n```go\nerr := db.Query().DoTx(ctx, func(ctx context.Context, tx query.TxActor) error {\n    _, err := tx.Exec(ctx,\n        `DECLARE $from AS Uint64; DECLARE $amt AS Int64;\n         UPDATE accounts SET balance = balance - $amt WHERE id = $from`,\n        query.WithParameters(ydb.ParamsBuilder().\n            Param(\"$from\").Uint64(fromID).\n            Param(\"$amt\").Int64(amount).Build()),\n    )\n    if err != nil { return err }\n    _, err = tx.Exec(ctx,\n        `DECLARE $to AS Uint64; DECLARE $amt AS Int64;\n         UPDATE accounts SET balance = balance + $amt WHERE id = $to`,\n        query.WithParameters(ydb.ParamsBuilder().\n            Param(\"$to\").Uint64(toID).\n            Param(\"$amt\").Int64(amount).Build()),\n    )\n    if err != nil { return err }\n    return tx.CommitTx(ctx)\n})\n```",
+      "expected_output": "A correct response for “Go audit · Separate Commit after last query (RULE-GO-10)”, including this primary requirement: Cite `RULE-GO-10` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-GO-10` by ID.",
+        "Identify that this is a non-interactive transaction (`db.Query().DoTx(...)`) and explain that `DoTx` already commits the transaction when the closure returns `nil`.",
+        "Identify the explicit `tx.CommitTx(ctx)` at the end of the closure as **doubly wrong**: redundant with DoTx's auto-commit AND a separate commit RPC.",
+        "Recommend the structural fix: delete the explicit `CommitTx` AND pass `query.WithCommit()` as an option to the last `tx.Exec(...)`. The commit then rides on the last write's RPC — zero extra round-trips for commit (vs. one extra with DoTx auto-commit, vs. one extra with the original explicit CommitTx).",
+        "Avoids this failure condition: Only recommends removing the explicit `CommitTx` without naming `query.WithCommit()` as the optimal fix.",
+        "Avoids this failure condition: Defends the explicit `CommitTx` as necessary.",
+        "Avoids this failure condition: Misses that DoTx auto-commits on return-nil."
+      ],
+      "covers": "Go audit · Separate Commit after last query (RULE-GO-10)"
+    },
+    {
+      "id": 1302993906,
+      "name": "go-rule-go-10b-interactive-table-commit",
+      "category": "go",
+      "prompt": "Review this Go function. It runs on a high-frequency OLTP path and\nis one of our hottest call sites. Anything we can tune?\n\n```go\nfunc transferFunds(ctx context.Context, db *ydb.Driver, fromID, toID uint64, amount int64) error {\n    return db.Table().Do(ctx, func(ctx context.Context, s table.Session) error {\n        tx, _, err := s.Execute(ctx,\n            table.TxControl(table.BeginTx(table.WithSerializableReadWrite())),\n            \"UPDATE accounts SET balance = balance - $amt WHERE id = $from\",\n            table.NewQueryParameters(\n                table.ValueParam(\"$from\", types.Uint64Value(fromID)),\n                table.ValueParam(\"$amt\", types.Int64Value(amount)),\n            ),\n        )\n        if err != nil { return err }\n        _, err = tx.Execute(ctx,\n            \"UPDATE accounts SET balance = balance + $amt WHERE id = $to\",\n            table.NewQueryParameters(\n                table.ValueParam(\"$to\", types.Uint64Value(toID)),\n                table.ValueParam(\"$amt\", types.Int64Value(amount)),\n            ),\n        )\n        if err != nil { return err }\n        _, err = tx.CommitTx(ctx)\n        return err\n    })\n}\n```",
+      "expected_output": "A correct response for “Go audit · Interactive Table Service `tx.CommitTx` as a separate RPC (RULE-GO-10)”, including this primary requirement: Cite `RULE-GO-10` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-GO-10` by ID.",
+        "Identify this as an interactive Table Service transaction (begin already correctly fused on the first `s.Execute` via `table.TxControl(table.BeginTx(...))`), and call out the trailing `tx.CommitTx(ctx)` as a standalone commit RPC.",
+        "Recommend passing `options.WithCommit()` (from `github.com/ydb-platform/ydb-go-sdk/v3/table/options`) as an `ExecuteDataQueryOption` on the *last* `tx.Execute(...)` and deleting the explicit `tx.CommitTx(ctx)` call. The commit then rides on that final write's RPC.",
+        "Make the round-trip arithmetic explicit: with begin already fused into the first `s.Execute`, the current code is 3 RPCs — `begin+write1`, `write2`, `commit`. After the fix the commit rides on `write2`, dropping it to 2 RPCs: `begin+write1`, `write2+commit`.",
+        "Avoids this failure condition: Recommends `query.WithCommit()` (Query Service ExecuteOption, wrong package — this is Table Service code).",
+        "Avoids this failure condition: Recommends rebuilding the whole transaction with `table.TxControl(table.BeginTx(...), table.CommitTx())` on the second `s.Execute` — that starts a fresh transaction and does not commit the one already opened on the first `s.Execute`.",
+        "Avoids this failure condition: Defends the explicit `tx.CommitTx` as needed for correctness."
+      ],
+      "covers": "Go audit · Interactive Table Service `tx.CommitTx` as a separate RPC (RULE-GO-10)"
+    },
+    {
+      "id": 1698542256,
+      "name": "go-rule-go-10c-dotx-missing-withcommit",
+      "category": "go",
+      "prompt": "Review this Go transaction code. OLTP path, ~10k req/s. We already\nenabled lazy transactions on the driver (`ydb.WithLazyTx(true)`).\nAny further round-trip tuning we can do?\n\n```go\nerr := db.Query().DoTx(ctx, func(ctx context.Context, tx query.TxActor) error {\n    if _, err := tx.Exec(ctx,\n        \"UPDATE orders SET status = 'paid' WHERE id = $id\",\n        query.WithParameters(ydb.ParamsBuilder().\n            Param(\"$id\").Uint64(orderID).Build()),\n    ); err != nil {\n        return err\n    }\n    _, err := tx.Exec(ctx,\n        \"INSERT INTO payments (order_id, txn_id, amount) VALUES ($oid, $txn, $amt)\",\n        query.WithParameters(ydb.ParamsBuilder().\n            Param(\"$oid\").Uint64(orderID).\n            Param(\"$txn\").Text(txnID).\n            Param(\"$amt\").Int64(amount).Build()),\n    )\n    return err\n})\n```",
+      "expected_output": "A correct response for “Go audit · Non-interactive DoTx auto-commit without `query.WithCommit()` (RULE-GO-10)”, including this primary requirement: Cite `RULE-GO-10` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-GO-10` by ID.",
+        "Identify this as a non-interactive transaction (`db.Query().DoTx`) where the closure returns `nil` after the last write. Per the upstream `query/client.go` `DoTx` godoc, DoTx commits on return-nil — but as a separate RPC because the last `tx.Exec` does not carry `query.WithCommit()`.",
+        "Recommend passing `query.WithCommit()` as an `ExecuteOption` to the last `tx.Exec(...)` so the commit rides on that write's RPC instead of being its own RPC. With LazyTx already on, the transaction goes from begin+write1+write2+commit = 3 post-LazyTx RPCs (write1, write2, commit) down to 2 (write1, write2-with-commit).",
+        "Be clear that this is the same RULE-GO-10 anti-pattern as the explicit `tx.CommitTx` case — the auto-commit DoTx does is still a standalone RPC unless the last write fuses it via `query.WithCommit()`.",
+        "Avoids this failure condition: Claims `DoTx` already commits without an extra round-trip purely from return-nil (it commits, but as a separate RPC unless `query.WithCommit()` is set).",
+        "Avoids this failure condition: Recommends adding an explicit `tx.CommitTx(ctx)` (that's the RULE-GO-10 doubly-wrong case).",
+        "Avoids this failure condition: Defends the code as already optimal because `WithLazyTx` is set."
+      ],
+      "covers": "Go audit · Non-interactive DoTx auto-commit without `query.WithCommit()` (RULE-GO-10)"
+    },
+    {
+      "id": 14386827,
+      "name": "go-rule-go-11-stats-before-close",
+      "category": "go",
+      "prompt": "We use YDB query stats for diagnostics and adaptive tuning.\nSometimes the diagnostics are empty even when the query itself succeeds.\nReview this helper:\n\n```go\nfunc runAndCollectStats(ctx context.Context, s query.Session) (summary StatsSummary, err error) {\n    var stats query.Stats\n\n    res, err := s.Query(ctx,\n        `SELECT id, payload FROM events WHERE id > $from LIMIT 100`,\n        query.WithStatsMode(query.StatsModeBasic, func(s query.Stats) {\n            stats = s\n        }),\n    )\n    if err != nil {\n        return 0, err\n    }\n    defer func() { _ = res.Close(ctx) }()\n\n    return summarizeStats(stats), nil\n}\n```",
+      "expected_output": "A correct response for “Go audit · Stats consumed before stream drain (RULE-GO-11)”, including this primary requirement: Cite `RULE-GO-11` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-GO-11` by ID.",
+        "Explain that `ExecuteQuery` is a stream: `WithStatsMode` callbacks can fire on earlier parts while later parts may still contain additional/final stats data.",
+        "Explain that control can return to caller code before all stream parts (including stats-bearing ones) are received.",
+        "Identify that `summarizeStats(stats)` runs before `Close` drains the stream — `defer res.Close` does not run until the function returns, so the helper may consume empty/partial stats.",
+        "Recommend the fix: call `res.Close(ctx)` synchronously (and check its error) before reading/returning data derived from `stats`.",
+        "Avoids this failure condition: Treats `defer Close` as sufficient while billing happens before return.",
+        "Avoids this failure condition: Blames only retry/idempotency without mentioning stream drain / stats timing.",
+        "Avoids this failure condition: Says the pattern is fine because `Query` returned nil error."
+      ],
+      "covers": "Go audit · Stats consumed before stream drain (RULE-GO-11)"
+    },
+    {
+      "id": 1347882449,
+      "name": "go-rule-go-12-detached-context",
+      "category": "go",
+      "prompt": "Review this request handler. The incoming context is cancelled when the\nHTTP client disconnects and may already carry a deadline.\n\n```go\nfunc loadUser(requestCtx context.Context, db *ydb.Driver, id uint64) error {\n    queryCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)\n    defer cancel()\n\n    return db.Query().Do(queryCtx, func(attemptCtx context.Context, s query.Session) error {\n        res, err := s.Query(queryCtx,\n            `SELECT name FROM users WHERE id = $id`,\n            query.WithParameters(ydb.ParamsBuilder().\n                Param(\"$id\").Uint64(id).Build()),\n        )\n        if err != nil { return err }\n        return res.Close(queryCtx)\n    }, query.WithIdempotent())\n}\n```",
+      "expected_output": "A correct response for “Go audit · detached caller context loses deadline and cancellation (RULE-GO-12)”, including this primary requirement: Cite `RULE-GO-12` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-GO-12` by ID.",
+        "Identify `context.Background()` as detaching the YDB work from the incoming request's cancellation and deadline.",
+        "Explain that the one caller-derived context/budget must cover session acquisition, every retry attempt, the RPC, and result draining; a new fixed timeout per attempt must not reset that budget.",
+        "Recommend deriving the bounded context from `requestCtx`, deferring its cancel function, passing it to `db.Query().Do`, and using the callback's `attemptCtx` for `s.Query` and `res.Close`.",
+        "State that cancellation stops work best-effort and is not evidence that a write was rolled back; replay safety still depends on idempotency."
+      ],
+      "covers": "Go audit · detached caller context loses deadline and cancellation (RULE-GO-12)"
+    },
+    {
+      "id": 2140086769,
+      "name": "go-rule-go-13-client-floatvector",
+      "category": "go",
+      "prompt": "Review this YDB Go query path. The application already has the embedding\nas `[]float32`, binds it as a YQL `List<Float>` parameter, and runs:\n\n```yql\nDECLARE $embedding AS List<Float>;\nSELECT id FROM documents\nORDER BY Knn::CosineDistance(\n    embedding, Knn::ToBinaryStringFloat($embedding))\nLIMIT 10;\n```",
+      "expected_output": "A correct response for “Go audit · client FloatVector list converted in YQL (RULE-GO-13)”, including this primary requirement: Cite `RULE-GO-13` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-GO-13` by ID.",
+        "Identify the application-provided Go slice bound as `List<Float>` plus server-side `Knn::ToBinaryStringFloat` as the anti-pattern.",
+        "Link to the current YDB vector-search recipe and its Go tab for client-side serialization instead of inventing a serialization snippet.",
+        "Bind the serialized result as YQL `String` and use it directly in `Knn::CosineDistance`.",
+        "Explain that the YQL conversion remains valid for a vector constructed within YQL."
+      ],
+      "covers": "Go audit · client FloatVector list converted in YQL (RULE-GO-13)"
+    },
+    {
+      "id": 1343983602,
+      "name": "java-rule-jv-01-findbyid-loop",
+      "category": "java",
+      "prompt": "Review this Spring Data JPA code that reads tokens from YDB and tell\nme if it has any anti-patterns. The repository extends `JpaRepository`.\n\n```java\npublic List<Token> loadTokens(List<Long> ids) {\n    List<Token> result = new ArrayList<>();\n    for (Long id : ids) {\n        result.add(repository.findById(id).orElseThrow());\n    }\n    return result;\n}\n```",
+      "expected_output": "A correct response for “Java audit · findById in a loop (RULE-JV-01)”, including this primary requirement: Cite `RULE-JV-01` by ID (the rule about findById in a loop).",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-JV-01` by ID (the rule about findById in a loop).",
+        "Recommend replacing the loop with `repository.findAllById(ids)`.",
+        "Explain that the loop issues one SELECT per id (N round trips) where one statement would do.",
+        "Not invent a different RULE-JV-XX ID that isn't in the loaded rules file."
+      ],
+      "covers": "Java audit · findById in a loop (RULE-JV-01)"
+    },
+    {
+      "id": 1154737848,
+      "name": "java-rule-jv-02-batch-size-unset",
+      "category": "java",
+      "prompt": "Here is the `application.properties` for our Spring Boot service that\nwrites a lot of rows into YDB via Hibernate. Anything wrong with it?\n\n```properties\nspring.datasource.url=jdbc:ydb:grpc://localhost:2136/local\nspring.datasource.driver-class-name=tech.ydb.jdbc.YdbDriver\nspring.jpa.hibernate.ddl-auto=update\nspring.jpa.show-sql=false\n```",
+      "expected_output": "A correct response for “Java audit · JDBC batching not configured (RULE-JV-02)”, including this primary requirement: Cite `RULE-JV-02` by ID (the rule about JDBC batching not configured).",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-JV-02` by ID (the rule about JDBC batching not configured).",
+        "Note that Hibernate's default JDBC batch size is 1, so every write is a separate round trip.",
+        "Recommend setting `spring.jpa.properties.hibernate.jdbc.batch_size` (with a value > 1; the rule recommends `1000` and we accept any value > 1 as long as the property name is correct).",
+        "Also recommend `spring.jpa.properties.hibernate.order_inserts=true` and `…order_updates=true` so batches can actually form.",
+        "Not invent additional Hibernate properties that don't exist."
+      ],
+      "covers": "Java audit · JDBC batching not configured (RULE-JV-02)"
+    },
+    {
+      "id": 52570784,
+      "name": "java-rule-jv-03-save-in-loop",
+      "category": "java",
+      "prompt": "Spring Boot service that imports users into YDB. Review the write path:\n\n```java\n@Transactional\npublic void importUsers(List<UserDto> input) {\n    for (UserDto u : input) {\n        User entity = new User(u.id(), u.name(), u.email());\n        repository.save(entity);\n    }\n}\n```\n\nAssume `hibernate.jdbc.batch_size=1000` is already configured.",
+      "expected_output": "A correct response for “Java audit · Spring save() in a loop (RULE-JV-03)”, including this primary requirement: Cite `RULE-JV-03` by ID (Spring save() in a loop).",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-JV-03` by ID (Spring save() in a loop).",
+        "Recommend collecting the entities into a `List` and calling `repository.saveAll(batch)` once at the end.",
+        "Either explain that per-entity save() defeats Hibernate batching even when batch_size is set, OR explain that one statement beats N statements.",
+        "Not claim the loop is fine \"because batch_size is configured\" — that's exactly the misconception the rule corrects."
+      ],
+      "covers": "Java audit · Spring save() in a loop (RULE-JV-03)"
+    },
+    {
+      "id": 751537380,
+      "name": "java-rule-jv-04-deleteallbyid-bulk",
+      "category": "java",
+      "prompt": "Code that purges expired tokens from YDB. Anything off here?\n\n```java\n@Transactional\npublic void purgeExpired(List<Long> ids) {\n    repository.deleteAllById(ids);\n}\n```\n\nThe repository extends `JpaRepository<Token, Long>`. `ids` is typically a few thousand items.",
+      "expected_output": "A correct response for “Java audit · deleteAllById on bulk path (RULE-JV-04)”, including this primary requirement: Cite `RULE-JV-04` by ID (deleteAllById on a bulk path).",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-JV-04` by ID (deleteAllById on a bulk path).",
+        "Recommend switching to `repository.deleteAllByIdInBatch(ids)`.",
+        "Explain that Spring Data's `deleteAllById` loads each entity via `findById` before deleting (N SELECT + N DELETE), while `deleteAllByIdInBatch` emits a single `DELETE … WHERE id IN (…)`.",
+        "Not confuse `deleteAllById` with `deleteAll` (the former takes ids, the latter takes entities)."
+      ],
+      "covers": "Java audit · deleteAllById on bulk path (RULE-JV-04)"
+    },
+    {
+      "id": 354274828,
+      "name": "java-rule-jv-05-jpa-version",
+      "category": "java",
+      "prompt": "Review this JPA entity. We're using YDB via the JDBC driver and Hibernate.\nProduction sees a lot of UPDATE traffic on this table.\n\n```java\n@Entity\npublic class Account {\n    @Id private Long id;\n    private BigDecimal balance;\n    @Version private Long version;\n}\n```",
+      "expected_output": "A correct response for “Java audit · JPA @Version over YDB (RULE-JV-05)”, including this primary requirement: Cite `RULE-JV-05` by ID (JPA @Version over YDB).",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-JV-05` by ID (JPA @Version over YDB).",
+        "Recommend removing the `@Version` field.",
+        "Explain why: YDB Query Service runs `SerializableRW` by default, so the server already detects update conflicts and surfaces them as a retryable error — the `@Version` predicate is redundant and adds work to every UPDATE.",
+        "Point to retry-based handling of conflicts (the response may reference RULE-JV-06 by ID, the SDK retry helpers, or `SQLRecoverableException` — any of these is acceptable).",
+        "Not recommend `@Version` as a defensive measure or claim it provides additional safety on YDB."
+      ],
+      "covers": "Java audit · JPA @Version over YDB (RULE-JV-05)"
+    },
+    {
+      "id": 176635428,
+      "name": "java-rule-jv-06-swallow-sqlexception",
+      "category": "java",
+      "prompt": "Review this method that writes a token into YDB through plain JDBC.\n\n```java\npublic void writeToken(Token t) {\n    try {\n        jdbcTemplate.update(\n            \"UPSERT INTO tokens (id, payload) VALUES (?, ?)\",\n            t.id(), t.payload());\n    } catch (SQLException e) {\n        log.warn(\"save failed\", e);\n    }\n}\n```\n\nThis is a non-idempotent path in some call sites, idempotent in others — callers vary.",
+      "expected_output": "A correct response for “Java audit · ignoring retryable JDBC exceptions (RULE-JV-06)”, including this primary requirement: Cite `RULE-JV-06` by ID (ignoring retryable JDBC exceptions).",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-JV-06` by ID (ignoring retryable JDBC exceptions).",
+        "Recommend classifying the caught exception rather than swallowing the bare `SQLException`.",
+        "Distinguish between the two retry buckets the ydb-jdbc-driver throws: `SQLRecoverableException` (always safe to retry — e.g. `ABORTED` / `Transaction locks invalidated`) versus `SQLTransientException` (retry only for idempotent operations — the server may have committed before the failure surfaced).",
+        "Mention that retrying `SQLTransientException` for non-idempotent operations risks double effect.",
+        "Not recommend a blanket \"retry everything on SQLException\" that ignores the idempotency distinction."
+      ],
+      "covers": "Java audit · ignoring retryable JDBC exceptions (RULE-JV-06)"
+    },
+    {
+      "id": 824033366,
+      "name": "java-rule-jv-07-detached-session-retry-context",
+      "category": "java",
+      "prompt": "Review this native YDB Java SDK helper. `callerDeadline` is the absolute\ndeadline of the incoming request, and `requestCancelled` completes when\nthe caller disconnects.\n\n```java\nCompletableFuture<Result<QueryInfo>> loadUsers(\n        QueryClient client,\n        Instant callerDeadline,\n        CompletableFuture<Void> requestCancelled) {\n    SessionRetryContext retryContext = SessionRetryContext.create(client)\n            .maxRetries(10)\n            .idempotent(true)\n            .build();\n\n    return retryContext.supplyResult(session -> session.createQuery(\n            \"SELECT id, name FROM users\",\n            TxMode.SNAPSHOT_RO,\n            Params.empty(),\n            ExecuteQuerySettings.newBuilder()\n                    .withRequestTimeout(Duration.ofSeconds(30))\n                    .build())\n            .execute(this::onPart));\n}\n```",
+      "expected_output": "A correct response for “Java audit · detached SessionRetryContext and reset query timeout (RULE-JV-07)”, including this primary requirement: Cite `RULE-JV-07` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-JV-07` by ID.",
+        "Identify both missing propagation paths: the future returned by `SessionRetryContext.supplyResult(...)` is not retained and cancelled when `requestCancelled` completes, and every retry receives a fresh fixed 30-second `withRequestTimeout` instead of the remaining duration until `callerDeadline`.",
+        "Recommend retaining the outer retry future and registering caller cancellation with `operation.cancel(false)`.",
+        "Recommend recomputing the remaining duration from the original `callerDeadline` inside the retry callback and passing it to `.withRequestTimeout(...)` for the current `ExecuteQuery` attempt.",
+        "State the boundary precisely: cancelling the SessionRetryContext future prevents subsequent retries but does not cancel an already running ExecuteQuery; its request timeout bounds that attempt.",
+        "State that cancelling the inner ExecuteQuery future is normally unnecessary and is not a substitute for cancelling the outer retry future."
+      ],
+      "covers": "Java audit · detached SessionRetryContext and reset query timeout (RULE-JV-07)"
+    },
+    {
+      "id": 2133803251,
+      "name": "java-rule-jv-08-client-floatvector",
+      "category": "java",
+      "prompt": "Review this YDB Java query path. The application already has the embedding\nas `float[]`, binds it as a YQL `List<Float>` parameter, and runs:\n\n```yql\nDECLARE $embedding AS List<Float>;\nSELECT id FROM documents\nORDER BY Knn::CosineDistance(\n    embedding, Knn::ToBinaryStringFloat($embedding))\nLIMIT 10;\n```",
+      "expected_output": "A correct response for “Java audit · client FloatVector list converted in YQL (RULE-JV-08)”, including this primary requirement: Cite `RULE-JV-08` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-JV-08` by ID.",
+        "Identify the application-provided `float[]` bound as `List<Float>` plus server-side `Knn::ToBinaryStringFloat` as the anti-pattern.",
+        "Link to the current YDB vector-search recipe and its Java tab for client-side serialization instead of inventing a serialization snippet.",
+        "Bind the serialized result as YQL `String` and use it directly in `Knn::CosineDistance`.",
+        "Explain that the YQL conversion remains valid for a vector constructed within YQL."
+      ],
+      "covers": "Java audit · client FloatVector list converted in YQL (RULE-JV-08)"
+    },
+    {
+      "id": 338406532,
+      "name": "keyset-pagination",
+      "category": "keyset",
+      "prompt": "Write a YQL query and the Go code (using ydb-go-sdk/v3) to paginate\na `users` table by `(created_at, id)` — where `created_at` is\n`Timestamp` and `id` is `Uint64`, 50 rows per page.",
+      "expected_output": "A correct response for “Query · Keyset pagination in YQL + Go”, including this primary requirement: Use keyset pagination over the primary key with tuple comparison — `WHERE (created_at, id) > ($cursorCreatedAt, $cursorId)` (or equivalent compound predicate) and `ORDER BY created_at, id LIMIT $limit`. The field order in the tuple must match the primary key.",
+      "files": [],
+      "expectations": [
+        "Use keyset pagination over the primary key with tuple comparison — `WHERE (created_at, id) > ($cursorCreatedAt, $cursorId)` (or equivalent compound predicate) and `ORDER BY created_at, id LIMIT $limit`. The field order in the tuple must match the primary key.",
+        "Avoid `OFFSET` for pagination. Citing `OFFSET` only to explain why it's the wrong shape is acceptable; recommending `OFFSET` as the pagination mechanism is a fail.",
+        "Bind cursor and limit through the SDK's typed parameter API (`ydb.ParamsBuilder()` with `.Param(\"$cursorCreatedAt\").Timestamp(...)`, `.Param(\"$cursorId\").Uint64(...)`, and `.Param(\"$limit\").Uint64(...)` (set to 50)). Raw-string interpolation of values into the query text is a fail.",
+        "Wrap the per-page read in `db.Query().Do(ctx, func(ctx, s query.Session) error { ... })` and pass `query.WithIdempotent()` — the read is idempotent.",
+        "Show or describe the caller-side cursor loop that terminates when a page returns fewer than `$limit` rows.",
+        "Avoids this failure condition: Uses `OFFSET` (e.g. `LIMIT $limit OFFSET $n`) as the pagination mechanism.",
+        "Avoids this failure condition: Interpolates the cursor or limit into the query string via `fmt.Sprintf` / string concatenation.",
+        "Avoids this failure condition: Puts the cursor field order in the tuple comparison in a different order than the primary key (e.g. `WHERE (id, created_at) > ...` when the PK is `(created_at, id)`)."
+      ],
+      "covers": "Query · Keyset pagination in YQL + Go"
+    },
+    {
+      "id": 636812235,
+      "name": "pk-design-iot",
+      "category": "pk",
+      "prompt": "I'm designing a YDB table for IoT events. Each event has a Uint64\nevent_id assigned by our id-service and the payload. Expected throughput\nis 50k inserts/sec. What should my primary key and partitioning look like?",
+      "expected_output": "A correct response for “Query · Primary-key design for IoT events (monotonic-PK trap)”, including this primary requirement: Explicitly warn that a monotonically increasing `event_id` as a single-column PK creates a hot last partition (writes concentrate on one tablet and one CPU core).",
+      "files": [],
+      "expectations": [
+        "Explicitly warn that a monotonically increasing `event_id` as a single-column PK creates a hot last partition (writes concentrate on one tablet and one CPU core).",
+        "Recommend a composite PK with a hash prefix, typically: `PRIMARY KEY (hash, event_id)` where `hash = Digest::NumericHash(event_id)` or similar. The first PK column must scatter writes.",
+        "Enable `AUTO_PARTITIONING_BY_LOAD` and set a sensible `AUTO_PARTITIONING_MIN_PARTITIONS_COUNT` (≥ 4, matching node count).",
+        "Mention `AUTO_PARTITIONING_MAX_PARTITIONS_COUNT` as an upper bound to prevent runaway splitting."
+      ],
+      "covers": "Query · Primary-key design for IoT events (monotonic-PK trap)"
+    },
+    {
+      "id": 857888031,
+      "name": "python-rule-py-01-client-floatvector",
+      "category": "python",
+      "prompt": "Review this YDB Python query path. The embedding is produced by the application:\n\n```python\nquery = '''\nDECLARE $embedding AS List<Float>;\nSELECT id FROM documents\nORDER BY Knn::CosineDistance(\n    embedding, Knn::ToBinaryStringFloat($embedding))\nLIMIT 10;\n'''\nrows = pool.execute_with_retries(query, {\n    \"$embedding\": (embedding, ydb.ListType(ydb.PrimitiveType.Float)),\n})\n```",
+      "expected_output": "A correct response for “Python audit · client FloatVector list converted in YQL (RULE-PY-01)”, including this primary requirement: Cite `RULE-PY-01` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-PY-01` by ID.",
+        "Identify the client-provided `List<Float>` plus `Knn::ToBinaryStringFloat` conversion in YQL as the anti-pattern.",
+        "Link to the current YDB vector-search recipe and its Python tab for client-side serialization instead of inventing a serialization snippet.",
+        "Bind the serialized result as YQL `String` and use the parameter directly in `Knn::CosineDistance`.",
+        "Explain that the YQL conversion remains valid for a vector constructed within YQL."
+      ],
+      "covers": "Python audit · client FloatVector list converted in YQL (RULE-PY-01)"
+    },
+    {
+      "id": 1410396193,
+      "name": "query-parameters-cli-declare",
+      "category": "query",
+      "prompt": "Our cluster runs YDB 25.1.2.7. Why does this command fail with\n`Query does not contain parameter`?\n\n```bash\nydb sql -s 'SELECT value FROM items WHERE id = $id' \\\n  --param '$id=42'\n```\n\nI thought parameter types were inferred now. Show the corrected command.",
+      "expected_output": "A correct response for “Query parameters · DECLARE remains required by YDB CLI”, including this primary requirement: Distinguish request-provided types for typed SDK requests using Syntax V1 on YDB 25.1.2.7+ from the YDB CLI parameter-input contract.",
+      "files": [],
+      "expectations": [
+        "Distinguish request-provided types for typed SDK requests using Syntax V1 on YDB 25.1.2.7+ from the YDB CLI parameter-input contract.",
+        "Explain that `ydb sql --param` still requires every accepted parameter to be declared in the YQL text; otherwise the CLI reports `Query does not contain parameter`.",
+        "Correct the query by adding exactly `DECLARE $id AS Uint64;` before the `SELECT`. The type must not be quoted.",
+        "Keep `--param '$id=42'` (or an equivalent CLI parameter source); `DECLARE` describes the type but does not provide the value."
+      ],
+      "covers": "Query parameters · DECLARE remains required by YDB CLI"
+    },
+    {
+      "id": 843378119,
+      "name": "query-parameters-declare",
+      "category": "query",
+      "prompt": "We run YDB 25.1.2.7 with Syntax V1 and send `$id` as a typed SDK parameter. Is this\ndeclaration still required, and is its syntax correct?\n\n```yql\nDECLARE $id AS \"Uint64\";\n\nSELECT value FROM items WHERE id = $id;\n```\n\nShow the corrected query and explain when keeping `DECLARE` is useful.",
+      "expected_output": "A correct response for “Query parameters · Optional DECLARE and unquoted type syntax”, including this primary requirement: State that Syntax V1 on YDB 25.1.2.7+ can take parameter types from typed values sent with the same request, so `DECLARE` is optional in this case. Do not claim the type comes from SQL context.",
+      "files": [],
+      "expectations": [
+        "State that Syntax V1 on YDB 25.1.2.7+ can take parameter types from typed values sent with the same request, so `DECLARE` is optional in this case. Do not claim the type comes from SQL context.",
+        "Identify the quoted type as invalid under Syntax V1. If the declaration is kept, correct it to exactly `DECLARE $id AS Uint64;` (without quotes). Omitting the declaration entirely is also a valid corrected query.",
+        "Keep `$id` as a separately bound parameter. `DECLARE` only describes its type and does not provide the value or make interpolation safe.",
+        "Explain that an explicit declaration remains useful as a caller contract, for readability of compound types, or for compatibility with YDB servers older than 25.1.2.7. At least one contract/readability reason and the older-server compatibility reason should be present.",
+        "Avoid calling `DECLARE` itself an anti-pattern or deprecated syntax."
+      ],
+      "covers": "Query parameters · Optional DECLARE and unquoted type syntax"
+    },
+    {
+      "id": 1298835672,
+      "name": "sql-to-yql-serial",
+      "category": "sql",
+      "prompt": "I'm porting a PostgreSQL schema to YDB. The original table uses\n`id SERIAL PRIMARY KEY`. What's the YQL equivalent?",
+      "expected_output": "A correct response for “Query · Converting PostgreSQL SERIAL to YQL”, including this primary requirement: State that YDB has serial data types and show the direct YQL shape `id Serial` with `PRIMARY KEY (id)` (or an equivalent CREATE TABLE).",
+      "files": [],
+      "expectations": [
+        "State that YDB has serial data types and show the direct YQL shape `id Serial` with `PRIMARY KEY (id)` (or an equivalent CREATE TABLE).",
+        "Explain that a serial column generates integer values automatically and may be used only as part of the primary key.",
+        "Warn that a monotonically increasing serial value as the sole primary key creates uneven distribution and a hot last partition.",
+        "For a high-write distributed design, recommend a client-generated UUID or a hash-prefix plus externally generated id instead of the serial PK.",
+        "Not invent an `AUTO_INCREMENT` keyword or a user-created `CREATE SEQUENCE`; YDB's sequence behind a serial column is private."
+      ],
+      "covers": "Query · Converting PostgreSQL SERIAL to YQL"
+    }
+  ]
+}

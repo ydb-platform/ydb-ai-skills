@@ -36,6 +36,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-go-audit
+    threshold: 0.8
     value: |
       The response should:
       - Cite `RULE-GO-02` by ID (external state mutation from inside Do
@@ -65,3 +67,6 @@ assert:
         end.
       - Misses the retry-closure semantics entirely and only comments
         on the SQL or the scan code.
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-GO-02

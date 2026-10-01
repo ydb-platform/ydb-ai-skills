@@ -31,6 +31,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-cpp-audit
+    threshold: 0.8
     value: |
       The response should:
       - Cite `RULE-CPP-02` by ID.
@@ -43,3 +45,6 @@ assert:
 
       Full fail if the response says duplicates are expected YDB
       behavior without flagging the closure mutation pattern.
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-CPP-02

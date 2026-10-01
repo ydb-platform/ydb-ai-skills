@@ -1,0 +1,30 @@
+description: C++ audit · client FloatVector list converted in YQL (RULE-CPP-13)
+
+vars:
+  user_prompt: |
+    Review this YDB C++ query path. The application already has the embedding
+    as `std::vector<float>`, binds it as a YQL `List<Float>` parameter, and
+    runs:
+
+    ```yql
+    DECLARE $embedding AS List<Float>;
+    SELECT id FROM documents
+    ORDER BY Knn::CosineDistance(
+        embedding, Knn::ToBinaryStringFloat($embedding))
+    LIMIT 10;
+    ```
+
+assert:
+  - type: llm-rubric
+    metric: table-cpp-audit
+    threshold: 0.8
+    value: |
+      The response should:
+      - Cite `RULE-CPP-13` by ID.
+      - Identify the application-provided `std::vector<float>` bound as `List<Float>` plus server-side `Knn::ToBinaryStringFloat` as the anti-pattern.
+      - Link to the current YDB vector-search recipe and its C++ tab for client-side serialization instead of inventing a serialization snippet.
+      - Bind the serialized result as YQL `String` and use it directly in `Knn::CosineDistance`.
+      - Explain that the YQL conversion remains valid for a vector constructed within YQL.
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-CPP-13

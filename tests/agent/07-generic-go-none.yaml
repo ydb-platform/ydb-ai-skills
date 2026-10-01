@@ -1,0 +1,10 @@
+description: Agent boundary · generic Go retry review uses neither YDB skill
+vars:
+  user_prompt: Review a generic Go net/http exponential-backoff loop. It does not call a database.
+assert:
+  - type: not-skill-used
+    metric: activation-precision
+    value: ydb-core
+  - type: not-skill-used
+    metric: activation-precision
+    value: ydb-table

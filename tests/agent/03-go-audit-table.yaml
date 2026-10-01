@@ -1,0 +1,14 @@
+description: Agent activation · Go query audit uses ydb-table
+vars:
+  user_prompt: |
+    Audit this YDB Go code: `db.Query().Do(ctx, func(ctx context.Context, s query.Session) error { _, err := s.Query(ctx, fmt.Sprintf("SELECT * FROM users WHERE id = %d", id)); return err })`.
+assert:
+  - type: skill-used
+    metric: activation-recall
+    value: ydb-table
+  - type: not-skill-used
+    metric: activation-isolation
+    value: ydb-core
+  - type: contains
+    metric: outcome
+    value: RULE-GO-07

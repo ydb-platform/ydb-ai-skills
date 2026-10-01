@@ -1,6 +1,6 @@
 # Project guide for coding agents
 
-This repository, **ai-dev-kit**, ships AI coding agent skills for [YDB](https://ydb.tech). The skills auto-trigger inside Claude Code / Cursor / Codex / etc. and route the agent toward grounded YDB material instead of letting it generalize from training memory. Skill bodies are deliberately small; details land in `references/` (positive patterns) and `rules/` (anti-patterns with `RULE-<PREFIX>-<NN>` IDs).
+This repository, **ydb-ai-skills**, ships AI coding agent skills for [YDB](https://ydb.tech). The skills auto-trigger inside Claude Code / Cursor / Codex / etc. and route the agent toward grounded YDB material instead of letting it generalize from training memory. Skill bodies are deliberately small; details land in `references/` (positive patterns) and `rules/` (anti-patterns with `RULE-<PREFIX>-<NN>` IDs).
 
 When you, the coding agent, work in this repo: the rules below are non-negotiable. Project-specific conventions on top of them live in [`docs/authoring.md`](docs/authoring.md) — read it before adding or restructuring skill content.
 
@@ -28,11 +28,12 @@ skills/
   ydb-core/SKILL.md             single-file router; stable anchor sections (#connecting, #schema-basics, ...)
   ydb-table/                    Table surface — YQL, schema, query execution
     SKILL.md
-    references/                 positive patterns; short doc excerpts + canonical snippets
-      working-with-data.md      language-agnostic YDB-level reference (reads, writes, transaction modes)
-      embed/<lang>.md           per-language SDK / driver patterns
+    references/                 language-agnostic YDB-level guidance
+      working-with-data.md      reads, writes, and transaction modes
+    embed/                      per-language positive SDK / driver patterns
+      <lang>.md
     rules/                      RULE-<PREFIX>-<NN> anti-patterns
-      embed/<lang>.md
+      <lang>.md
   ydb-topics/, ydb-coordination/  same shape as ydb-table
 docs/
   authoring.md                  full content conventions, prefix registry
@@ -41,10 +42,10 @@ docs/
 
 ## Conventions you must respect
 
-- **Two buckets, no mixing.** `references/` is "how to do it right" (no `RULE-` IDs, no severity labels). `rules/` is "what to catch" (must have `RULE-<PREFIX>-<NN>`, severity, what-to-look-for, problem, fix). Don't put advisory prose in `rules/`, and don't put audit anti-patterns in `references/`.
-- **`rules/` files are self-contained.** No cross-skill links from `rules/`. The user may install one surface skill without the others; rules must still produce correct audit output. `references/` may link to `../ydb-core/SKILL.md` anchors and to other references in the same skill — relative paths only.
-- **YDB-level files stay language-agnostic.** Top-level `references/*.md` (e.g. `working-with-data.md`) and any cross-cutting references must not mention JDBC / Hibernate / Spring / Java / Python / Go / .NET / C++ tokens. Per-language guidance goes in `references/embed/<lang>.md` and `rules/embed/<lang>.md`. Verify with `grep -iE 'jdbc|hibernate|spring|java|jpa|python|golang|\.net|dotnet|csharp'` before committing.
-- **Prefix registry.** New rule prefixes must be registered in the table in `docs/authoring.md` on first use. Never reuse an ID or renumber after merge. Currently allocated: `JV` (Java SDK / JDBC / Hibernate / Spring Data), `GO` (Go SDK — `ydb-go-sdk/v3`).
+- **Content buckets do not mix.** `references/` holds language-agnostic positive guidance, `embed/` holds language-specific positive patterns, and `rules/` holds audit anti-patterns with `RULE-<PREFIX>-<NN>`, severity, signals, problem, and fix. Positive guidance has no rule IDs or severity labels.
+- **`rules/` files are self-contained.** No cross-skill links from `rules/`. The user may install one surface skill without the others; rules must still produce correct audit output. `references/` and `embed/` may link to files inside the same skill package. Do not use relative links that escape the package; refer to a companion skill by slug or link official external documentation.
+- **YDB-level files stay language-agnostic.** Top-level `references/*.md` (e.g. `working-with-data.md`) and any cross-cutting references must not mention JDBC / Hibernate / Spring / Java / Python / Go / .NET / C++ tokens. Per-language guidance goes in `embed/<lang>.md` and `rules/<lang>.md`. Verify with `grep -iE 'jdbc|hibernate|spring|java|jpa|python|golang|\.net|dotnet|csharp'` before committing.
+- **Prefix registry.** New rule prefixes must be registered in the table in `docs/authoring.md` on first use. Never reuse an ID or renumber after merge. Currently allocated: `JV` (Java SDK / JDBC / Hibernate / Spring Data), `GO` (Go SDK application APIs), `CGO` (Go core driver), `CPP` (C++ SDK), and `PY` (Python SDK).
 - **Skill `description:` matches shipped content, not aspirations.** The selector triggers on what's in `description:`. If you list `ydb-go-sdk` in the triggers but the skill has no grounded Go content, the skill will fire on Go code and have nothing useful to load — worse than not firing. Update the description when content lands, not before.
 
 ## Git workflow

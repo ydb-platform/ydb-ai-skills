@@ -1,0 +1,52 @@
+{
+  "skill_name": "ydb-docs",
+  "description": "Generated from the promptfoo cases under tests/ydb-docs; edit the YAML sources, then regenerate.",
+  "evals": [
+    {
+      "id": 1037952160,
+      "name": "default-main-fallback",
+      "category": "default",
+      "prompt": "Find the current English YDB documentation for client authentication.\nI did not request a product version. Describe the retrieval sequence,\nincluding what to do if the root llms.txt endpoint is unavailable.",
+      "expected_output": "A correct response for “Documentation · Default branch and retrieval fallback”, including this primary requirement: Use https://ydb.tech/llms.txt as the normal entry point.",
+      "files": [],
+      "expectations": [
+        "Use https://ydb.tech/llms.txt as the normal entry point.",
+        "Select English and use the main documentation branch because no version was requested.",
+        "Fall back to https://ydb.tech/docs/en/llms.txt?version=main, then documentation navigation or site-restricted search if indexes are unavailable.",
+        "Open only the relevant linked pages and disclose any retrieval or version mismatch."
+      ],
+      "covers": "Documentation · Default branch and retrieval fallback"
+    },
+    {
+      "id": 2133047914,
+      "name": "lookup-offline",
+      "category": "lookup",
+      "prompt": "Do not use browser, HTTP, or search tools in this scenario. Explain how\nyou would find the official Russian YDB 26.1 documentation for\ntransactions. Do not answer the transaction question from memory.",
+      "expected_output": "A correct response for “Documentation · Offline lookup plan preserves language and version”, including this primary requirement: Identify https://ydb.tech/llms.txt as the normal entry point.",
+      "files": [],
+      "expectations": [
+        "Identify https://ydb.tech/llms.txt as the normal entry point.",
+        "Select Russian documentation and the v26.1 product branch rather than main.",
+        "Explain that the relevant pages linked by the index must be read before answering.",
+        "Respect the no-network constraint and not invoke browser, HTTP, or search tools.",
+        "Not claim that transaction behavior was verified in this scenario."
+      ],
+      "covers": "Documentation · Offline lookup plan preserves language and version"
+    },
+    {
+      "id": 1679514035,
+      "name": "verify-source-chain",
+      "category": "verify",
+      "prompt": "I need to verify whether YDB documents SerializableRW transaction semantics.\nExplain how you would find the authoritative page and cite the evidence.\nDo not treat an index entry as proof.",
+      "expected_output": "A correct response for “Documentation · Verify claims against a relevant page, not the index”, including this primary requirement: Start from https://ydb.tech/llms.txt and select the relevant documentation index.",
+      "files": [],
+      "expectations": [
+        "Start from https://ydb.tech/llms.txt and select the relevant documentation index.",
+        "Open a transaction page linked from that index before making the claim.",
+        "Cite the page actually read rather than citing llms.txt as behavioral evidence.",
+        "State that an unsupported claim must remain unverified instead of being inferred."
+      ],
+      "covers": "Documentation · Verify claims against a relevant page, not the index"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+description: Agent activation · YDB onboarding uses ydb-core
+vars:
+  user_prompt: Give me a concise introduction to YDB, its main developer surfaces, and where to start.
+assert:
+  - type: skill-used
+    metric: activation-recall
+    value: ydb-core
+  - type: not-skill-used
+    metric: activation-isolation
+    value: ydb-table
+  - type: javascript
+    metric: outcome
+    value: |
+      const s = String(output).toLowerCase();
+      return s.includes('distributed') && s.includes('sql') && s.includes('yql');

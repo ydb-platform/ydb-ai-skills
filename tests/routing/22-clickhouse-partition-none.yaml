@@ -1,0 +1,12 @@
+description: Routing · ClickHouse partition design → none
+
+vars:
+  user_prompt: |
+    Design a ClickHouse PARTITION BY and ORDER BY expression for an events
+    table queried by tenant and month. We do not use YDB here.
+
+assert:
+  - type: regex
+    value: \bnone\b
+  - type: not-regex
+    value: \bydb-(core|table)\b

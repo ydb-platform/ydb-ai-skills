@@ -5,6 +5,7 @@ vars:
     What is the general YDB best practice for propagating an upstream request
     deadline and cancellation through session acquisition, retries, and RPCs?
     I want one end-to-end budget instead of resetting the timeout per attempt.
+    There is no query or application code to review; this is a cross-cutting client policy.
 
 assert:
   - type: regex

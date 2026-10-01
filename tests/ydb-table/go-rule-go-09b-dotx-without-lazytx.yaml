@@ -37,6 +37,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-go-audit
+    threshold: 0.8
     value: |
       The response should:
       - Cite `RULE-GO-09` by ID.
@@ -63,3 +65,6 @@ assert:
       - Treats the existing `query.WithCommit()` as the begin-side
         fix.
       - Misses the `ydb.WithLazyTx(true)` driver-option name entirely.
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-GO-09

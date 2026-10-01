@@ -1,6 +1,6 @@
 # C++ SDK (`ydb-cpp-sdk`) — anti-patterns
 
-Self-contained audit rules. Positive patterns: [`../../references/embed/cpp.md`](../../references/embed/cpp.md).
+Self-contained audit rules. Positive patterns are in `embed/cpp.md`, loaded directly from `SKILL.md`.
 
 ## Audit format
 

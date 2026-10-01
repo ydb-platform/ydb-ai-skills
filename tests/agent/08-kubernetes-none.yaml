@@ -1,0 +1,10 @@
+description: Agent boundary · Kubernetes RBAC uses neither YDB skill
+vars:
+  user_prompt: Show a Kubernetes Role and RoleBinding that let one ServiceAccount list ConfigMaps.
+assert:
+  - type: not-skill-used
+    metric: activation-precision
+    value: ydb-core
+  - type: not-skill-used
+    metric: activation-precision
+    value: ydb-table

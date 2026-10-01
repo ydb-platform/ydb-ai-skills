@@ -44,6 +44,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-cpp-audit
+    threshold: 0.8
     value: |
       The response should:
       - Cite `RULE-CPP-09` by ID.
@@ -58,3 +60,6 @@ assert:
 
       Full fail if the response blames only application logic outside
       the stream without mentioning retry-induced duplicates.
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-CPP-09

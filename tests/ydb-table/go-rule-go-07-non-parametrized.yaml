@@ -25,6 +25,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-go-audit
+    threshold: 0.8
     value: |
       The response should:
       - Cite `RULE-GO-07` by ID (non-parametrized YQL).
@@ -51,3 +53,6 @@ assert:
       naming the plan-cache consequence, or only mentions plan caching
       without naming SQL injection, or if its proposed fix drops the prefix `%`
       (turning the predicate from prefix-LIKE into equality match).
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-GO-07

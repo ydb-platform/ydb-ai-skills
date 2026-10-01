@@ -26,6 +26,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-cpp-audit
+    threshold: 0.8
     value: |
       The response should:
       - Cite `RULE-CPP-05` by ID.
@@ -37,3 +39,6 @@ assert:
       - Not invent a different RULE-CPP-XX ID.
 
       Full fail if the response says the custom backoff is fine.
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-CPP-05

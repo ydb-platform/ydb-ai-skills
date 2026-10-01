@@ -2,6 +2,8 @@
 
 SDK picks which cluster node receives each gRPC request. Docs: <https://ydb.tech/docs/en/recipes/ydb-sdk/balancing>.
 
+Topology details and balancer, pool, and session API names differ by SDK. Ask for the target language and verify its current SDK documentation before naming an API; do not translate Go names into another SDK by analogy.
+
 ## Default: random spread
 
 Pick an endpoint at random per request. Spreads load across every discovered node. Go SDK names: `embed/go.md`.
