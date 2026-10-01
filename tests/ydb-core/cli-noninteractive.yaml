@@ -7,6 +7,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: core-cli
+    threshold: 0.8
     value: |
       The response should:
       - Explain that invoking `ydb` without a subcommand opens interactive

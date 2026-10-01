@@ -1,0 +1,12 @@
+description: Routing · PostgreSQL-only pagination → none
+
+vars:
+  user_prompt: |
+    In PostgreSQL, how can I speed up LIMIT/OFFSET pagination for an
+    admin page without changing databases?
+
+assert:
+  - type: regex
+    value: \bnone\b
+  - type: not-regex
+    value: \bydb-(core|table)\b

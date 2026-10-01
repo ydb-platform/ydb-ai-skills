@@ -34,6 +34,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-cpp-audit
+    threshold: 0.8
     value: |
       The response should:
       - Cite `RULE-CPP-06` by ID.
@@ -50,3 +52,6 @@ assert:
       Full fail if the response says per-request driver construction
       is fine or recommends only tuning timeouts without addressing
       the driver lifecycle.
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-CPP-06

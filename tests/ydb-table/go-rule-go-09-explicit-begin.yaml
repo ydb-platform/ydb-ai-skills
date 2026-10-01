@@ -36,6 +36,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-go-audit
+    threshold: 0.8
     value: |
       The response should:
       - Cite `RULE-GO-09` by ID.
@@ -68,3 +70,6 @@ assert:
         right and only mentions `DoTx` in passing without LazyTx is
         not a full fail — the rubric only triggers when LazyTx is
         missing from the response's primary recommendation).
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-GO-09

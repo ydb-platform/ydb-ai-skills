@@ -1,6 +1,6 @@
 ---
 name: ydb-core
-description: Entry point and router for YDB-related work. Orients an LLM about YDB — what it is, what surfaces it exposes, where to read upstream docs, which specialist skill to load for surface-specific questions. Covers SDK packages, connection strings and auth, local Docker, schema fundamentals, YDB CLI command discovery and scheme inspection, common integrations (ORMs, migration tools, Terraform), client-side balancing, and session lifecycle / resilience under rolling restart. Use when the user asks a general YDB question, mentions YDB without naming a specific surface (queries, topics, coordination), needs setup help, wants to inspect a database with YDB CLI, asks about balancing policies, end-to-end deadline propagation, caller cancellation, shared retry budgets, `BAD_SESSION` / `shutdownHint` / rolling restart, or when another YDB skill needs foundational context. Also triggers on `grpcs://` / `grpc://`, `ydb --help`, `ydb version`, `ydb config profile`, `ydb config info`, `ydb discovery`, `ydb scheme`, `balancers.RandomChoice`, `balancers.PreferNearestDC`, `ydb.WithBalancer`, `session-balancer`, and "getting started with YDB" prompts.
+description: "Use only for foundational YDB setup and operational guidance: a general YDB introduction; connection strings and authentication; local Docker; YDB CLI discovery and object inspection with `ydb scheme`; choosing an SDK package or integration; client-side balancing; session lifecycle under rolling restart; and general end-to-end deadline, cancellation, or retry-budget guidance when no application code is being audited. Triggers include `grpcs://`, `grpc://`, `ydb --help`, `ydb version`, `ydb config`, `ydb discovery`, `ydb scheme`, `balancers.RandomChoice`, `balancers.PreferNearestDC`, `ydb.WithBalancer`, `session-balancer`, `BAD_SESSION`, and `shutdownHint`. This is not a catch-all YDB skill: if a request falls outside this closed list, choose a more specific skill."
 ---
 
 # YDB Core
@@ -69,9 +69,9 @@ Q = queries, T = topics, C = coordination.
 
 ## cli
 
-Treat the installed CLI as a versioned interface whose syntax must be discovered at runtime:
+Treat the installed CLI as a versioned interface whose syntax must be discovered at runtime. CLI discovery is an ordered gate: complete it before composing or running a database command. `ydb version` does not replace `ydb --help`.
 
-1. Run `ydb version` and `ydb --help` before composing commands for a session.
+1. Run both `ydb version` and `ydb --help` before composing commands for a session.
 2. Run `ydb <subcommand> --help` before first use of that command tree; use `-hh` when the regular help says more options are hidden.
 3. Keep global connection options before the first subcommand. Preserve the endpoint, database, profile, certificate, and credential options supplied by the user; do not invent or silently replace them.
 4. Prefer a non-interactive subcommand. Running `ydb` without a subcommand opens interactive mode; do that only when the user explicitly requests an interactive session.

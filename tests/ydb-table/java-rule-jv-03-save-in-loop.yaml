@@ -18,6 +18,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-java-audit
+    threshold: 0.8
     value: |
       The response should:
       - Cite `RULE-JV-03` by ID (Spring save() in a loop).
@@ -26,3 +28,6 @@ assert:
       - Not claim the loop is fine "because batch_size is configured" — that's exactly the misconception the rule corrects.
 
       Full fail if the response approves the loop because batch_size is set.
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-JV-03

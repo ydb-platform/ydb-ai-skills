@@ -1,0 +1,24 @@
+description: Core · Preserve one end-to-end deadline budget
+
+vars:
+  user_prompt: |
+    A request handler has a 2 second upstream deadline. Our YDB wrapper creates a
+    fresh 2 second timeout for session acquisition, every retry, and every RPC.
+    Is that the right way to keep each attempt bounded?
+
+assert:
+  - type: llm-rubric
+    metric: core-deadline
+    threshold: 0.8
+    value: |
+      The response should:
+      - Reject resetting a fresh full timeout at each layer or retry because the
+        total operation can exceed the caller's budget.
+      - Propagate the caller context/deadline through session acquisition,
+        retries, query execution, stream draining, and commit.
+      - Allow a shorter child deadline only when it is bounded by the remaining
+        parent budget and cancellation still propagates.
+      - Explain that retry helpers must stop when the caller budget is exhausted.
+
+      Full fail if the response endorses `context.Background()` or a new full
+      timeout inside every retry attempt.

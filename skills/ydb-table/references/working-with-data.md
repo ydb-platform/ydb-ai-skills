@@ -1,6 +1,6 @@
 # Working with data in YDB tables
 
-How application code reads and writes YDB tables: which transaction mode applies, how to write many rows at once, and which API to pick when. Pairs with `../ydb-core/SKILL.md#schema-basics` for the schema choices that interact with these decisions.
+How application code reads and writes YDB tables: which transaction mode applies, how to write many rows at once, and which API to pick when. Pair it with the `ydb-core` skill's schema fundamentals when that companion skill is installed.
 
 ## Terminology
 
@@ -92,4 +92,4 @@ Source: <https://ydb.tech/docs/en/dev/paging>.
 
 ## Related
 
-- [`../../ydb-core/SKILL.md#schema-basics`](../../ydb-core/SKILL.md#schema-basics) — primary-key shape and partitioning determine batch-ingest efficiency and transaction-conflict locality.
+- The separate `ydb-core` skill's schema guidance covers how primary-key shape and partitioning determine batch-ingest efficiency and transaction-conflict locality.

@@ -1,0 +1,10 @@
+description: Routing · Verify a YDB claim from official docs → ydb-docs
+
+vars:
+  user_prompt: |
+    Check the official YDB documentation and give me the source that defines
+    SerializableRW transaction semantics. I need a citation, not code.
+
+assert:
+  - type: regex
+    value: ^\s*ydb-docs\s*$

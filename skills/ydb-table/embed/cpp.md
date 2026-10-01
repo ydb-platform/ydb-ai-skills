@@ -12,7 +12,7 @@ Official SDK: **`ydb-cpp-sdk`** (<https://github.com/ydb-platform/ydb-cpp-sdk>),
 - **`NYdb::NTable::TTableClient`** — Table Service: `ExecuteDataQuery`, `BulkUpsert`, `StreamExecuteScanQuery`, `ExecuteSchemeQuery`.
 - One **`NYdb::TDriver`** per process; clients are cheap on top. C++20. Docs: <https://ydb.tech/docs/en/reference/ydb-sdk/>.
 
-Connection details: [`../../../ydb-core/SKILL.md#connecting`](../../../ydb-core/SKILL.md#connecting). Production: `NYdb::CreateFromEnvironment(connectionString)` (`helpers/helpers.h`).
+Connection details: <https://ydb.tech/docs/en/concepts/connect>. Production: `NYdb::CreateFromEnvironment(connectionString)` (`helpers/helpers.h`).
 
 ## Query pattern
 
@@ -30,11 +30,11 @@ ThrowOnError(client.RetryQuerySync(
     NYdb::NRetry::TRetryOperationSettings().Idempotent(true)));
 ```
 
-Bind values with **`TParamsBuilder`** — never concatenate into YQL. Build results **inside** the lambda; assign outers only on success (see [`rules/embed/cpp.md`](../../rules/embed/cpp.md) RULE-CPP-02).
+Bind values with **`TParamsBuilder`** — never concatenate into YQL. Build results **inside** the lambda; assign outers only on success (see `rules/cpp.md` RULE-CPP-02).
 
 ## Transactions
 
-Single statement: `TTxControl::BeginTx(TTxSettings::SerializableRW()).CommitTx()` on the query call. Multi-step: first query `BeginTx()` without `CommitTx`, later `TTxControl::Tx(tx).CommitTx()`. Modes: [`../working-with-data.md`](../working-with-data.md), <https://ydb.tech/docs/en/recipes/ydb-sdk/tx-control>.
+Single statement: `TTxControl::BeginTx(TTxSettings::SerializableRW()).CommitTx()` on the query call. Multi-step: first query `BeginTx()` without `CommitTx`, later `TTxControl::Tx(tx).CommitTx()`. Modes: `references/working-with-data.md`, <https://ydb.tech/docs/en/recipes/ydb-sdk/tx-control>.
 
 ## Retries
 
@@ -84,4 +84,4 @@ ThrowOnError(client.RetryQuerySync(
 
 ## Bulk upsert
 
-`TTableClient::BulkUpsert` via `RetryOperationSync` — non-transactional, UPSERT-keyed, `.Idempotent(true)` conventional. See <https://ydb.tech/docs/en/dev/batch-upload> and [`../working-with-data.md`](../working-with-data.md).
+`TTableClient::BulkUpsert` via `RetryOperationSync` — non-transactional, UPSERT-keyed, `.Idempotent(true)` conventional. See <https://ydb.tech/docs/en/dev/batch-upload> and `references/working-with-data.md`.

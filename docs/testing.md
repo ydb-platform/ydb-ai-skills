@@ -8,13 +8,16 @@ The tool is [promptfoo](https://www.promptfoo.dev). One declarative `promptfooco
 
 Every eval runs this shape:
 
-- **System prompt:** the installable skills' content embedded into one system message. `ydb-core` is loaded as `SKILL.md` plus its `references/balancing.md`, `references/session-lifecycle.md`, `references/embed/go.md`, and `rules/embed/go.md`. `ydb-table` is loaded as `SKILL.md` plus its `references/cli.md`, `references/working-with-data.md`, `references/query-parameters.md`, `references/embed/java.md`, `references/embed/go.md`, `references/embed/cpp.md`, `rules/embed/java.md`, `rules/embed/go.md`, `rules/embed/cpp.md`, `references/embed/python.md`, and `rules/embed/python.md` — i.e. the full body of each skill, as if the agent had read every Load-Sources entry.
+- **System prompt:** the installable skills' content embedded into one system message. `ydb-core` is loaded as `SKILL.md` plus its `references/balancing.md`, `references/session-lifecycle.md`, `embed/go.md`, and `rules/go.md`. `ydb-table` is loaded as `SKILL.md` plus its `references/cli.md`, `references/working-with-data.md`, `references/query-parameters.md`, `embed/java.md`, `embed/go.md`, `embed/cpp.md`, `embed/python.md`, `rules/java.md`, `rules/go.md`, `rules/cpp.md`, and `rules/python.md` — i.e. the full body of each skill, as if the agent had read every Load-Sources entry.
 - **User prompt:** supplied by the test case (`tests/<skill>/<case>.yaml`).
 - **Grader:** `anthropic/claude-haiku-4.5` judges each `llm-rubric` assertion against a criterion block written in plain English.
 
 This approximates the *ceiling* per model — every loadable file is fully in context. A model that fails this can't work in a real runtime (Claude Code, Codex, Cursor, etc.) where the agent additionally has to decide which skill to load and which references to read.
 
-Runtime-specific behavior (how Claude Code chooses skills vs. how Codex does) is **not** tested here. That requires installing each runtime and running against it, which is a manual exercise — see the [known gap](#runtime-level-testing-known-gap) below.
+The main matrix intentionally measures a ceiling with all sources preloaded.
+Runtime selection is tested separately: the routing matrix checks descriptions,
+and `promptfooconfig.agent.yaml` runs the real local Claude Code Skill tool
+against project-installed skills.
 
 ## Setup
 
@@ -36,7 +39,7 @@ npx promptfoo@latest view         # open the matrix in the browser
 
 ## Speed knobs
 
-Default concurrency is set to **12** in each `promptfooconfig*.yaml` via
+Default concurrency is set to **12** in the preloaded matrix and routing configs via
 `evaluateOptions.maxConcurrency`. On a healthy OpenRouter key this
 finishes the full matrix in roughly a third of the time of the
 promptfoo default (4). If your key's monthly limit caps single-request
@@ -151,6 +154,110 @@ python3 scripts/validate-skills.py
 
 Exit code 0 = all checks passed; 1 = at least one violation, printed to stderr with file path and reason. Use this before opening a PR to catch the cheap mistakes without burning a promptfoo run.
 
+## Claude Code runtime suite
+
+The runtime suite tests the actual skill-selection path rather than embedding
+skill bodies in a system prompt. Project-local symlinks under `.claude/skills/`
+expose both packages to Claude Code; Promptfoo asserts `skill-used` /
+`not-skill-used` and deterministic outcome signals.
+
+Install the pinned Claude Agent SDK dependency once, then run the suite with
+the existing local Claude Code login. No OpenRouter key is required.
+
+```bash
+npm install
+npx promptfoo@latest eval -c promptfooconfig.agent.yaml
+```
+
+Each case runs three fresh trials with cache disabled. The provider is
+read-only: file inspection is allowed, while Bash, writes, and web access are
+disabled. Read activation recall/precision and outcome as separate named
+metrics; a lucky answer without the expected Skill call does not pass.
+
+For the broad preloaded model matrix, use an explicit three-trial stability run
+on high-risk cases before a release:
+
+```bash
+npx promptfoo@latest eval --no-cache --repeat 3 \
+  --filter-pattern 'admin safety|scheme mutation|Explain-analyze|deadline|BulkUpsert'
+```
+
+## Arcadia scenarios, activations, and local validation
+
+The promptfoo YAML files under `tests/<skill>/` are the editable eval source.
+Generate the current Arcadia Skill Eval format into each installable skill:
+
+```bash
+python3 scripts/export-arcadia-evals.py
+python3 scripts/export-arcadia-activations.py
+```
+
+The generated files are:
+
+```text
+skills/ydb-core/evals/scenarios.json
+skills/ydb-core/evals/activations.json
+skills/ydb-docs/evals/scenarios.json
+skills/ydb-docs/evals/activations.json
+skills/ydb-table/evals/scenarios.json
+skills/ydb-table/evals/activations.json
+```
+
+`validate-skills.py` runs the generator in check mode, so a changed YAML case
+with a stale `scenarios.json` fails local validation. The standalone check is:
+
+```bash
+python3 scripts/export-arcadia-evals.py --check
+python3 scripts/export-arcadia-activations.py --check
+python3 scripts/eval-coverage.py --check
+```
+
+With an Arcadia checkout at `~/arcadia`, run all deterministic repository,
+skill-package, and case-discovery checks with one command:
+
+```bash
+python3 scripts/validate-arcadia-evals.py
+```
+
+This invokes the same local Arcadia tooling used after sync:
+
+```bash
+~/arcadia/ya tool swebench skill validate \
+  --skill "$PWD/skills/ydb-core/SKILL.md"
+
+~/arcadia/ya tool swebench skill discover cases \
+  --skill "$PWD/skills/ydb-core/SKILL.md" \
+  --case-type scenarios
+```
+
+To make Arcadia parse every case and build the complete local SWE Bench
+datasets without calling a model:
+
+```bash
+python3 scripts/validate-arcadia-evals.py --build-datasets
+```
+
+To run one complete solver-and-judge scenario through Arcadia SWE Bench:
+
+```bash
+python3 scripts/validate-arcadia-evals.py \
+  --run-case ydb-core:onboarding \
+  --agent claude
+```
+
+The wrapper invokes the installed `swebenchcli` directly with a local-only
+placeholder token, so dataset building does not require an SSH agent or call a
+model. A model run additionally requires the selected agent to be logged in and
+permission to create an isolated Arcadia mount. It writes `results.json`,
+`summary.txt`, and `report.html` to a temporary output directory and prints the
+report path. Use `--output <dir>` when the result should be kept at a known path.
+
+Run the complete positive/negative Arcadia routing suites through local Claude:
+
+```bash
+python3 scripts/validate-arcadia-evals.py --run-activations --agent claude
+```
+
 ## Routing matrix
 
 A second promptfoo config — `promptfooconfig.routing.yaml` — tests the
@@ -181,24 +288,10 @@ any `description:` edit. `scripts/validate-skills.py` calls
 `extract-descriptions.py --check` and fails if `tests/routing/descriptions.md`
 is stale relative to the SKILL.md frontmatter.
 
-## Runtime-level testing (known gap)
-
-This setup tests models. It does not test runtimes — Claude Code / Cursor / Windsurf / Codex / Gemini CLI each have their own skill-loading mechanics (description-first routing, varying system-prompt construction, different tool sets) that can change the outcome from what the matrix shows.
-
-Runtime-level testing requires installing each runtime and running against it with the skill installed. That is manual today:
-
-1. Install skills into the target runtime (`./install.sh --agent=<name>`).
-2. Spin up the runtime with a target model.
-3. Paste a prompt from `tests/` into the runtime's chat.
-4. Eye-check the response.
-
-A non-trivial runtime-testing harness would need per-runtime drivers (subprocess calls or embedded automation). Deferred.
-
 ## What is NOT included
 
 - **CI workflow.** Promptfoo runs locally against an OpenAI-compatible endpoint. CI wiring would require that endpoint to be reachable from CI and an API key provisioned as a secret — out of scope right now.
 - **Cost tracking.** The matrix runs every provider × every test. Use `--filter-providers` / `--filter-pattern` during iteration to keep the spend low.
-- **Trigger-only tests.** The current layout always loads all installable skills. If you need to measure "does the model correctly pick ydb-table given only the descriptions?" — that's a second-stage rig, not built here.
 
 ## See also
 

@@ -1,0 +1,10 @@
+description: Routing · Direct YDB documentation index lookup → ydb-docs
+
+vars:
+  user_prompt: |
+    Use the official YDB llms.txt index to find the current client
+    authentication documentation in English.
+
+assert:
+  - type: regex
+    value: ^\s*ydb-docs\s*$

@@ -15,6 +15,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-java-audit
+    threshold: 0.8
     value: |
       The response should:
       - Cite `RULE-JV-04` by ID (deleteAllById on a bulk path).
@@ -23,3 +25,6 @@ assert:
       - Not confuse `deleteAllById` with `deleteAll` (the former takes ids, the latter takes entities).
 
       Full fail if the response says `deleteAllById` is the correct bulk method, or recommends a loop instead.
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-JV-04

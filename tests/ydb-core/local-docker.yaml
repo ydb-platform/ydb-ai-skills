@@ -8,6 +8,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: core-local
+    threshold: 0.8
     value: |
       The response should:
       - Recommend the `ydbplatform/local-ydb` Docker image (the image name

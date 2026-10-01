@@ -12,6 +12,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-cli
+    threshold: 0.8
     value: |
       The response should:
       - State clearly that `--explain-analyze` executes the query and the

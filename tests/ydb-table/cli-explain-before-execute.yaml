@@ -2,19 +2,24 @@ description: Table CLI · Explain a complex query before execution
 
 vars:
   user_prompt: |
-    The schema is known. Execute `query.sql` against profile `prod`; it has a
-    multi-statement query with a join and window function. If there is a YQL
-    error, fix it and retry.
+    I have `query.sql` locally and will run it against profile `prod`; it has a
+    multi-statement query with a join and window function. Show me the exact
+    safe validation and execution sequence, including what to do with YQL
+    errors. Do not execute it from this environment.
 
 assert:
   - type: llm-rubric
+    metric: table-cli
+    threshold: 0.8
     value: |
       The response should:
-      - Verify `ydb sql` syntax through local help first.
-      - Run the query file with `ydb -p prod sql --explain -f query.sql`
-        before any execution attempt.
+      - Verify `ydb sql` syntax through local help before composing the
+        database commands.
+      - Show `ydb -p prod sql --explain -f query.sql` as the first database
+        action, before any execution attempt.
       - Iterate on parser or semantic errors with `--explain`, not by running
         broken queries repeatedly.
-      - Execute with `ydb -p prod sql -f query.sql` only after validation
-        succeeds.
-      - Not substitute `--explain-analyze` for validation and not add `-y`.
+      - Show `ydb -p prod sql -f query.sql` as the execution command only after
+        validation succeeds.
+      - Not execute the query, substitute `--explain-analyze` for validation,
+        or add `-y`.

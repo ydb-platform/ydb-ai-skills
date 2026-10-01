@@ -8,6 +8,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: core-cli
+    threshold: 0.8
     value: |
       The response should:
       - Inspect `ydb scheme rmdir --help` instead of constructing force flags

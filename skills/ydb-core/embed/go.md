@@ -1,6 +1,6 @@
 # Balancing and sessions in Go (`ydb-go-sdk/v3`)
 
-Principles: [`../balancing.md`](../balancing.md), [`../session-lifecycle.md`](../session-lifecycle.md). YQL execution and transaction patterns live in the ydb-table skill.
+Principles: `references/balancing.md`, `references/session-lifecycle.md`. YQL execution and transaction patterns live in the ydb-table skill.
 
 ## Default balancer
 

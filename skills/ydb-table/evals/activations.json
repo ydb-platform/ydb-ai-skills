@@ -1,0 +1,156 @@
+{
+  "version": 1,
+  "skill_name": "ydb-table",
+  "cases": [
+    {
+      "id": 1943444,
+      "prompt": "I've never used YDB before. Can you give me a 3-minute intro —\nwhat it is, what problems it solves, and how it differs from\nPostgreSQL?",
+      "should_activate": false,
+      "note": "Routing · Onboarding question → ydb-core Expected router target: ydb-core."
+    },
+    {
+      "id": 405013215,
+      "prompt": "I need to connect to a hosted YDB cluster from a Go service.\nWhat connection string format does YDB use and which env vars\ndo I set for service-account auth?",
+      "should_activate": false,
+      "note": "Routing · Setup / connection question → ydb-core Expected router target: ydb-core."
+    },
+    {
+      "id": 709902074,
+      "prompt": "Write a YQL query to paginate a `users` table by\n`created_at` (Timestamp) and `id` (Uint64), 50 rows per page.",
+      "should_activate": true,
+      "note": "Routing · YQL writing → ydb-table Expected router target: ydb-table."
+    },
+    {
+      "id": 577997682,
+      "prompt": "Design a primary key for an IoT events table in YDB. Devices\nemit telemetry every second; we'll have ~50M rows/day and\nquery mostly by device_id + recent time range.",
+      "should_activate": true,
+      "note": "Routing · Schema / primary-key design → ydb-table Expected router target: ydb-table."
+    },
+    {
+      "id": 694709353,
+      "prompt": "Review this Spring Data JPA code that writes events to YDB.\nIs there anything wrong with the bulk-write pattern?\n\n```java\n@Transactional\npublic void saveAll(List<Event> events) {\n    for (Event e : events) {\n        repository.save(e);\n    }\n}\n```",
+      "should_activate": true,
+      "note": "Routing · Java/Spring/Hibernate audit → ydb-table Expected router target: ydb-table."
+    },
+    {
+      "id": 1565543388,
+      "prompt": "I'm porting this PostgreSQL table to YDB. The `id SERIAL PRIMARY KEY`\ncolumn is the main issue — what's the YDB equivalent and how do\nI keep IDs unique?\n\n```sql\nCREATE TABLE orders (\n    id SERIAL PRIMARY KEY,\n    customer_id BIGINT NOT NULL,\n    created_at TIMESTAMP NOT NULL DEFAULT NOW()\n);\n```",
+      "should_activate": true,
+      "note": "Routing · PostgreSQL → YDB conversion → ydb-table Expected router target: ydb-table."
+    },
+    {
+      "id": 1157819430,
+      "prompt": "How do I write a PostgreSQL trigger that fires on UPDATE and\nlogs the changed row to a separate audit table?",
+      "should_activate": false,
+      "note": "Routing · Unrelated PostgreSQL question → none Expected router target: none."
+    },
+    {
+      "id": 1381113715,
+      "prompt": "Review this Go SDK code that runs an OLTP transfer through YDB.\nAnything wrong with the retry / transaction shape?\n\n```go\nerr := db.Query().DoTx(ctx, func(ctx context.Context, tx query.TxActor) error {\n    _, err := tx.Exec(ctx,\n        \"UPDATE accounts SET balance = balance - $amt WHERE id = $from\",\n        query.WithParameters(ydb.ParamsBuilder().\n            Param(\"$from\").Uint64(fromID).\n            Param(\"$amt\").Int64(amount).Build()),\n    )\n    if err != nil { return err }\n    return tx.CommitTx(ctx)\n}, query.WithIdempotent())\n```",
+      "should_activate": true,
+      "note": "Routing · Go ydb-go-sdk/v3 audit → ydb-table Expected router target: ydb-table."
+    },
+    {
+      "id": 1373048237,
+      "prompt": "Please audit this C++ code that uses `ydb-cpp-sdk` and\n`RetryQuerySync`. Are there YDB anti-patterns?\n\n```cpp\nclient.RetryQuerySync([](NYdb::NQuery::TSession session) {\n    return session.ExecuteQuery(\"SELECT 1\",\n        NYdb::NQuery::TTxControl::BeginTx(\n            NYdb::NQuery::TTxSettings::OnlineRO()).CommitTx()\n    ).GetValueSync();\n});\n```",
+      "should_activate": true,
+      "note": "Routing · C++ RetryQuerySync audit routes to ydb-table Expected router target: ydb-table."
+    },
+    {
+      "id": 110492441,
+      "prompt": "In YQL, should I write `DECLARE $id AS \"Uint64\";`, or can I omit\nthe declaration when the SDK sends a typed parameter?",
+      "should_activate": true,
+      "note": "Routing · DECLARE syntax → ydb-table Expected router target: ydb-table."
+    },
+    {
+      "id": 70502633,
+      "prompt": "Use YDB CLI to list the objects under `/Root/app` and describe the\n`orders` table. I am already connected with profile `prod`.",
+      "should_activate": false,
+      "note": "Routing · YDB CLI scheme inspection → ydb-core Expected router target: ydb-core."
+    },
+    {
+      "id": 108320976,
+      "prompt": "Build a parameterized `ydb sql` command that selects one item by its\nUint64 primary key, validate it with `--explain`, and then run it.",
+      "should_activate": true,
+      "note": "Routing · ydb sql query execution → ydb-table Expected router target: ydb-table."
+    },
+    {
+      "id": 2044872961,
+      "prompt": "Audit this YDB Go SDK handler. It receives `requestCtx`, but calls\n`db.Query().Do(context.Background(), ...)`. Make sure cancellation and the\nrequest deadline reach session acquisition, retries, and the query RPC.",
+      "should_activate": true,
+      "note": "Routing · SDK deadline/cancellation audit → ydb-table Expected router target: ydb-table."
+    },
+    {
+      "id": 528648311,
+      "prompt": "What is the general YDB best practice for propagating an upstream request\ndeadline and cancellation through session acquisition, retries, and RPCs?\nI want one end-to-end budget instead of resetting the timeout per attempt.\nThere is no query or application code to review; this is a cross-cutting client policy.",
+      "should_activate": false,
+      "note": "Routing · general YDB deadline propagation → ydb-core Expected router target: ydb-core."
+    },
+    {
+      "id": 1141022594,
+      "prompt": "Найди официальную документацию YDB 26.1 по транзакциям на русском и дай ссылки.",
+      "should_activate": false,
+      "note": "Routing · 15-docs-ru-version Expected router target: ydb-docs."
+    },
+    {
+      "id": 182345071,
+      "prompt": "Find the official YDB reference that documents transaction isolation. I need sources to verify a claim, not implementation code.",
+      "should_activate": false,
+      "note": "Routing · 16-docs-verify Expected router target: ydb-docs."
+    },
+    {
+      "id": 503872993,
+      "prompt": "Find the YQL documentation for querying YT tables on Hahn; this is not about YDB.",
+      "should_activate": false,
+      "note": "Routing · 17-yql-yt-none Expected router target: none."
+    },
+    {
+      "id": 1290417410,
+      "prompt": "I want a local single-node YDB on my laptop and a connection string\nfor a Python smoke test. Which Docker image and ports should I use?",
+      "should_activate": false,
+      "note": "Routing · Local YDB Docker setup → ydb-core Expected router target: ydb-core."
+    },
+    {
+      "id": 947204090,
+      "prompt": "In PostgreSQL, how can I speed up LIMIT/OFFSET pagination for an\nadmin page without changing databases?",
+      "should_activate": false,
+      "note": "Routing · PostgreSQL-only pagination → none Expected router target: none."
+    },
+    {
+      "id": 1713661359,
+      "prompt": "Review this Go HTTP client retry loop. It retries 503 responses with\nexponential backoff and does not use any database SDK.",
+      "should_activate": false,
+      "note": "Routing · Generic Go HTTP retries → none Expected router target: none."
+    },
+    {
+      "id": 2052011815,
+      "prompt": "How do I bind a Kubernetes ServiceAccount to a Role so a pod can list\nConfigMaps in its namespace? This is unrelated to any database.",
+      "should_activate": false,
+      "note": "Routing · Kubernetes service account → none Expected router target: none."
+    },
+    {
+      "id": 1825452386,
+      "prompt": "Design a ClickHouse PARTITION BY and ORDER BY expression for an events\ntable queried by tenant and month. We do not use YDB here.",
+      "should_activate": false,
+      "note": "Routing · ClickHouse partition design → none Expected router target: none."
+    },
+    {
+      "id": 1167974717,
+      "prompt": "Use the official YDB llms.txt index to find the current client\nauthentication documentation in English.",
+      "should_activate": false,
+      "note": "Routing · Direct YDB documentation index lookup → ydb-docs Expected router target: ydb-docs."
+    },
+    {
+      "id": 329699816,
+      "prompt": "Check the official YDB documentation and give me the source that defines\nSerializableRW transaction semantics. I need a citation, not code.",
+      "should_activate": false,
+      "note": "Routing · Verify a YDB claim from official docs → ydb-docs Expected router target: ydb-docs."
+    },
+    {
+      "id": 1729618281,
+      "prompt": "Locate the English YDB 25.3 reference for configuring service-account\nauthentication and preserve the requested documentation version.",
+      "should_activate": false,
+      "note": "Routing · Versioned English YDB reference → ydb-docs Expected router target: ydb-docs."
+    }
+  ]
+}

@@ -31,6 +31,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-go-audit
+    threshold: 0.8
     value: |
       The response should:
       - Cite `RULE-GO-05` by ID (custom retrier wrapping YDB calls).
@@ -60,3 +62,6 @@ assert:
       Full fail if the response only complains about backoff strategy
       (fixed delay vs exponential) without naming the YDB error
       classification gap.
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-GO-05

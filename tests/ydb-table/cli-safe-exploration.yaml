@@ -8,6 +8,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-cli
+    threshold: 0.8
     value: |
       The response should:
       - Verify the installed CLI and relevant command help before composing

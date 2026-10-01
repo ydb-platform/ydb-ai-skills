@@ -15,17 +15,9 @@ vars:
     ```
 
 assert:
-  - type: llm-rubric
-    value: |
-      The response should:
-      - Treat this as ydb-table scope (C++ application code against
-        YDB tables), not ydb-core-only onboarding.
-      - Load or reference C++ SDK guidance (`RULE-CPP-*` or
-        `references/embed/cpp.md` patterns) rather than saying C++
-        SDK guidance is unavailable.
-      - Mention `RetryQuerySync` / idempotency or parameterization
-        where relevant to the snippet.
-      - Not invent YQL or SDK APIs absent from the loaded skills.
-
-      Full fail if the response says C++ SDK-specific guidance is not
-      shipped in this skill.
+  - type: regex
+    value: \bydb-table\b
+  - type: not-regex
+    value: \bydb-core\b
+  - type: not-regex
+    value: \bnone\b

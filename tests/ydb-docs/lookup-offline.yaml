@@ -2,15 +2,16 @@ description: Documentation · Offline lookup plan preserves language and version
 
 vars:
   user_prompt: |
-    You have no browser or HTTP tool in this session. Explain how you would
-    find the official Russian YDB 26.1 documentation for transactions.
-    Do not answer the transaction question from memory.
+    Do not use browser, HTTP, or search tools in this scenario. Explain how
+    you would find the official Russian YDB 26.1 documentation for
+    transactions. Do not answer the transaction question from memory.
 
 assert:
   - type: llm-rubric
     value: |
-      The response identifies https://ydb.tech/llms.txt as the entry point,
-      selects Russian documentation and the v26.1 product branch rather
-      than main, and explains that relevant linked pages must be read.
-      It acknowledges that it cannot retrieve the documentation in this
-      session and does not claim to have verified transaction behavior.
+      The response should:
+      - Identify https://ydb.tech/llms.txt as the normal entry point.
+      - Select Russian documentation and the v26.1 product branch rather than main.
+      - Explain that the relevant pages linked by the index must be read before answering.
+      - Respect the no-network constraint and not invoke browser, HTTP, or search tools.
+      - Not claim that transaction behavior was verified in this scenario.

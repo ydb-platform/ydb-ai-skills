@@ -1,0 +1,10 @@
+description: Routing · Versioned English YDB reference → ydb-docs
+
+vars:
+  user_prompt: |
+    Locate the English YDB 25.3 reference for configuring service-account
+    authentication and preserve the requested documentation version.
+
+assert:
+  - type: regex
+    value: ^\s*ydb-docs\s*$

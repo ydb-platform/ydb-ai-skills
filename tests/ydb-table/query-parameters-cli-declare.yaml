@@ -14,6 +14,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-query
+    threshold: 0.8
     value: |
       The response should:
       - Distinguish request-provided types for typed SDK requests using

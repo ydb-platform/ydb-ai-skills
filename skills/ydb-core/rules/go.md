@@ -2,7 +2,7 @@
 
 Driver-construction and session-lifecycle rules.
 
-### RULE-GO-11: Long-lived session stored on the application side
+### RULE-CGO-01: Long-lived session stored on the application side
 
 **Severity**: High
 

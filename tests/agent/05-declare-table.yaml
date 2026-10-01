@@ -1,0 +1,15 @@
+description: Agent activation · YQL DECLARE question uses ydb-table
+vars:
+  user_prompt: On YDB 25.1.2.7 Syntax V1, fix `DECLARE $id AS "Uint64";` when the SDK already sends a typed parameter.
+assert:
+  - type: skill-used
+    metric: activation-recall
+    value: ydb-table
+  - type: not-skill-used
+    metric: activation-isolation
+    value: ydb-core
+  - type: javascript
+    metric: outcome
+    value: |
+      const s = String(output);
+      return s.includes('DECLARE $id AS Uint64;') && !s.includes('DECLARE $id AS "Uint64";');

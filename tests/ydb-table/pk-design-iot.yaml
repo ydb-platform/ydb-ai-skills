@@ -8,6 +8,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-pk
+    threshold: 0.8
     value: |
       The response should:
       - Explicitly warn that a monotonically increasing `event_id` as a

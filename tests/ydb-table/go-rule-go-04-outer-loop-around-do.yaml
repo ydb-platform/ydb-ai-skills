@@ -33,6 +33,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-go-audit
+    threshold: 0.8
     value: |
       The response should:
       - Cite `RULE-GO-04` by ID (outer for-loop wrapping Do).
@@ -51,3 +53,6 @@ assert:
 
       Full fail if the response defends the outer for-loop as
       "extra safety" or "defense in depth".
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-GO-04

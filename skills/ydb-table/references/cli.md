@@ -1,10 +1,10 @@
 # Running SQL with YDB CLI
 
-Use `ydb sql` for query execution. Pair this reference with [`ydb-core`'s CLI workflow](../../ydb-core/SKILL.md#cli) and load [`query-parameters.md`](query-parameters.md) whenever values enter the query.
+Use `ydb sql` for query execution. Pair this reference with the separate `ydb-core` skill's CLI workflow when that skill is installed, and load `references/query-parameters.md` whenever values enter the query.
 
 ## Workflow
 
-1. Verify the installed interface with `ydb version`, `ydb --help`, and `ydb sql --help`. Use `ydb sql -hh` before relying on options omitted from short help.
+1. Before composing or running any `ydb sql` command, run all three discovery commands: `ydb version`, `ydb --help`, and `ydb sql --help`. `ydb version` alone is not sufficient. Use `ydb sql -hh` before relying on options omitted from short help.
 2. Inspect every referenced table whose schema is not already known with `ydb scheme describe <path>`. Do not guess column names, types, or primary-key order.
 3. For a filter whose actual values are unknown, do not guess. Constrain discovery by a known primary-key range, suitable index, or another input restriction learned from the schema. Use `--explain` before a potentially large discovery query; if the plan can scan a large table, warn about the cost and obtain approval before executing it.
 4. Keep values outside SQL text. Declare CLI parameters in the query and bind them with `--param`, `--input-file`, or an input stream.
@@ -29,7 +29,7 @@ ydb -p <profile> sql \
   --param '$id=42'
 ```
 
-Use one `--param` per simple value. The part after `=` is JSON whose conversion is driven by `DECLARE`; see [`query-parameters.md`](query-parameters.md) for YDB type encodings. For example, timestamps and decimals are JSON strings:
+Use one `--param` per simple value. The part after `=` is JSON whose conversion is driven by `DECLARE`; see `references/query-parameters.md` for YDB type encodings. For example, timestamps and decimals are JSON strings:
 
 ```bash
 ydb -p <profile> sql -f query.sql \
@@ -52,7 +52,7 @@ Replace the example profile only with connection options already supplied or app
 Choose the least fragile supported source:
 
 - Use repeated `--param` for a few scalar values.
-- Use one JSON input stream for many or composite values. In an agent or CI non-TTY subprocess, use `--input-file - < params.json`; a named `--input-file params.json` requires stdin to be a TTY/PTY in current CLI releases. Object keys are parameter names without `$`; `List`, `Struct`, `Tuple`, optional, temporal, decimal, binary, and document values follow [`query-parameters.md`](query-parameters.md).
+- Use one JSON input stream for many or composite values. In an agent or CI non-TTY subprocess, use `--input-file - < params.json`; a named `--input-file params.json` requires stdin to be a TTY/PTY in current CLI releases. Object keys are parameter names without `$`; `List`, `Struct`, `Tuple`, optional, temporal, decimal, binary, and document values follow `references/query-parameters.md`.
 - Use `csv` or `tsv` for row-shaped scalar data. Prefer keeping the header in the file; it supplies parameter names without `$`. For a headerless file, `--input-columns` must use the selected format's delimiter: comma for CSV and a literal tab for TSV. Type conversion still comes from `DECLARE`.
 - Use `raw` only for one `String` or `Utf8` value and name it with `--input-param-name`.
 
@@ -146,7 +146,7 @@ Each adaptive batch is an independent execution and transaction. If a later batc
 ## Gotchas
 
 - **A SQL command is not inherently read-only.** `ydb sql` accepts DDL, DML, and multi-statement queries; classify the query text before execution.
-- **CLI parameters still need `DECLARE`.** The CLI uses declarations to match and convert input values; see [`query-parameters.md`](query-parameters.md).
+- **CLI parameters still need `DECLARE`.** The CLI uses declarations to match and convert input values; see `references/query-parameters.md`.
 - **Input and output formats are different option sets.** `--format parquet` controls query results; it does not make Parquet or Arrow a SQL parameter input.
 - **Unbounded streaming can fill the context.** The CLI does not impose a read-volume limit, so add a query limit for exploration instead of relying on output truncation downstream.
 - **Bare `ydb` is interactive.** Keep agent workflows non-interactive unless the user explicitly asks to enter the interactive terminal.

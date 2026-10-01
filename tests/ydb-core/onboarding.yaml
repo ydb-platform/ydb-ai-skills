@@ -8,6 +8,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: core-onboarding
+    threshold: 0.8
     value: |
       The response should:
       - Identify YDB as an open-source distributed SQL database.

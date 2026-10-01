@@ -7,17 +7,20 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-sql
+    threshold: 0.8
     value: |
       The response should:
-      - State plainly that YDB has no SERIAL / AUTO_INCREMENT equivalent —
-        sequences are not a built-in YDB feature (grounded in the ydb-table
-        skill's sql-to-yql guidance).
-      - Recommend either a client-generated UUID (e.g. Utf8 stored as
-        `String` or as `Uuid`) or a hash-prefix + id-service design.
-      - Warn that simply using a monotonically increasing integer as the sole
-        PK column recreates the hot-partition problem.
-      - Not invent a YDB `AUTO_INCREMENT` or `SEQUENCE` keyword — neither
-        exists.
+      - State that YDB has serial data types and show the direct YQL shape
+        `id Serial` with `PRIMARY KEY (id)` (or an equivalent CREATE TABLE).
+      - Explain that a serial column generates integer values automatically
+        and may be used only as part of the primary key.
+      - Warn that a monotonically increasing serial value as the sole primary
+        key creates uneven distribution and a hot last partition.
+      - For a high-write distributed design, recommend a client-generated UUID
+        or a hash-prefix plus externally generated id instead of the serial PK.
+      - Not invent an `AUTO_INCREMENT` keyword or a user-created
+        `CREATE SEQUENCE`; YDB's sequence behind a serial column is private.
 
-      Full fail if the response suggests `AUTO_INCREMENT`, `SERIAL`, or
-      `CREATE SEQUENCE` in YQL.
+      Full fail if the response claims that YDB has no `Serial` type, suggests
+      `AUTO_INCREMENT`, or suggests a standalone `CREATE SEQUENCE` in YQL.

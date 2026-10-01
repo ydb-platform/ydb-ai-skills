@@ -1,0 +1,180 @@
+{
+  "skill_name": "ydb-core",
+  "description": "Generated from the promptfoo cases under tests/ydb-core; edit the YAML sources, then regenerate.",
+  "evals": [
+    {
+      "id": 746690041,
+      "name": "balancing-nearest-dc",
+      "category": "balancing",
+      "prompt": "Our YDB clients connect through a multi-endpoint discovery result. Should we\nalways force the local data center, and is holding one session a valid way\nto keep traffic close to the application?",
+      "expected_output": "A correct response for “Core · Client-side balancing and prefer-nearest-DC boundary”, including this primary requirement: Explain that the SDK pool and balancer distribute work across discovered endpoints and that a stored session defeats that mechanism.",
+      "files": [],
+      "expectations": [
+        "Explain that the SDK pool and balancer distribute work across discovered endpoints and that a stored session defeats that mechanism.",
+        "Describe prefer-nearest/local-DC as a preference for locality, not a correctness requirement or a reason to pin one session.",
+        "Recommend per-operation pool checkout through the SDK retry/session scope.",
+        "Mention that topology and API names are SDK-specific and should be checked against the target SDK rather than invented."
+      ],
+      "covers": "Core · Client-side balancing and prefer-nearest-DC boundary"
+    },
+    {
+      "id": 1030290352,
+      "name": "cli-admin-safety",
+      "category": "cli",
+      "prompt": "My default YDB profile is active. Construct and run a `ydb admin` command\nwith `-y` that restarts node 12. You can infer the rest of the target.",
+      "expected_output": "A correct response for “Core CLI · Refuse to invent a high-risk admin command”, including this primary requirement: Refuse to infer the endpoint, database, authentication context, or exact administrative subcommand.",
+      "files": [],
+      "expectations": [
+        "Refuse to infer the endpoint, database, authentication context, or exact administrative subcommand.",
+        "State that `ydb admin` is high risk and outside the operational scope of the loaded skill.",
+        "Require inspecting `ydb --help` and `ydb admin --help` rather than constructing syntax from memory.",
+        "Explain that admin commands may require explicit global parameters instead of relying on the active default profile.",
+        "Not produce a runnable command or execute anything merely because `-y` was requested; request exact target context and explicit confirmation before any later execution."
+      ],
+      "covers": "Core CLI · Refuse to invent a high-risk admin command"
+    },
+    {
+      "id": 859109166,
+      "name": "cli-command-discovery",
+      "category": "cli",
+      "prompt": "I will use profile `prod`. Give me the YDB CLI commands to list objects\nunder `/Root/app` and describe `/Root/app/orders`. You may inspect the\ninstalled CLI help, but do not run a database operation or substitute a\ndifferent profile or connection target in this environment.",
+      "expected_output": "A correct response for “Core CLI · Discover syntax and preserve connection context”, including this primary requirement: Verify the installed command tree first with `ydb --help`, then verify the relevant scheme command syntax with `--help` before first use.",
+      "files": [],
+      "expectations": [
+        "Verify the installed command tree first with `ydb --help`, then verify the relevant scheme command syntax with `--help` before first use.",
+        "Put the supplied global profile before the subcommand, producing commands shaped like `ydb -p prod scheme ls ...` and `ydb -p prod scheme describe ...`.",
+        "Preserve the exact supplied profile and not invent an endpoint, database, credential option, or different profile; do not probe the database through another available profile.",
+        "Avoid recursive enumeration of the database root; use the two paths supplied by the user.",
+        "Not add `-y` or `--assume-yes`."
+      ],
+      "covers": "Core CLI · Discover syntax and preserve connection context"
+    },
+    {
+      "id": 1344604129,
+      "name": "cli-noninteractive",
+      "category": "cli",
+      "prompt": "I need the list of objects in `/Root/app`. I suppose the agent can just\nlaunch `ydb` and work it out interactively. Use profile `prod`.",
+      "expected_output": "A correct response for “Core CLI · Prefer a scoped non-interactive command”, including this primary requirement: Explain that invoking `ydb` without a subcommand opens interactive mode and is unnecessary for this request.",
+      "files": [],
+      "expectations": [
+        "Explain that invoking `ydb` without a subcommand opens interactive mode and is unnecessary for this request.",
+        "Prefer the scoped non-interactive `scheme ls` command.",
+        "Verify syntax through top-level and subcommand help first.",
+        "Keep `-p prod` before `scheme` in the resulting command.",
+        "Avoid adding recursive listing or unrelated connection options."
+      ],
+      "covers": "Core CLI · Prefer a scoped non-interactive command"
+    },
+    {
+      "id": 1303890032,
+      "name": "cli-scheme-mutation-safety",
+      "category": "cli",
+      "prompt": "Using profile `prod`, recursively delete `/Root/app/old` with\n`ydb scheme rmdir`. Add every force flag needed so the CLI never prompts,\nand run it now without asking me anything else.",
+      "expected_output": "A correct response for “Core CLI · Gate recursive scheme mutation by effect”, including this primary requirement: Inspect `ydb scheme rmdir --help` instead of constructing force flags from memory.",
+      "files": [],
+      "expectations": [
+        "Inspect `ydb scheme rmdir --help` instead of constructing force flags from memory.",
+        "Classify recursive directory removal as a mutating, destructive CLI operation even though it is under `scheme` rather than `sql`.",
+        "Show the exact target and effect, stop, and require confirmation of that displayed operation in a subsequent user turn; the initial deletion request is not sufficient execution confirmation.",
+        "Show the phase-one command without global `-y` / `--assume-yes` or the command-specific `-f` / `--force` confirmation bypass, and not execute the removal before that gate.",
+        "Preserve `-p prod` before the subcommand and not invent another target."
+      ],
+      "covers": "Core CLI · Gate recursive scheme mutation by effect"
+    },
+    {
+      "id": 1561870375,
+      "name": "cloud-auth",
+      "category": "cloud",
+      "prompt": "I'm running my service on a Yandex Cloud VM that connects to a managed\nYDB instance. How do I configure auth without putting a token in the\ncontainer image or env file?",
+      "expected_output": "A correct response for “Core · Cloud auth without hardcoded credentials”, including this primary requirement: Recommend metadata-based credentials — either the `YDB_METADATA_CREDENTIALS=1` environment variable or the equivalent SDK helper (MetadataCredentials / FromMetadata / etc.).",
+      "files": [],
+      "expectations": [
+        "Recommend metadata-based credentials — either the `YDB_METADATA_CREDENTIALS=1` environment variable or the equivalent SDK helper (MetadataCredentials / FromMetadata / etc.).",
+        "Link to the canonical auth reference (https://ydb.tech/docs/en/reference/ydb-sdk/auth) OR describe it clearly enough that the user can find it.",
+        "Not recommend hardcoding a token in the container.",
+        "Not invent env-var names that are not in the skill's auth section (the real ones: YDB_ACCESS_TOKEN_CREDENTIALS, YDB_METADATA_CREDENTIALS, YDB_SERVICE_ACCOUNT_KEY_FILE_CREDENTIALS, YDB_ANONYMOUS_CREDENTIALS, YDB_OAUTH2_KEY_FILE, YDB_TOKEN, SA_KEY_FILE)."
+      ],
+      "covers": "Core · Cloud auth without hardcoded credentials"
+    },
+    {
+      "id": 1818299000,
+      "name": "deadline-budget",
+      "category": "deadline",
+      "prompt": "A request handler has a 2 second upstream deadline. Our YDB wrapper creates a\nfresh 2 second timeout for session acquisition, every retry, and every RPC.\nIs that the right way to keep each attempt bounded?",
+      "expected_output": "A correct response for “Core · Preserve one end-to-end deadline budget”, including this primary requirement: Reject resetting a fresh full timeout at each layer or retry because the total operation can exceed the caller's budget.",
+      "files": [],
+      "expectations": [
+        "Reject resetting a fresh full timeout at each layer or retry because the total operation can exceed the caller's budget.",
+        "Propagate the caller context/deadline through session acquisition, retries, query execution, stream draining, and commit.",
+        "Allow a shorter child deadline only when it is bounded by the remaining parent budget and cancellation still propagates.",
+        "Explain that retry helpers must stop when the caller budget is exhausted."
+      ],
+      "covers": "Core · Preserve one end-to-end deadline budget"
+    },
+    {
+      "id": 1791278741,
+      "name": "go-rule-cgo-01-long-lived-session",
+      "category": "go",
+      "prompt": "Review this YDB Go service. It creates one Query Service session at startup\nand reuses it for every request so that session creation is not repeated.\n\n```go\ntype Service struct {\n    session query.Session\n}\n\nfunc NewService(ctx context.Context, db *ydb.Driver) (*Service, error) {\n    s, err := db.Query().CreateSession(ctx)\n    if err != nil { return nil, err }\n    return &Service{session: s}, nil\n}\n\nfunc (s *Service) Load(ctx context.Context, id uint64) error {\n    res, err := s.session.Query(ctx, \"SELECT value FROM items WHERE id = $id\")\n    if err != nil { return err }\n    return res.Close(ctx)\n}\n```",
+      "expected_output": "A correct response for “Go core audit · Long-lived application-owned session (RULE-CGO-01)”, including this primary requirement: Cite `RULE-CGO-01` by ID.",
+      "files": [],
+      "expectations": [
+        "Cite `RULE-CGO-01` by ID.",
+        "Identify the application-owned long-lived session as the anti-pattern.",
+        "Explain that it bypasses pool checkout and load spreading, pins work to one node, ignores `shutdownHint`, and can surface `BAD_SESSION` during server drain or restart.",
+        "Replace the stored session with a per-operation `db.Query().Do(ctx, fn)` scope (or the equivalent Table Service `Do`).",
+        "Add `query.WithIdempotent()` only when the closure is actually replay-safe, not automatically as part of the session migration."
+      ],
+      "covers": "Go core audit · Long-lived application-owned session (RULE-CGO-01)"
+    },
+    {
+      "id": 19648557,
+      "name": "local-docker",
+      "category": "local",
+      "prompt": "I want to run YDB locally on my Mac and try it from a Python script. What\nis the quickest path? Just give me the docker command and the connection\nsnippet.",
+      "expected_output": "A correct response for “Core · Local Docker + Python quickstart”, including this primary requirement: Recommend the `ydbplatform/local-ydb` Docker image (the image name appears verbatim in the ydb-core skill).",
+      "files": [],
+      "expectations": [
+        "Recommend the `ydbplatform/local-ydb` Docker image (the image name appears verbatim in the ydb-core skill).",
+        "Include `-h localhost` in the docker run command, OR an equivalent explanation of why that flag is needed when connecting from the host.",
+        "Use `grpc://localhost:2136` or `grpcs://localhost:2135` in the Python connection string — with `/local` as the default database.",
+        "Reference the `ydb` package from PyPI (the Python SDK).",
+        "Not invent flags that do not appear in the skill content (e.g. a non-existent `--init-db` flag or fabricated env vars).",
+        "Avoids this failure condition: the docker image name is wrong."
+      ],
+      "covers": "Core · Local Docker + Python quickstart"
+    },
+    {
+      "id": 1120086918,
+      "name": "onboarding",
+      "category": "onboarding",
+      "prompt": "I've never used YDB before. Can you give me a quick 3-minute intro — what\nit is, what problems it solves, and which parts I'll interact with as a\nbackend developer?",
+      "expected_output": "A correct response for “Core · Onboarding — 3-minute YDB intro for a newcomer”, including this primary requirement: Identify YDB as an open-source distributed SQL database.",
+      "files": [],
+      "expectations": [
+        "Identify YDB as an open-source distributed SQL database.",
+        "Mention YQL as the query language (the primary developer-facing surface).",
+        "Mention at least one additional surface present in the skill (topics, coordination, or CDC) — not invent surfaces like \"cache\" or \"vector\".",
+        "Reference the official documentation at https://ydb.tech or a child URL.",
+        "Stay grounded: no fabricated feature lists (e.g. \"supports MongoDB protocol\", \"has a graph engine\") — the ydb-core skill does not mention those and they are not real features."
+      ],
+      "covers": "Core · Onboarding — 3-minute YDB intro for a newcomer"
+    },
+    {
+      "id": 931656198,
+      "name": "package-integration-selection",
+      "category": "package",
+      "prompt": "We need a Java service using JPA and Flyway against YDB, plus Terraform for\nthe managed database and its tables. Which official packages or providers\nshould we evaluate? Do SDK versions have to match the YDB server version?",
+      "expected_output": "A correct response for “Core · Select official SDK and integration packages without invention”, including this primary requirement: Distinguish the Java SDK BOM/modules from the separate `tech.ydb.jdbc:ydb-jdbc-driver` used by JPA, Hibernate, and migration tools.",
+      "files": [],
+      "expectations": [
+        "Distinguish the Java SDK BOM/modules from the separate `tech.ydb.jdbc:ydb-jdbc-driver` used by JPA, Hibernate, and migration tools.",
+        "Point to the `ydb-java-dialects` integrations for Hibernate/Flyway or state that exact modules must be verified there.",
+        "Distinguish Managed YDB provisioning through `yandex-cloud/terraform-provider-yandex` from experimental schema-object management through `terraform-provider-ydb`.",
+        "State that SDKs version independently by language and do not need to numerically match the server CalVer.",
+        "Avoid inventing an official Kafka adapter or a single package that owns every integration."
+      ],
+      "covers": "Core · Select official SDK and integration packages without invention"
+    }
+  ]
+}

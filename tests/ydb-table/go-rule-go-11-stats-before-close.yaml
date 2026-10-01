@@ -27,6 +27,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-go-audit
+    threshold: 0.8
     value: |
       The response should:
       - Cite `RULE-GO-11` by ID.
@@ -45,3 +47,6 @@ assert:
       - Treats `defer Close` as sufficient while billing happens before return.
       - Blames only retry/idempotency without mentioning stream drain / stats timing.
       - Says the pattern is fine because `Query` returned nil error.
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-GO-11

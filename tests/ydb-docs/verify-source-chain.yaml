@@ -1,0 +1,16 @@
+description: Documentation · Verify claims against a relevant page, not the index
+
+vars:
+  user_prompt: |
+    I need to verify whether YDB documents SerializableRW transaction semantics.
+    Explain how you would find the authoritative page and cite the evidence.
+    Do not treat an index entry as proof.
+
+assert:
+  - type: llm-rubric
+    value: |
+      The response should:
+      - Start from https://ydb.tech/llms.txt and select the relevant documentation index.
+      - Open a transaction page linked from that index before making the claim.
+      - Cite the page actually read rather than citing llms.txt as behavioral evidence.
+      - State that an unsupported claim must remain unverified instead of being inferred.

@@ -13,7 +13,7 @@ The only YDB Go SDK is **`github.com/ydb-platform/ydb-go-sdk/v3`**. The same pac
 - a **native** API with the modern Query Service (`db.Query().Do/DoTx(...)`) and the legacy Table Service (`db.Table().Do/DoTx(...)`),
 - a **`database/sql`** driver registered as `"ydb"` (blank-import `_ "github.com/ydb-platform/ydb-go-sdk/v3"`) for code that needs the stdlib interface.
 
-Default new code to the native Query Service. The Table Service is in legacy mode and has a 1000-row default result cap (surfaced as an error on `s.Execute` in v3 by default, restored to v2-style silent truncation if `ydb.WithIgnoreTruncated` is set on the driver — see <https://github.com/ydb-platform/ydb-go-sdk/blob/master/MIGRATION_v2_v3.md>). Connection-string format and authentication environment variables: see [`../../../ydb-core/SKILL.md#connecting`](../../../ydb-core/SKILL.md#connecting). Worked examples for both surfaces: <https://github.com/ydb-platform/ydb-go-sdk/tree/master/examples>. `database/sql` specifics: <https://github.com/ydb-platform/ydb-go-sdk/blob/master/SQL.md>.
+Default new code to the native Query Service. The Table Service is in legacy mode and has a 1000-row default result cap (surfaced as an error on `s.Execute` in v3 by default, restored to v2-style silent truncation if `ydb.WithIgnoreTruncated` is set on the driver — see <https://github.com/ydb-platform/ydb-go-sdk/blob/master/MIGRATION_v2_v3.md>). Connection-string format and authentication environment variables: see <https://ydb.tech/docs/en/concepts/connect>. Worked examples for both surfaces: <https://github.com/ydb-platform/ydb-go-sdk/tree/master/examples>. `database/sql` specifics: <https://github.com/ydb-platform/ydb-go-sdk/blob/master/SQL.md>.
 
 ## Query execution
 
@@ -104,7 +104,7 @@ YDB has two transaction styles, and `ydb-go-sdk/v3` supports both:
 
 Worked non-interactive example: <https://github.com/ydb-platform/ydb-go-sdk/blob/master/examples/transaction/query/main.go>.
 
-For the transaction-mode list (`SerializableRW`, `SnapshotRO`, `StaleRO`, `OnlineRO`) and the consequence for application-level optimistic locking, see [`../working-with-data.md`](../working-with-data.md).
+For the transaction-mode list (`SerializableRW`, `SnapshotRO`, `StaleRO`, `OnlineRO`) and the consequence for application-level optimistic locking, see `references/working-with-data.md`.
 
 ## Retries
 
@@ -120,7 +120,7 @@ Source: <https://github.com/ydb-platform/ydb-go-sdk/blob/master/retry/mode.go>.
 
 ## Long scans / resumable reads
 
-One `s.Query(ctx, "SELECT ... FROM big_table WHERE <wide predicate>")` inside a single `Do` closure is one retry unit — a transient failure mid-stream replays the whole read. Cut the read into keyset-paginated batches: caller-side cursor over the primary key, each iteration is its own `Do`. See [`../working-with-data.md`](../working-with-data.md) → "Reading many rows" for the YDB-level recipe and the tuple-order / NULL / `OFFSET` caveats.
+One `s.Query(ctx, "SELECT ... FROM big_table WHERE <wide predicate>")` inside a single `Do` closure is one retry unit — a transient failure mid-stream replays the whole read. Cut the read into keyset-paginated batches: caller-side cursor over the primary key, each iteration is its own `Do`. See `references/working-with-data.md` → "Reading many rows" for the YDB-level recipe and the tuple-order / NULL / `OFFSET` caveats.
 
 ```go
 type row struct {
@@ -173,10 +173,10 @@ err := db.Table().BulkUpsert(ctx,
 )
 ```
 
-For when the bulk API is the right call versus `AS_TABLE` inside a transaction — and when it is forbidden (synchronous secondary indexes, attached changefeeds) — see [`../working-with-data.md`](../working-with-data.md).
+For when the bulk API is the right call versus `AS_TABLE` inside a transaction — and when it is forbidden (synchronous secondary indexes, attached changefeeds) — see `references/working-with-data.md`.
 
 Source: <https://github.com/ydb-platform/ydb-go-sdk/blob/master/examples/opensource_night2024/main.go>.
 
 ## Connection
 
-See [`../../../ydb-core/SKILL.md#connecting`](../../../ydb-core/SKILL.md#connecting).
+See <https://ydb.tech/docs/en/concepts/connect>.

@@ -19,12 +19,15 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-python-audit
+    threshold: 0.8
     value: |
-      The response should cite RULE-PY-01, identify client-provided
-      List<Float> plus Knn::ToBinaryStringFloat as the anti-pattern, and
-      link to the current YDB vector-search recipe and its Python tab for
-      client-side serialization instead of prescribing a serialization snippet.
-      It should bind the result as YQL String and use the parameter directly
-      in Knn::CosineDistance.
-      It should not treat the YQL conversion as always wrong: it remains useful
-      for a vector constructed within YQL.
+      The response should:
+      - Cite `RULE-PY-01` by ID.
+      - Identify the client-provided `List<Float>` plus `Knn::ToBinaryStringFloat` conversion in YQL as the anti-pattern.
+      - Link to the current YDB vector-search recipe and its Python tab for client-side serialization instead of inventing a serialization snippet.
+      - Bind the serialized result as YQL `String` and use the parameter directly in `Knn::CosineDistance`.
+      - Explain that the YQL conversion remains valid for a vector constructed within YQL.
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-PY-01

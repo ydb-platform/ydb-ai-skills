@@ -1,0 +1,25 @@
+description: Core · Select official SDK and integration packages without invention
+
+vars:
+  user_prompt: |
+    We need a Java service using JPA and Flyway against YDB, plus Terraform for
+    the managed database and its tables. Which official packages or providers
+    should we evaluate? Do SDK versions have to match the YDB server version?
+
+assert:
+  - type: llm-rubric
+    metric: core-package
+    threshold: 0.8
+    value: |
+      The response should:
+      - Distinguish the Java SDK BOM/modules from the separate
+        `tech.ydb.jdbc:ydb-jdbc-driver` used by JPA, Hibernate, and migration tools.
+      - Point to the `ydb-java-dialects` integrations for Hibernate/Flyway or
+        state that exact modules must be verified there.
+      - Distinguish Managed YDB provisioning through
+        `yandex-cloud/terraform-provider-yandex` from experimental schema-object
+        management through `terraform-provider-ydb`.
+      - State that SDKs version independently by language and do not need to
+        numerically match the server CalVer.
+      - Avoid inventing an official Kafka adapter or a single package that owns
+        every integration.

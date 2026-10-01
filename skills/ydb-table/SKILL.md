@@ -1,6 +1,6 @@
 ---
 name: ydb-table
-description: Writing and auditing code that runs YQL against YDB tables. Use when the user writes a query, designs a table or primary key, reads an `EXPLAIN`, executes SQL with `ydb sql`, passes typed YDB query parameters or JSON/CSV/TSV/raw parameter files, or asks to review Java (ydb-java-sdk, ydb-jdbc-driver, Hibernate, Spring Data JPA), Go (`ydb-go-sdk/v3`), or C++ (`ydb-cpp-sdk`) application code that talks to YDB, or Python (`ydb.QuerySessionPool`) FloatVector parameter code. Triggers on `ydb sql`, `--explain`, `--explain-analyze`, `--param`, `--input-file`, `--input-format`, `--input-framing`, `--input-param-name`, `--input-batch`, Arrow/CSV/TSV parameter-file questions, YQL keywords (`UPSERT`, `SELECT`, `DECLARE`, `AS_TABLE`, `Knn::ToBinaryStringFloat`, `FloatVector`, `VIEW <index>`, `CREATE TABLE`, `ALTER TABLE`, `EXPLAIN`), on the `BulkUpsert` SDK API, on JDBC / Hibernate / Spring symbols (`JpaRepository`, `findAllById`, `saveAll`, `deleteAllByIdInBatch`, `hibernate.jdbc.batch_size`, `@Version`, `@Retryable`, `SQLRecoverableException`, `SQLTransientException`, `ExecuteQuerySettings.withRequestTimeout`, `SessionRetryContext`, `SessionRetryContext.supplyResult`), on `ydb-go-sdk/v3` symbols (`ydb.Open`, `db.Query().Do`, `db.Query().DoTx`, `db.Table().Do`, `query.WithIdempotent`, `query.WithCommit`, `query.WithStatsMode`, `query.Stats`, `query.StatsModeBasic`, `result.Close`, `context.WithTimeout`, `context.Background`, `ydb.WithLazyTx`, `ydb.ParamsBuilder`, `s.BeginTransaction`, `table.TxControl`, `table.BeginTx`, `BulkUpsertDataRows`, `sugar.Embedding`, `balancers.PreferLocalDC`, `balancers.PreferNearestDC`), on `ydb-cpp-sdk` symbols (`#include <ydb-cpp-sdk/client/`, `NYdb::TDriver`, `TDriverConfig`, `NYdb::NQuery::TQueryClient`, `NYdb::NTable::TTableClient`, `RetryQuerySync`, `RetryOperationSync`, `TRetryOperationSettings`, `TRetryOperationSettings::CancellationToken`, `ClientTimeout`, `TDeadline`, `Deadline`, `MaxTimeout`, `TParamsBuilder`, `TTxControl`, `TValueBuilder`, `TResultSetParser`, `StreamExecuteQuery`, `BulkUpsert`, `ExecuteSchemeQuery`, `CreateFromEnvironment`, `GetValueSync`, `find_package(ydb-cpp-sdk`, `YDB-CPP-SDK::`), on flaky empty/zero query stats right after `Query` returns, on YDB transaction-mode names (`SerializableRW`, `SnapshotRO`), and on PostgreSQL / MySQL → YDB conversion prompts. For Python, this skill covers FloatVector parameter encoding and YQL / schema / transaction modes; other Python SDK behavior and C# SDK specifics remain outside this skill — point at upstream docs.
+description: "Use only for YDB table and data-access work: writing or auditing YQL; designing tables and primary keys; reading `EXPLAIN`; executing parameterized `ydb sql`; converting PostgreSQL/MySQL SQL and schemas to YDB; BulkUpsert and batched writes; and reviewing Java, Go, C++, or Python application code that executes YDB queries or transactions. Triggers include YQL (`SELECT`, `UPSERT`, `DECLARE`, `AS_TABLE`, `Knn::ToBinaryStringFloat`, `FloatVector`, `CREATE TABLE`, `ALTER TABLE`), `ydb sql`, `--explain`, `--param`, YDB SDK query/transaction types, ydb-java-sdk, ydb-jdbc-driver, Hibernate or Spring Data JPA with YDB, `ydb-go-sdk/v3`, `ydb-cpp-sdk`, and `ydb.QuerySessionPool`. For Python, cover FloatVector parameter encoding and YQL/schema/transaction modes; for C#, cover only YQL, schema, and transaction modes and refer SDK details upstream."
 ---
 
 # YDB Table
@@ -11,24 +11,24 @@ Writing YQL against YDB tables, designing schemas to back those queries, and aud
 
 1. **Classify the task.** Write a new query or schema, execute SQL with YDB CLI, audit existing code, convert from another SQL dialect, or read an `EXPLAIN`.
 2. **Load sources** per the table below.
-3. **Do the work.** When auditing, cite `RULE-JV-NN`, `RULE-GO-NN`, `RULE-CPP-NN`, or `RULE-PY-NN`. C++ audits: never empty, never rule-ID-only — use the 4-part format in `rules/embed/cpp.md` (ID + diagnosis in sentence 1, then trigger, failure mode, fix).
+3. **Do the work.** When auditing, cite `RULE-JV-NN`, `RULE-GO-NN`, `RULE-CPP-NN`, or `RULE-PY-NN`. C++ audits: never empty, never rule-ID-only — use the 4-part format in `rules/cpp.md` (ID + diagnosis in sentence 1, then trigger, failure mode, fix).
 
 ## Load sources
 
 | Task                                                | Files to consult                                                                          |
 | --------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Executing or explaining SQL with YDB CLI            | `references/cli.md` and `../ydb-core/SKILL.md#cli`                                       |
+| Executing or explaining SQL with YDB CLI            | `references/cli.md`; activate `ydb-core` separately for connection context                                       |
 | Parameter binding, CLI value encoding, `DECLARE` syntax and compatibility | `references/query-parameters.md`                                             |
 | Reads, writes, transaction modes, batch vs bulk     | `references/working-with-data.md`                                                         |
-| Writing Java application code against YDB           | `references/embed/java.md`                                                                |
-| Auditing Java application code against YDB          | `rules/embed/java.md`                                                                     |
-| Writing Go application code against YDB             | `references/embed/go.md`                                                                  |
-| Auditing Go application code against YDB            | `rules/embed/go.md`                                                                       |
-| Writing C++ application code against YDB            | `references/embed/cpp.md`                                                                 |
-| Auditing C++ application code against YDB           | `rules/embed/cpp.md`                                                                      |
-| Writing Python FloatVector parameters                | `references/embed/python.md`                                                              |
-| Auditing Python FloatVector parameters               | `rules/embed/python.md`                                                                   |
-| Schema design — primary key shape, partitioning     | `../ydb-core/SKILL.md#schema-basics`                                                      |
+| Writing Java application code against YDB           | `embed/java.md`                                                                |
+| Auditing Java application code against YDB          | `rules/java.md`                                                                     |
+| Writing Go application code against YDB             | `embed/go.md`                                                                  |
+| Auditing Go application code against YDB            | `rules/go.md`                                                                       |
+| Writing C++ application code against YDB            | `embed/cpp.md`                                                                 |
+| Auditing C++ application code against YDB           | `rules/cpp.md`                                                                      |
+| Writing Python FloatVector parameters                | `embed/python.md`                                                              |
+| Auditing Python FloatVector parameters               | `rules/python.md`                                                                   |
+| Schema design — primary key shape, partitioning     | `references/working-with-data.md`; activate `ydb-core` for schema fundamentals                                                      |
 | YQL syntax, built-in functions, pragmas             | <https://ydb.tech/docs/en/yql/reference/> — do not reproduce the spec from memory         |
 
 ## Content rules

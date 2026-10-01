@@ -1,0 +1,25 @@
+description: Table writes · Transactional batch with AS_TABLE
+
+vars:
+  user_prompt: |
+    I need to upsert 500 typed rows into YDB and then update an aggregate in the
+    same transaction. Show the recommended YQL shape and explain why calling one
+    UPSERT per row is the wrong approach.
+
+assert:
+  - type: llm-rubric
+    metric: table-batch
+    threshold: 0.8
+    value: |
+      The response should:
+      - Declare one `List<Struct<...>>` parameter and use
+        `UPSERT INTO ... SELECT ... FROM AS_TABLE($items)` or an equivalent
+        parameterized batch statement.
+      - Keep the batch and aggregate update in the same surrounding transaction
+        so they commit or roll back atomically.
+      - Explain that one statement avoids per-row round trips and allows plan reuse.
+      - Avoid recommending `BulkUpsert` for this requirement because the caller
+        explicitly needs one transaction with the aggregate update.
+
+      Full fail if the response emits one SDK request per row or claims
+      `BulkUpsert` participates in the same transaction.

@@ -28,6 +28,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-cpp-audit
+    threshold: 0.8
     value: |
       The response should:
       - Cite `RULE-CPP-10` by ID.
@@ -49,3 +51,6 @@ assert:
 
       Full fail if the response endorses `INSERT INTO` with
       `.Idempotent(true)` as a safe pattern.
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-CPP-10

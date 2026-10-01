@@ -1,0 +1,24 @@
+description: Table writes · BulkUpsert eligibility and transactional boundary
+
+vars:
+  user_prompt: |
+    We are loading millions of rows into YDB. The target table has a synchronous
+    secondary index and a changefeed, and the whole load must be atomic. Can we
+    switch from parameterized YQL batches to SDK BulkUpsert for speed?
+
+assert:
+  - type: llm-rubric
+    metric: table-bulk
+    threshold: 0.8
+    value: |
+      The response should:
+      - Reject `BulkUpsert` for this target and requirement.
+      - Explain that BulkUpsert is non-transactional across partitions and can
+        expose partial progress, so it cannot provide an atomic all-or-nothing load.
+      - State that synchronous secondary indexes and attached changefeeds each
+        independently disqualify BulkUpsert.
+      - Recommend parameterized `AS_TABLE($items)` plus YQL `UPSERT` in the
+        required transaction, with bounded batches if needed.
+
+      Full fail if the response says BulkUpsert is atomic or supported with the
+      stated synchronous index and changefeed.

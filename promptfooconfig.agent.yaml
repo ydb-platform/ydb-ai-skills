@@ -1,0 +1,28 @@
+# End-to-end Claude Code skill routing and outcome checks.
+# Uses the local Claude Agent SDK / Claude Code authentication and reads project
+# skills from .claude/skills. Each case runs three fresh trials.
+description: YDB skills · Claude Code runtime
+
+evaluateOptions:
+  maxConcurrency: 1
+  repeat: 3
+  cache: false
+  timeoutMs: 180000
+
+prompts:
+  - "{{ user_prompt }}"
+
+providers:
+  - id: anthropic:claude-agent-sdk
+    label: Claude Code · project skills
+    config:
+      apiKeyRequired: false
+      working_dir: .
+      setting_sources: ['project']
+      skills: 'all'
+      append_allowed_tools: ['Read', 'Grep', 'Glob']
+      disallowed_tools: ['Bash', 'Write', 'Edit', 'WebFetch', 'WebSearch']
+
+# These cases exercise the real Skill tool, not a preloaded system prompt.
+tests:
+  - file://tests/agent/*.yaml

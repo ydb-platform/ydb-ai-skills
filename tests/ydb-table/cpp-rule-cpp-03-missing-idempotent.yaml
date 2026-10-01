@@ -25,6 +25,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-cpp-audit
+    threshold: 0.8
     value: |
       The response should:
       - Cite `RULE-CPP-03` by ID.
@@ -39,3 +41,6 @@ assert:
 
       Full fail if the response says the code is fine or recommends an
       outer manual retry loop instead of the idempotent flag.
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-CPP-03

@@ -28,9 +28,12 @@ Content lives in the surface skill whose API it is called on. When a method or c
 ```
 skills/ydb-core/
   SKILL.md
-  references/    # OPTIONAL — driver/transport patterns (balancing, sessions)
+  references/    # OPTIONAL — language-agnostic driver/transport patterns
+  embed/         # OPTIONAL — language-specific positive patterns
   rules/         # OPTIONAL — driver/transport anti-patterns
-  evals/evals.json
+  evals/
+    scenarios.json
+    activations.json
 ```
 
 The body of `SKILL.md` carries stable section anchors so other skills can deep-link to it:
@@ -46,26 +49,32 @@ The body of `SKILL.md` carries stable section anchors so other skills can deep-l
 - `## integrations` — ORMs, migration tools, Terraform, Spark, EF Core
 - `## schema-basics` — LLM failure modes on YDB schemas with concrete fixes
 
-Progressive disclosure is intentionally off for `ydb-core` itself: the SKILL.md body must remain in context whenever the skill triggers (body budget: ≤500 lines). The optional `references/` and `rules/` subdirs are loaded on demand the same way they are in surface skills, and they exist for driver/transport patterns whose surface is `ydb.Open(...)` rather than any one application API — balancing, session lifecycle, retry. Application-layer rules (query execution, transactions, schema) stay in the relevant surface skill (`ydb-table`, etc.); cross-link only from `references/`, not `rules/`.
+Progressive disclosure is intentionally off for `ydb-core` itself: the SKILL.md body must remain in context whenever the skill triggers (body budget: ≤500 lines). The optional `references/` and `rules/` subdirs are loaded on demand the same way they are in surface skills, and they exist for driver/transport patterns whose surface is `ydb.Open(...)` rather than any one application API — balancing, session lifecycle, retry. Application-layer rules (query execution, transactions, schema) stay in the relevant surface skill (`ydb-table`, etc.). Every skill package must validate independently; refer to companion skills by slug instead of linking outside the package.
 
 ### Surface skills — split by authoring vs audit
 
 ```
 skills/ydb-<surface>/
   SKILL.md
-  references/    # how to write correctly (positive patterns + short doc excerpts)
+  references/    # language-agnostic positive patterns
+  embed/         # language-specific positive SDK / driver patterns
   rules/         # what to catch (RULE-<PREFIX>-NN anti-patterns)
-  evals/evals.json
+  evals/
+    scenarios.json
+    activations.json
 ```
 
 Workflow inside `SKILL.md` loads **one** tree or the other based on task type (author vs audit), saving tokens when only one mode is needed. Body budget: ≤150 lines.
 
-### `references/` content
+### `references/` and `embed/` content
+
+`references/` contains language-agnostic YDB guidance. `embed/<lang>.md`
+contains language-specific SDK or driver patterns.
 
 - Short doc excerpt (what the feature is, with a link to upstream YDB docs).
 - Positive-pattern snippet(s).
 - One or two sentences explaining *why* this is the canonical pattern.
-- **No rule IDs**, no severity labels — references are for authoring, not auditing.
+- **No rule IDs**, no severity labels — these files are for authoring, not auditing.
 
 ### `rules/` content — template
 
@@ -82,15 +91,15 @@ Workflow inside `SKILL.md` loads **one** tree or the other based on task type (a
 
 Rules must be self-contained — a surface skill installed without `ydb-core` must still produce correct audit output for its own rules. Do not cross-reference `ydb-core` from `rules/`.
 
-### Cross-references (from `references/` only)
+### References and package boundaries
 
-A `references/` file may link into `ydb-core/SKILL.md` by anchor:
-
-```
-See ../ydb-core/SKILL.md#schema-basics for partitioning fundamentals.
-```
-
-Relative paths only. One level of indirection.
+Relative Markdown links must stay inside the current skill package. A
+`references/` or `embed/` file may link to another file in the same package.
+To direct the runtime to another installed skill, name its slug in prose; for
+product facts, prefer an official external documentation URL. Arcadia Skill
+Eval rejects resource links that escape the package and warns about
+reference-to-reference chains, so important resources must be linked directly
+from `SKILL.md`.
 
 ## Rule ID scheme
 
@@ -102,10 +111,11 @@ Rule IDs have the shape `RULE-<PREFIX>-<NN>`. Prefixes are **not pre-allocated**
 
 | Prefix | Scope | First used in |
 |--------|-------|---------------|
-| JV | Java SDK / JDBC / Hibernate / Spring Data anti-patterns | skills/ydb-table/rules/embed/java.md |
-| GO | Go SDK (`ydb-go-sdk/v3`) — driver, sessions, query/table services, retry, transactions | skills/ydb-table/rules/embed/go.md |
-| CPP | C++ SDK (`ydb-cpp-sdk`) — query/table clients, retry, transactions, parameterization | skills/ydb-table/rules/embed/cpp.md |
-| PY | Python SDK (`ydb`) — query parameters and vector encoding | skills/ydb-table/rules/embed/python.md |
+| JV | Java SDK / JDBC / Hibernate / Spring Data anti-patterns | skills/ydb-table/rules/java.md |
+| GO | Go SDK (`ydb-go-sdk/v3`) — driver, sessions, query/table services, retry, transactions | skills/ydb-table/rules/go.md |
+| CGO | Go SDK core driver, balancing, and session-lifecycle anti-patterns | skills/ydb-core/rules/go.md |
+| CPP | C++ SDK (`ydb-cpp-sdk`) — query/table clients, retry, transactions, parameterization | skills/ydb-table/rules/cpp.md |
+| PY | Python SDK (`ydb`) — query parameters and vector encoding | skills/ydb-table/rules/python.md |
 
 ### Severity labels
 
@@ -121,7 +131,7 @@ More precise definitions evolve alongside real rules. Don't invent cutoffs up fr
 Required fields: `name`, `description`. Nothing else.
 
 - `name` — kebab-case matching the directory.
-- `description` — **third person**, in the style that Claude's skill selector expects. Include both what the skill does **and** specific trigger phrases that grab the right user intent. Upstream calls this "pushy" phrasing and documents it as the counter to Claude's tendency to undertrigger — see [`skill-creator`, "Write the SKILL.md"](https://github.com/anthropics/skills/blob/main/skills/skill-creator/SKILL.md#write-the-skillmd).
+- `description` — a selector-facing scope statement. State the closed positive scope first (for example, `Use only for ...`) and include grounded trigger phrases for the intended requests. Avoid listing detailed negative keywords: semantic selectors can match those words and overtrigger. Measure both recall and false activation with activation evals. See [`skill-creator`, "Write the SKILL.md"](https://github.com/anthropics/skills/blob/main/skills/skill-creator/SKILL.md#write-the-skillmd).
 
 Do not add `version:`, `compatibility:` (unless you really mean it), or other fields — they are not part of the Agent Skills spec and get ignored or, worse, cause confusion in other runtimes.
 
@@ -149,7 +159,19 @@ A trigger phrase without a corresponding grep hit in upstream code is a bug.
 
 ## Evals
 
-One `evals/evals.json` per skill. Schema in [`docs/schemas.md`](schemas.md) (ported verbatim from upstream). Follow the upstream workflow:
+Write response-quality cases as promptfoo YAML under `tests/<skill>/`. The
+Arcadia-compatible `skills/<skill>/evals/scenarios.json` is generated from
+those files and travels with the skill during sync. Its schema is documented
+in [`docs/schemas.md`](schemas.md).
+
+After adding or changing a case, regenerate and check the Arcadia form:
+
+```bash
+python3 scripts/export-arcadia-evals.py
+python3 scripts/export-arcadia-evals.py --check
+```
+
+Do not edit `scenarios.json` directly. Follow this authoring workflow:
 
 1. Write prompts first. Leave `expectations` empty.
 2. Run once to observe behavior.
@@ -160,7 +182,7 @@ See [`docs/testing.md`](testing.md) for how to run evals.
 ## Review checklist (use before PR)
 
 1. `name:` is kebab-case, matches the directory.
-2. `description:` is third-person, specific, grounded in real symbols from SDK/CLI/docs.
+2. `description:` states a closed positive scope and uses specific triggers grounded in SDK/CLI/docs.
 3. No `version:` or other non-spec frontmatter fields.
 4. Body ≤150 lines (surface skills) / ≤500 lines (`ydb-core`).
 5. No cross-references from `rules/` to any other skill.
@@ -170,6 +192,6 @@ See [`docs/testing.md`](testing.md) for how to run evals.
 
 ## See also
 
-- [`docs/schemas.md`](schemas.md) — canonical JSON shapes for `evals.json`, `grading.json`, `benchmark.json`.
+- [`docs/schemas.md`](schemas.md) — Arcadia `scenarios.json` shape used by this repository.
 - [`docs/testing.md`](testing.md) — how to run the promptfoo compatibility matrix.
 - [Upstream `skill-creator` SKILL.md](https://github.com/anthropics/skills/blob/main/skills/skill-creator/SKILL.md) — general skill-authoring principles.

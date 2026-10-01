@@ -16,6 +16,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-java-audit
+    threshold: 0.8
     value: |
       The response should:
       - Cite `RULE-JV-05` by ID (JPA @Version over YDB).
@@ -25,3 +27,6 @@ assert:
       - Not recommend `@Version` as a defensive measure or claim it provides additional safety on YDB.
 
       Full fail if the response approves keeping `@Version` "for safety" or invents a different rule ID.
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-JV-05

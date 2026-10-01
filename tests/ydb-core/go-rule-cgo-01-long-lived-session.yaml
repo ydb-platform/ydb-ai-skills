@@ -1,0 +1,46 @@
+description: Go core audit · Long-lived application-owned session (RULE-CGO-01)
+
+vars:
+  user_prompt: |
+    Review this YDB Go service. It creates one Query Service session at startup
+    and reuses it for every request so that session creation is not repeated.
+
+    ```go
+    type Service struct {
+        session query.Session
+    }
+
+    func NewService(ctx context.Context, db *ydb.Driver) (*Service, error) {
+        s, err := db.Query().CreateSession(ctx)
+        if err != nil { return nil, err }
+        return &Service{session: s}, nil
+    }
+
+    func (s *Service) Load(ctx context.Context, id uint64) error {
+        res, err := s.session.Query(ctx, "SELECT value FROM items WHERE id = $id")
+        if err != nil { return err }
+        return res.Close(ctx)
+    }
+    ```
+
+assert:
+  - type: llm-rubric
+    metric: core-go-audit
+    threshold: 0.8
+    value: |
+      The response should:
+      - Cite `RULE-CGO-01` by ID.
+      - Identify the application-owned long-lived session as the anti-pattern.
+      - Explain that it bypasses pool checkout and load spreading, pins work to
+        one node, ignores `shutdownHint`, and can surface `BAD_SESSION` during
+        server drain or restart.
+      - Replace the stored session with a per-operation `db.Query().Do(ctx, fn)`
+        scope (or the equivalent Table Service `Do`).
+      - Add `query.WithIdempotent()` only when the closure is actually replay-safe,
+        not automatically as part of the session migration.
+
+      Full fail if the response recommends keeping the session in the struct
+      or merely reconnecting it after `BAD_SESSION`.
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-CGO-01

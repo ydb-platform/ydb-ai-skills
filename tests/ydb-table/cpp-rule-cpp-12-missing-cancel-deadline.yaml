@@ -32,6 +32,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-cpp-audit
+    threshold: 0.8
     value: |
       The response should:
       - Use the C++ audit format and cite `RULE-CPP-12` in sentence 1.
@@ -52,3 +54,6 @@ assert:
 
       Full fail if the response claims `CancellationToken` aborts an in-flight
       RPC or proves that the operation had no effect.
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-CPP-12

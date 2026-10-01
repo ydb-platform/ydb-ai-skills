@@ -41,6 +41,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-go-audit
+    threshold: 0.8
     value: |
       The response should:
       - Cite `RULE-GO-01` by ID.
@@ -67,3 +69,6 @@ assert:
         loss.
       - Recommends only raising `LIMIT` without an outer pagination
         loop.
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-GO-01

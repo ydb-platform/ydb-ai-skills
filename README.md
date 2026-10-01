@@ -98,11 +98,10 @@ For agents that don't auto-trigger skills, reference the skill name explicitly i
 
 ```
 skills/                          Surface-aligned skills (universal format)
-  ydb-core/SKILL.md              Single-file router — overview, auth, schema basics, CLI discovery
-  ydb-table/                     SKILL.md + references/ + rules/
-  ydb-docs/SKILL.md               Standalone documentation lookup via llms.txt
+  ydb-core/                      SKILL.md + references/ + rules/ + Arcadia scenarios/activations
+  ydb-docs/                      SKILL.md + Arcadia scenarios/activations
+  ydb-table/                     SKILL.md + references/ + rules/ + Arcadia scenarios/activations
 promptfooconfig.yaml             Compatibility matrix config — provider list, test discovery
-prompts/coding-agent.yaml        Shared system prompt for all tests
 tests/                           Test cases per skill (YAML, one per file)
 agents/grader.md                 Reference grader prompt (from anthropics/skills)
 docs/
@@ -123,11 +122,25 @@ export OPENROUTER_API_BASE_URL="..."
 export OPENROUTER_API_KEY="..."
 npx promptfoo@latest eval
 npx promptfoo@latest view
+
+# Real Claude Code skill activation + outcome checks, three trials each
+npm install
+npx promptfoo@latest eval -c promptfooconfig.agent.yaml
 ```
 
 All providers route through one OpenAI-compatible endpoint. Default model set skews toward enterprise-deployed open-source (Qwen, DeepSeek, Mistral, Llama, GLM, Kimi) with one baseline per major cloud vendor (Anthropic, Google, OpenAI, xAI).
 
 Details — adding tests, adding models, reading the matrix, known gaps — in [`docs/testing.md`](docs/testing.md).
+
+The same YAML cases generate Arcadia `evals/scenarios.json` files that travel
+with each skill during sync:
+
+```bash
+python3 scripts/export-arcadia-evals.py
+python3 scripts/export-arcadia-activations.py
+python3 scripts/eval-coverage.py
+python3 scripts/validate-arcadia-evals.py
+```
 
 ## Contributing
 

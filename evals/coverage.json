@@ -1,0 +1,255 @@
+{
+  "version": 1,
+  "description": "Weighted inventory of externally observable YDB skill behaviors. Coverage is separate from model pass rate.",
+  "requirements": [
+    {
+      "id": "core.onboarding",
+      "skill": "ydb-core",
+      "weight": 1,
+      "cases": [
+        "ydb-core:onboarding"
+      ]
+    },
+    {
+      "id": "core.packages-versioning",
+      "skill": "ydb-core",
+      "weight": 1,
+      "cases": [
+        "ydb-core:package-integration-selection"
+      ]
+    },
+    {
+      "id": "core.cli.discovery",
+      "skill": "ydb-core",
+      "weight": 2,
+      "cases": [
+        "ydb-core:cli-command-discovery",
+        "ydb-core:cli-noninteractive"
+      ]
+    },
+    {
+      "id": "core.cli.mutation-safety",
+      "skill": "ydb-core",
+      "weight": 3,
+      "cases": [
+        "ydb-core:cli-admin-safety",
+        "ydb-core:cli-scheme-mutation-safety"
+      ]
+    },
+    {
+      "id": "core.connecting-auth",
+      "skill": "ydb-core",
+      "weight": 3,
+      "cases": [
+        "ydb-core:cloud-auth"
+      ]
+    },
+    {
+      "id": "core.balancing",
+      "skill": "ydb-core",
+      "weight": 2,
+      "cases": [
+        "ydb-core:balancing-nearest-dc"
+      ]
+    },
+    {
+      "id": "core.local-deployment",
+      "skill": "ydb-core",
+      "weight": 1,
+      "cases": [
+        "ydb-core:local-docker"
+      ]
+    },
+    {
+      "id": "core.integrations",
+      "skill": "ydb-core",
+      "weight": 1,
+      "cases": [
+        "ydb-core:package-integration-selection"
+      ]
+    },
+    {
+      "id": "core.schema-basics",
+      "skill": "ydb-core",
+      "weight": 2,
+      "cases": [
+        "ydb-table:pk-design-iot",
+        "ydb-table:sql-to-yql-serial"
+      ]
+    },
+    {
+      "id": "core.session-lifecycle",
+      "skill": "ydb-core",
+      "weight": 3,
+      "cases": [
+        "ydb-core:go-rule-cgo-01-long-lived-session"
+      ]
+    },
+    {
+      "id": "core.deadline-budget",
+      "skill": "ydb-core",
+      "weight": 3,
+      "cases": [
+        "ydb-core:deadline-budget"
+      ]
+    },
+    {
+      "id": "docs.lookup-version-language",
+      "skill": "ydb-docs",
+      "weight": 2,
+      "cases": [
+        "ydb-docs:lookup-offline"
+      ]
+    },
+    {
+      "id": "docs.evidence-chain",
+      "skill": "ydb-docs",
+      "weight": 3,
+      "cases": [
+        "ydb-docs:verify-source-chain"
+      ]
+    },
+    {
+      "id": "docs.default-and-fallback",
+      "skill": "ydb-docs",
+      "weight": 2,
+      "cases": [
+        "ydb-docs:default-main-fallback"
+      ]
+    },
+    {
+      "id": "table.cli.explain-execute",
+      "skill": "ydb-table",
+      "weight": 3,
+      "cases": [
+        "ydb-table:cli-explain-analyze",
+        "ydb-table:cli-explain-before-execute"
+      ]
+    },
+    {
+      "id": "table.cli.parameters",
+      "skill": "ydb-table",
+      "weight": 2,
+      "cases": [
+        "ydb-table:cli-file-parameter-formats",
+        "ydb-table:cli-typed-parameters"
+      ]
+    },
+    {
+      "id": "table.safe-exploration",
+      "skill": "ydb-table",
+      "weight": 2,
+      "cases": [
+        "ydb-table:cli-safe-exploration"
+      ]
+    },
+    {
+      "id": "table.query-parameters",
+      "skill": "ydb-table",
+      "weight": 2,
+      "cases": [
+        "ydb-table:query-parameters-declare",
+        "ydb-table:query-parameters-cli-declare"
+      ]
+    },
+    {
+      "id": "table.primary-key-design",
+      "skill": "ydb-table",
+      "weight": 3,
+      "cases": [
+        "ydb-table:pk-design-iot"
+      ]
+    },
+    {
+      "id": "table.keyset-pagination",
+      "skill": "ydb-table",
+      "weight": 3,
+      "cases": [
+        "ydb-table:keyset-pagination"
+      ]
+    },
+    {
+      "id": "table.sql-to-yql",
+      "skill": "ydb-table",
+      "weight": 2,
+      "cases": [
+        "ydb-table:sql-to-yql-serial"
+      ]
+    },
+    {
+      "id": "table.transactional-batch",
+      "skill": "ydb-table",
+      "weight": 3,
+      "cases": [
+        "ydb-table:batch-as-table"
+      ]
+    },
+    {
+      "id": "table.bulk-upsert-boundaries",
+      "skill": "ydb-table",
+      "weight": 3,
+      "cases": [
+        "ydb-table:bulk-upsert-boundaries"
+      ]
+    },
+    {
+      "id": "table.cpp-audit",
+      "skill": "ydb-table",
+      "weight": 3,
+      "cases": [
+        "ydb-table:cpp-rule-cpp-01-unbounded-read",
+        "ydb-table:cpp-rule-cpp-12-missing-cancel-deadline"
+      ]
+    },
+    {
+      "id": "table.go-audit",
+      "skill": "ydb-table",
+      "weight": 3,
+      "cases": [
+        "ydb-table:go-rule-go-01-table-service-read",
+        "ydb-table:go-rule-go-12-detached-context"
+      ]
+    },
+    {
+      "id": "table.java-audit",
+      "skill": "ydb-table",
+      "weight": 3,
+      "cases": [
+        "ydb-table:java-rule-jv-01-findbyid-loop",
+        "ydb-table:java-rule-jv-07-detached-session-retry-context"
+      ]
+    },
+    {
+      "id": "table.python-audit",
+      "skill": "ydb-table",
+      "weight": 2,
+      "cases": [
+        "ydb-table:python-rule-py-01-client-floatvector"
+      ]
+    },
+    {
+      "id": "table.cpp-floatvector",
+      "skill": "ydb-table",
+      "weight": 2,
+      "cases": [
+        "ydb-table:cpp-rule-cpp-13-client-floatvector"
+      ]
+    },
+    {
+      "id": "table.go-floatvector",
+      "skill": "ydb-table",
+      "weight": 2,
+      "cases": [
+        "ydb-table:go-rule-go-13-client-floatvector"
+      ]
+    },
+    {
+      "id": "table.java-floatvector",
+      "skill": "ydb-table",
+      "weight": 2,
+      "cases": [
+        "ydb-table:java-rule-jv-08-client-floatvector"
+      ]
+    }
+  ]
+}

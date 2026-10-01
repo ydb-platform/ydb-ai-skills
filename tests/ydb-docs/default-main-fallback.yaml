@@ -1,0 +1,16 @@
+description: Documentation · Default branch and retrieval fallback
+
+vars:
+  user_prompt: |
+    Find the current English YDB documentation for client authentication.
+    I did not request a product version. Describe the retrieval sequence,
+    including what to do if the root llms.txt endpoint is unavailable.
+
+assert:
+  - type: llm-rubric
+    value: |
+      The response should:
+      - Use https://ydb.tech/llms.txt as the normal entry point.
+      - Select English and use the main documentation branch because no version was requested.
+      - Fall back to https://ydb.tech/docs/en/llms.txt?version=main, then documentation navigation or site-restricted search if indexes are unavailable.
+      - Open only the relevant linked pages and disclose any retrieval or version mismatch.

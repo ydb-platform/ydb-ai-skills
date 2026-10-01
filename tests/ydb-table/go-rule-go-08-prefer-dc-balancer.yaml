@@ -18,6 +18,8 @@ vars:
 
 assert:
   - type: llm-rubric
+    metric: table-go-audit
+    threshold: 0.8
     value: |
       The response should:
       - Cite `RULE-GO-08` by ID (PreferLocalDC / PreferNearestDC in
@@ -38,3 +40,6 @@ assert:
       Full fail if the response endorses the prefer-DC choice as a
       latency optimization or suggests using `PreferNearestDC` as a
       replacement for `PreferLocalDC`.
+  - type: contains
+    metric: exact-rule-id
+    value: RULE-GO-08

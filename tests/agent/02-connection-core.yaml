@@ -1,0 +1,15 @@
+description: Agent activation · hosted connection and auth use ydb-core
+vars:
+  user_prompt: How should a Go service connect securely to hosted YDB from a cloud VM without baking a token into the image?
+assert:
+  - type: skill-used
+    metric: activation-recall
+    value: ydb-core
+  - type: not-skill-used
+    metric: activation-isolation
+    value: ydb-table
+  - type: javascript
+    metric: outcome
+    value: |
+      const s = String(output);
+      return /grpcs:\/\//i.test(s) && /YDB_METADATA_CREDENTIALS|MetadataCredentials|FromMetadata/.test(s);
