@@ -10,7 +10,7 @@ Skill bodies are intentionally concise. Supporting references and rules are grou
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **ydb-core**         | YDB overview and comparisons, local setup, connection/auth, SDK selection, CLI namespace operations, driver balancing, sessions and shared client policy. Baseline skill — auto-installed.     |
 | **ydb-table**        | Application data access: SQL/YQL, query execution via SDK or `ydb sql`, schema design, transactions, optimization, SQL-dialect conversion and audits of data-access code/configuration.        |
-| **ydb-search**       | Vector and full-text indexes, nearest-neighbor queries, BM25, hybrid ranking with `HybridRank`, recall tuning, and index lifecycle. |
+| **ydb-search**       | Vector and full-text indexes, BM25, `HybridRank`, recall tuning, index lifecycle, and search examples for Python, Go, Java, C++, and JavaScript SDKs. |
 | **ydb-docs** | Finds and verifies official YDB documentation through `llms.txt`, with language/version selection and source citations; can support core/table tasks. |
 
 Choose by the part of YDB involved, not by whether the request contains code.
@@ -115,7 +115,7 @@ skills/                          Surface-aligned skills (universal format)
   ydb-core/                      SKILL.md + references/ + rules/ + canonical eval JSON
   ydb-docs/                      SKILL.md + canonical eval JSON
   ydb-table/                     SKILL.md + references/ + rules/ + canonical eval JSON
-  ydb-search/                    Search workflow + vector, full-text, hybrid, and compatibility references
+  ydb-search/                    Search references + SDK examples in references/embed/ + shared SQL assets
 promptfooconfig.yaml             Preloaded API compatibility matrix
 promptfooconfig.codex.yaml       Local Codex solver and judge over canonical scenarios
 promptfooconfig.agent.yaml       Claude Code runtime selection and outcome fixtures

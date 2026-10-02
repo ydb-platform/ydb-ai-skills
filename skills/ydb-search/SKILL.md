@@ -1,6 +1,6 @@
 ---
 name: ydb-search
-description: Designs YDB vector indexes, fulltext indexes, and hybrid search queries. Use for YDB semantic search, ANN or exact nearest neighbors, vector_kmeans_tree, Knn distance and similarity ranking, KMeansTreeSearchTopSize, fulltext_plain, fulltext_relevance, FulltextMatch, FulltextScore, BM25, tokenizers, n-grams, HybridRank, RRF, and search recall or index lifecycle problems. Covers index DDL, embedding storage, filtered search, ranking, and query troubleshooting. For SDK binding mechanics or general SQL execution use ydb-table; for finding documentation use ydb-docs. Does not cover YQL on YT or other search engines.
+description: Designs YDB vector indexes, fulltext indexes, and hybrid search queries, including SDK examples for Python, Go, Java, C++, and JavaScript. Use for YDB semantic search, ANN or exact nearest neighbors, vector_kmeans_tree, Knn distance and similarity ranking, KMeansTreeSearchTopSize, fulltext_plain, fulltext_relevance, FulltextMatch, FulltextScore, BM25, tokenizers, n-grams, HybridRank, RRF, and search recall or index lifecycle problems. Covers index DDL, binary embedding parameters, batch writes, filtered search, ranking, and query troubleshooting. For general SDK usage or SQL execution use ydb-table; for finding documentation use ydb-docs. Does not cover YQL on YT or other search engines.
 ---
 
 # YDB Search
@@ -22,9 +22,15 @@ Design search indexes and write vector, full-text, and hybrid queries for YDB ro
 | Vector storage, exact/ANN queries, vector index DDL, coverage, filtering, recall, rebuilding | [Vector indexes](references/vector-indexes.md) |
 | Text matching, BM25, analyzers, n-grams, filtered full-text indexes | [Full-text indexes](references/fulltext-indexes.md) |
 | HybridRank, RRF/linear fusion, branch weights and candidate limits | [Hybrid search](references/hybrid-search.md); load the individual index references when changing their DDL |
+| SDK setup, shared SQL files, parameter types, and operation order | [SDK workflow](references/sdk.md), plus only the relevant language page below |
+| Search through the Python SDK | [Python](references/embed/python.md) |
+| Search through the Go SDK | [Go](references/embed/go.md) |
+| Search through the Java SDK | [Java](references/embed/java.md) |
+| Search through the C++ SDK | [C++](references/embed/cpp.md) |
+| Search through the JavaScript SDK | [JavaScript](references/embed/javascript.md) |
 | Feature availability, documentation/source disagreements, source provenance | [Compatibility](references/compatibility.md) |
 
-If installed, `ydb-table` covers SDK parameter APIs and CLI execution, and `ydb-core` covers connection discovery. This skill's SQL guidance is usable independently; consult official version-matched documentation for those additional tasks if the companion skills are absent.
+The SDK pages are focused on search and share executable SQL assets under `assets/queries/`. If installed, `ydb-table` covers general SDK usage and CLI execution, and `ydb-core` covers connection discovery. The examples can be used independently with the linked official SDK setup documentation.
 
 ## Gotchas
 

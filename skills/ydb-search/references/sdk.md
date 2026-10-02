@@ -1,0 +1,46 @@
+# Search through an SDK
+
+Use the Query Service to execute the search SQL with typed parameters. Index selection, ranking, and fusion are expressed in SQL; the SDK supplies credentials, sessions, retries, parameter values, and result handling. Sources: [vector-search SDK recipe](https://ydb.tech/docs/ru/recipes/ydb-sdk/vector-search?version=main), [driver initialization](https://ydb.tech/docs/en/recipes/ydb-sdk/init), and [query parameters](https://ydb.tech/docs/en/yql/reference/syntax/declare).
+
+Load the language-specific page selected in `SKILL.md` alongside this workflow. Each page covers client setup, FloatVector serialization, a parameterized batch write, and all four search modes below. General SDK usage outside search remains in `ydb-table`.
+
+## Shared SQL and setup order
+
+Copy the bundled [queries directory](../assets/queries) into the application's working directory as `queries/`. The snippets load those files without interpolating caller values into the SQL. Table and index names in them are fixed application identifiers; adapt these together when using another schema.
+
+The walkthrough uses three-dimensional float vectors so the data is readable. Change the client dimension check and `vector_dimension` together to match the real embedding model. Use a representative dataset when building a production index; the tiny sample only demonstrates the API.
+
+1. Open one driver and reuse a Query Service client/session pool with the application's endpoint, database, and credentials.
+2. Execute [create-table.sql](../assets/queries/create-table.sql) once for a new demonstration table. Existing applications should use their migration procedure and actual schema.
+3. Batch-write documents with [upsert.sql](../assets/queries/upsert.sql). Serialize each embedding before binding the batch. Stable application-assigned IDs make these example `UPSERT`s safe to retry with the same values.
+4. Run [exact-search.sql](../assets/queries/exact-search.sql) if a baseline is useful. It needs no vector index.
+5. After loading representative data, execute [add-vector-index.sql](../assets/queries/add-vector-index.sql) and [add-fulltext-index.sql](../assets/queries/add-fulltext-index.sql) as separate schema operations. Wait for both indexes to become ready. Coordinate writes during vector index construction if a consistent build is required; see [vector lifecycle](vector-indexes.md#lifecycle-and-verification).
+6. Run indexed searches, consume results, and close the pool/client and driver at application shutdown.
+
+Schema operations are separate from the retriable read/write helpers. A failed or interrupted index build needs a schema-state check before retrying. `BulkUpsert` is an initial-load alternative only before these synchronous indexes exist.
+
+## Parameter contract
+
+| Query file / mode | Parameters |
+|---|---|
+| `upsert.sql` | `$items`: `List<Struct<id: Uint64, title: Utf8, body: Utf8, embedding: String>>` |
+| `exact-search.sql` / `exact` | `$query_vector`: `String`; `$limit`: `Uint64` |
+| `vector-search.sql` / `vector` | `$query_vector`: `String`; `$limit`: `Uint64` |
+| `fulltext-search.sql` / `fulltext` | `$query_text`: `Utf8`; `$limit`: `Uint64` |
+| `hybrid-search.sql` / `hybrid` | `$query_text`: `Utf8`; `$query_vector`: `String`; `$limit`: `Uint64` |
+
+`String` is binary data: float32 coordinates in little-endian order followed by `0x01`. For three dimensions this is 13 bytes. Text fields and the lexical query use `Utf8`. Bind an unsigned 64-bit integer for the limit; supplying a language's default integer type is not equivalent to declaring `Uint64`.
+
+The shared SQL files intentionally omit `DECLARE`: these examples target Query Service requests with typed parameters on YDB 25.1.2.7 or newer, with implicit parameter type inference enabled. Individual search features have additional version requirements; check [compatibility](compatibility.md). An SDK that generates declarations supplies them itself. When executing the files through a CLI or compiling without parameter values, add explicit `DECLARE` statements from the table above.
+
+For hybrid search, the text and vector should represent the same user query. Embedding generation happens in the application. The literal `(100, 200) AS Limits` enables a parameterized final `$limit`; tune those pools and vector probing for the workload. The examples return ranked `id`/`title` pairs in every mode. Vector and full-text SQL also project their own `score`; hybrid SQL does not expose a scalar `HybridRank` column.
+
+## Adapting the examples
+
+- Keep application-provided embeddings as binary `String` in both search and `AS_TABLE` writes. Do not send `List<Float>` for conversion in SQL.
+- Select SQL from the fixed mode map, not from user input. Bind the query text, vector, document fields, and result limit separately.
+- Preserve caller deadlines/cancellation when integrating the helpers into a request handler, and use the SDK's retry support. Construct a fresh result collection inside each retried attempt before publishing it to the caller.
+- Read results only after checking query status and propagate stream errors. A result limit makes materializing these search results practical; use streaming or pagination for unrelated large reads.
+- The fixed sample schema has non-null `id` and `title`. Adapt result readers for nullable columns if the application's schema differs.
+
+The SDK recipe has recommended and alternative tabs. Use the recommended client encoding. The snippets here also keep full-text and hybrid query constraints from the corresponding references.

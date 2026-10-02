@@ -35,6 +35,8 @@ only core must not count as table activation. Testing table alone is a separate
 isolation experiment corresponding to installation with `--no-core`; record it
 as such rather than treating it as the default installation.
 
+`ydb-search` is loaded with its vector, full-text, hybrid, compatibility, and SDK references, including all five language pages and the shared SQL assets. Its cases under `tests/ydb-search/` exercise index lifecycle, standalone full-text query shape, hybrid candidate limits, and version-dependent prefix support. Run just these cases with `--filter-pattern 'Search ·'`; routing cases are in `tests/routing/18-*` through `21-*`. Source inspection and static validation do not substitute for running the model matrix or executing SQL against a matching server.
+
 ## Canonical cases and the Promptfoo adapter
 
 Edit canonical JSON directly. [`tests/adapters/read-native-evals.cjs`](../tests/adapters/read-native-evals.cjs)

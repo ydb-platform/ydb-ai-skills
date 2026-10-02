@@ -81,6 +81,42 @@ _messages: &messages
       --- ydb-search / references / compatibility.md ---
       {{ ydb_search_refs_compatibility }}
 
+      --- ydb-search / references / sdk.md ---
+      {{ ydb_search_refs_sdk }}
+
+      --- ydb-search / references / embed / python.md ---
+      {{ ydb_search_refs_python }}
+
+      --- ydb-search / references / embed / go.md ---
+      {{ ydb_search_refs_go }}
+
+      --- ydb-search / references / embed / java.md ---
+      {{ ydb_search_refs_java }}
+
+      --- ydb-search / references / embed / cpp.md ---
+      {{ ydb_search_refs_cpp }}
+
+      --- ydb-search / references / embed / javascript.md ---
+      {{ ydb_search_refs_javascript }}
+
+      --- ydb-search / assets / queries ---
+      create-table.sql:
+      {{ ydb_search_sql_create }}
+      upsert.sql:
+      {{ ydb_search_sql_upsert }}
+      add-vector-index.sql:
+      {{ ydb_search_sql_vector_index }}
+      add-fulltext-index.sql:
+      {{ ydb_search_sql_fulltext_index }}
+      exact-search.sql:
+      {{ ydb_search_sql_exact }}
+      vector-search.sql:
+      {{ ydb_search_sql_vector }}
+      fulltext-search.sql:
+      {{ ydb_search_sql_fulltext }}
+      hybrid-search.sql:
+      {{ ydb_search_sql_hybrid }}
+
       SKILL: ydb-table
       ══════════════════════════════════════════════════════════════════════════
       {{ ydb_table }}
@@ -274,6 +310,20 @@ defaultTest:
     ydb_search_refs_fulltext: file://skills/ydb-search/references/fulltext-indexes.md
     ydb_search_refs_hybrid: file://skills/ydb-search/references/hybrid-search.md
     ydb_search_refs_compatibility: file://skills/ydb-search/references/compatibility.md
+    ydb_search_refs_sdk: file://skills/ydb-search/references/sdk.md
+    ydb_search_refs_python: file://skills/ydb-search/references/embed/python.md
+    ydb_search_refs_go: file://skills/ydb-search/references/embed/go.md
+    ydb_search_refs_java: file://skills/ydb-search/references/embed/java.md
+    ydb_search_refs_cpp: file://skills/ydb-search/references/embed/cpp.md
+    ydb_search_refs_javascript: file://skills/ydb-search/references/embed/javascript.md
+    ydb_search_sql_create: file://skills/ydb-search/assets/queries/create-table.sql
+    ydb_search_sql_upsert: file://skills/ydb-search/assets/queries/upsert.sql
+    ydb_search_sql_vector_index: file://skills/ydb-search/assets/queries/add-vector-index.sql
+    ydb_search_sql_fulltext_index: file://skills/ydb-search/assets/queries/add-fulltext-index.sql
+    ydb_search_sql_exact: file://skills/ydb-search/assets/queries/exact-search.sql
+    ydb_search_sql_vector: file://skills/ydb-search/assets/queries/vector-search.sql
+    ydb_search_sql_fulltext: file://skills/ydb-search/assets/queries/fulltext-search.sql
+    ydb_search_sql_hybrid: file://skills/ydb-search/assets/queries/hybrid-search.sql
     ydb_core: file://skills/ydb-core/SKILL.md
     ydb_core_refs_balancing: file://skills/ydb-core/references/balancing.md
     ydb_core_refs_session_lifecycle: file://skills/ydb-core/references/session-lifecycle.md
