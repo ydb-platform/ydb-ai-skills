@@ -60,7 +60,7 @@ WHERE FulltextMatch(body, $query_text,
 LIMIT 20;
 ```
 
-`Keywords` is the default mode and `And` the default term operator. With `Or`, `+term` is required, and `MinimumShouldMatch` counts only optional terms (a number or percentage supplied as a string). `Query` mode supports required/excluded terms and quoted phrases. `Wildcard` mode uses `%` and `_` and requires n-grams.
+`Keywords` is the default mode and `And` the default term operator. With `Or`, an optional `+` prefix marks that particular term as mandatory. Terms without `+` are optional, and `MinimumShouldMatch` counts only those optional terms (a number or percentage supplied as a string). If no term has `+`, all terms are optional and the threshold applies to all of them. Preserve the supplied query text; adding `+` changes which documents match. The [main full-text query tests](https://github.com/ydb-platform/ydb/blob/169565bacd19165e6c2c6d5432db89f11b422189/ydb/core/kqp/ut/indexes/fulltext/kqp_fulltext_search_ut.cpp) exercise `FulltextScore` with `Or` and `"50%" AS MinimumShouldMatch` without `+` prefixes. `Query` mode supports required/excluded terms and quoted phrases. `Wildcard` mode uses `%` and `_` and requires n-grams.
 
 `FulltextScore` accepts `DefaultOperator`, `MinimumShouldMatch` (with `Or`), and numeric `K1`/`B` BM25 settings. Keep its options distinct from `FulltextMatch`'s `Mode`; do not infer that every matching option is also a scoring option.
 
@@ -124,6 +124,6 @@ ORDER BY relevance DESC
 LIMIT 10;
 ```
 
-The text column is last, and equality predicates may be written in any order. Keep filter columns separate from the primary key in this pattern. The inspected schema validation prohibits a prefix containing all primary-key columns; its docs state the broader restriction that filter columns cannot be primary-key columns. Check the target if a prefix overlaps a composite key. Prefixed relevance indexes require both `EnableFulltextIndexPrefix` and the compact implementation selected by `EnableCompactFulltextIndex` in this snapshot; see [compatibility](compatibility.md).
+The text column is last, and equality predicates may be written in any order. Keep filter columns separate from the primary key in this pattern. The inspected schema validation prohibits a prefix containing all primary-key columns; older docs state the broader restriction that filter columns cannot be primary-key columns. Check the target if a prefix overlaps a composite key. Prefixed relevance indexes require both `EnableFulltextIndexPrefix` and the compact implementation selected by `EnableCompactFulltextIndex`. Both default to true on the inspected main revision, while the original stable-26-3-1 snapshot defaults to false; check effective cluster overrides and see [compatibility](compatibility.md).
 
 Full-text indexes are maintained for `INSERT`, `UPSERT`, `REPLACE`, `UPDATE`, and `DELETE`; `BulkUpsert` on an indexed table is unsupported. A single `Uint64`/`Int64`/`Uint32`/`Int32` primary key supplies document IDs directly. With the row-ID feature enabled, other keys use the auto-managed `__ydb_row_id` column and `__ydb_unique_row_id` index. Omit the system column from writes; YDB populates it, and the unique index must remain while full-text indexes depend on it. Support for those keys in full-text search does not remove hybrid search's single-column key restriction.

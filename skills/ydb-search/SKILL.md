@@ -11,7 +11,7 @@ Design search indexes and write vector, full-text, and hybrid queries for YDB ro
 
 1. Identify the retrieval task: exact nearest neighbors, approximate vector search, lexical matching, BM25 ranking, or fusion of lexical and semantic results. Reuse the supplied schema, embedding model and dimension, metric, filters, and result limit; state assumptions where these are missing.
 2. Establish the server version and relevant enabled features when available. Read [compatibility](references/compatibility.md) before relying on hybrid search, prefixed indexes, or non-integer full-text primary keys. A source checkout or documentation branch does not establish deployed availability.
-3. Load only the relevant reference below. Produce matching DDL and parameterized SQL, distinguishing schema creation, initial data loading, index construction, and querying. Application-provided vectors should be serialized on the client and bound as binary `String` values.
+3. Load only the relevant reference below. Produce matching DDL and parameterized SQL, distinguishing schema creation, initial data loading, index construction, and querying. Serialize application-provided FloatVectors on the client and bind the completed binary `String`; do not send `List<Float>` and convert it with `Knn::ToBinaryStringFloat` in SQL. Apply this to exact, indexed, and hybrid search, and to embedding fields in batch writes.
 4. For diagnosis, compare the query with the index's columns, metric, readiness, and filter requirements. Use a non-executing explain when a target is available. Evaluate recall and latency with representative queries; compare ANN results with exact search on the same data and filters when practical.
 5. Report the SQL, assumptions, applicable build/update limitations, and what was actually verified. Writing a query or skill does not require connecting to or changing a database.
 
@@ -29,7 +29,7 @@ If installed, `ydb-table` covers SDK parameter APIs and CLI execution, and `ydb-
 ## Gotchas
 
 - Standalone vector and full-text queries select an index with `VIEW index_name`. A hybrid query reads the base table without `VIEW` and resolves branch indexes through `HybridRank`.
-- Vectors are serialized binary `String` values. An array, JSON text, or arbitrary float bytes without YDB's type marker is not that representation. Match stored and query vectors to the model, dimension, and index type.
+- Vectors are serialized binary `String` values. FloatVectors use little-endian float32 bytes followed by `0x01`. Pass that parameter directly to `Knn` functions, without `Knn::ToBinaryStringFloat` or `Untag` around it. Match stored and query vectors to the model, dimension, and index type; SQL-side conversion remains appropriate for vectors constructed or already stored as lists inside YDB.
 - Build a vector index after loading representative data. An index built on an empty table has one cluster; later writes do not retrain the cluster tree. Writes during the build are not consistently captured.
 - Standalone BM25 requires `fulltext_relevance` and the same `FulltextScore(...)` expression in `SELECT` and `WHERE ... > 0`. The hybrid rewrite supplies the branch access; do not copy this standalone `WHERE` requirement into a hybrid query.
 - `HybridRank(...)` is the entire `ORDER BY` key. A parameterized outer `LIMIT` requires explicit candidate `Limits` for every branch. The inspected implementation also requires a single-column primary key.

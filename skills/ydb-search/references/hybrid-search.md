@@ -2,7 +2,7 @@
 
 Hybrid search fuses candidate rankings from existing indexes on one table. For lexical plus semantic retrieval, use `fulltext_relevance` on the text and `vector_kmeans_tree` on the embedding. There is no separate hybrid index type.
 
-Sources: [hybrid guide](https://ydb.tech/docs/en/dev/hybrid-search?version=main), [HybridRank syntax](https://ydb.tech/docs/en/yql/reference/syntax/select/hybrid_search?version=main), and the pinned [optimizer implementation](https://github.com/ydb-platform/ydb/blob/4cdb81ee6e8a3949acb6d6fb56eff0399d207eb7/ydb/core/kqp/opt/logical/kqp_opt_log_indexes.cpp) (`KqpRewriteHybridRankTopSort`). Read [compatibility](compatibility.md): the inspected implementation supports more prefix cases than its accompanying guide, requires a single-column primary key, and gates hybrid search on a server setting.
+Sources: [hybrid guide](https://ydb.tech/docs/en/dev/hybrid-search?version=main), [HybridRank syntax](https://ydb.tech/docs/en/yql/reference/syntax/select/hybrid_search?version=main), and the pinned [main optimizer](https://github.com/ydb-platform/ydb/blob/169565bacd19165e6c2c6d5432db89f11b422189/ydb/core/kqp/opt/logical/kqp_opt_log_indexes.cpp) (`KqpRewriteHybridRankTopSort`). Read [compatibility](compatibility.md) for differences from stable-26-3-1. The inspected main implementation requires a single-column primary key and enables hybrid search by default unless the cluster overrides the setting.
 
 ## Prepare the table and indexes
 
@@ -49,7 +49,7 @@ ORDER BY HybridRank(
 LIMIT 10;
 ```
 
-Bind the user's search text and the client-computed binary embedding of that query. Use the same embedding model as the stored documents. The `HybridRank` call is the entire sort key; follow this form without adding another sort key, negating it, or wrapping it in an expression. The rewrite ranks larger fused contributions first.
+Bind the user's search text and the client-computed binary embedding of that query. For FloatVectors, bind the completed little-endian float32 bytes with the trailing `0x01` marker as `$query_vector AS String`; do not send `List<Float>` or wrap this parameter in `Knn::ToBinaryStringFloat`/`Untag`. See [client encoding and batch writes](vector-indexes.md#store-and-load-embeddings). Use the same embedding model as the stored documents. The `HybridRank` call is the entire sort key; follow this form without adding another sort key, negating it, or wrapping it in an expression. The rewrite ranks larger fused contributions first.
 
 Read the base table **without `VIEW`**. Each branch resolves a ready matching index from its scored column and, for vector branches, its metric. The rewrite constructs the full-text branch internally: the standalone `WHERE FulltextScore(...) > 0` requirement does not belong in this query. Documents found by only one branch can still appear in the fused result.
 
@@ -94,7 +94,9 @@ Two or more scoring branches are supported, including additional vector columns 
 
 For a tenant filter, preserve `WHERE tenant = $tenant`. General predicates are reapplied after candidate lookup, so a small candidate pool can leave fewer than the requested number of rows. Increasing pools may help; measure the result and do not promise exact filtered top-k from ANN.
 
-In the inspected implementation, prefixed full-text indexes require equality on every prefix column. Prefixed vector indexes require equality on a nonempty contiguous leading prefix; bound columns after an unbound prefix column are rejected. Predicates under SQL `OR` do not establish those equalities. A supported configuration can use full-text `(tenant, body)` and vector `(tenant, embedding)` with `WHERE tenant = $tenant` and explicit `Indexes`. Check target support before generating this variant; the source tests explicitly enable `EnableFulltextIndexPrefix` and `EnableCompactFulltextIndex` for prefixed relevance indexes, as well as hybrid search.
+On the inspected main revision, **both** prefixed full-text and prefixed vector indexes require equality on **every** prefix column. A leading subset is insufficient: `(Region, Category, Embedding)` with only `WHERE Region = $region` is rejected; also bind `Category = $category`. Predicates under SQL `OR` do not establish those equalities. Full-text `(tenant, body)` and vector `(tenant, embedding)` with `WHERE tenant = $tenant` and explicit `Indexes` bind both prefixes fully. The older stable-26-3-1 snapshot accepted a leading subset for vector branches; use [compatibility](compatibility.md) to keep that historical behavior out of SQL for main.
+
+Prefixed relevance indexes require `EnableFulltextIndexPrefix` and the compact implementation selected by `EnableCompactFulltextIndex`. Both, as well as `EnableHybridSearch`, default to true on the inspected main revision; an effective cluster override can disable them.
 
 When a query fails, inspect:
 
@@ -105,4 +107,4 @@ When a query fails, inspect:
 - Explicit `Limits` with a parameterized outer limit, and the unwrapped `HybridRank` sort key.
 - Prefix equalities and feature availability. Do not change a tenant-scoped request into an unfiltered search to make it compile.
 
-Use non-executing explain to inspect the target plan, then evaluate retrieval quality separately. Implementation checks and query examples are backed by the [hybrid query tests](https://github.com/ydb-platform/ydb/blob/4cdb81ee6e8a3949acb6d6fb56eff0399d207eb7/ydb/core/kqp/ut/indexes/hybrid/kqp_hybrid_search_ut.cpp).
+Use non-executing explain to inspect the target plan, then evaluate retrieval quality separately. Implementation checks and query examples are backed by the [main hybrid query tests](https://github.com/ydb-platform/ydb/blob/169565bacd19165e6c2c6d5432db89f11b422189/ydb/core/kqp/ut/indexes/hybrid/kqp_hybrid_search_ut.cpp).

@@ -19,6 +19,10 @@ CREATE TABLE documents (
 
 Compute embeddings outside YDB with the same model for documents and queries. For application input, serialize on the client and bind `String`; the [SDK recipe](https://ydb.tech/docs/en/recipes/ydb-sdk/vector-search?version=main) gives the serialization patterns. A `FloatVector` contains little-endian float32 coordinates followed by one byte `0x01`: dimension `D` occupies `4 * D + 1` bytes. Preserve binary bytes through parameter binding.
 
+For a FloatVector that already exists in the application, do not bind `List<Float>` and then call `Knn::ToBinaryStringFloat` or `Untag` in the query. That adds SDK list serialization, transfer and parsing of individual list elements, and conversion on the server. Bind the completed bytes through the SDK's binary value API as YQL `String`, then use `Knn::CosineDistance(embedding, $query_vector)` or the corresponding similarity function directly. This recommendation applies to exact, indexed, and hybrid search.
+
+Sources: [KIKIMR-27252](https://st.yandex-team.ru/KIKIMR-27252) and the [recommended vector-search recipe](https://ydb.tech/docs/ru/recipes/ydb-sdk/vector-search?version=main&tabs=tool_javascript#search-by-vector). The alternative list-based example on that page is not the recommended client parameter pattern.
+
 Bind the serialized embedding for writes as well as queries:
 
 ```yql
@@ -29,7 +33,21 @@ UPSERT INTO documents (id, embedding)
 VALUES ($id, $embedding);
 ```
 
-For vectors constructed inside SQL, persist `Untag(Knn::ToBinaryStringFloat($vector), "FloatVector")`: the conversion UDF returns a tagged value, while the column stores `String`. `Knn` comparisons return `NULL` for incompatible formats or lengths. Indexable vector types are `float`, `uint8`, and `int8`; `BitVector` is supported by conversion/comparison functions but not by vector indexes.
+Use `String` for each embedding member in a batch parameter as well:
+
+```yql
+DECLARE $items AS List<Struct<id: Uint64, embedding: String>>;
+
+UPSERT INTO documents (id, embedding)
+SELECT id, embedding
+FROM AS_TABLE($items);
+```
+
+Serialize each row's embedding before binding `$items`; the embedding member should not be `List<Float>`. Keep the existing application interface, stored column format, and search semantics when refactoring. Verify byte equality with the UDF representation, read back a stored vector, and check exact and indexed search. Measure performance on representative requests; a transfer benchmark does not establish a fixed speedup for complete ANN queries.
+
+For vectors constructed inside SQL or list values already stored in YDB, conversion on the server remains appropriate: persist `Untag(Knn::ToBinaryStringFloat($vector), "FloatVector")` because the conversion UDF returns a tagged value while the column stores `String`. This exception does not apply to a list supplied by the client. `Knn` comparisons return `NULL` for incompatible formats or lengths.
+
+Supported index types include `float`, `uint8`, `int8`, and `bit`; the inspected main revision also accepts `float16` and `bfloat16`. `OrderByCosineLevel1WithBitQuantization` creates a cosine index with `vector_type="bit"` and searches through it, including on the original stable-26-3-1 pin. `HalfVectorIndex` on main verifies explicit and inferred `float16`/`bfloat16` types with Euclidean search. The older Knn documentation's bit-index prohibition is stale. See the [main vector tests](https://github.com/ydb-platform/ydb/blob/169565bacd19165e6c2c6d5432db89f11b422189/ydb/core/kqp/ut/indexes/vector/kqp_indexes_vector_ut.cpp) and [compatibility](compatibility.md). These types have their own encodings; the float32 layout above applies only to `FloatVector`.
 
 ## Build after initial loading
 

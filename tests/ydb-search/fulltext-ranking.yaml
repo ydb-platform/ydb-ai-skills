@@ -9,6 +9,7 @@ vars:
       WHERE score > 0 OR FulltextMatch(body, $q)
       ORDER BY score DESC LIMIT 10;
     I want BM25 results matching at least half of the optional query terms.
+    The query text has no + prefixes; preserve those term semantics.
     Give the corrected index choice and parameterized SQL. Do not execute it.
 
 assert:
@@ -20,3 +21,5 @@ assert:
       Do not use the SELECT alias in WHERE or combine scoring with FulltextMatch
       via SQL OR. Sort the score descending. Distinguish query-term Or semantics
       from SQL OR around full-text predicates. Bind the query text as a parameter.
+      Do not add + prefixes or require a mandatory term: with Or and no +, all
+      supplied terms are optional and MinimumShouldMatch applies to all of them.
