@@ -1,10 +1,6 @@
-# Source provenance and compatibility
+# Version compatibility
 
-The search guidance was checked against `ydb-platform/ydb` **main at `169565ba`** on 2026-10-02. The original supplied checkout, `4cdb81ee`, is a **stable-26-3-1** snapshot. It is not main, and several defaults and query restrictions differ. Local paths below are relative to the source repository; the installed skill does not require the author's filesystem path.
-
-For a specified server version, consult that version's documentation and implementation. Otherwise give the grounded query pattern with explicit availability assumptions. When documentation and source disagree, describe the difference and check the target; do not infer a release introduction from source presence or a test fixture.
-
-## Branch differences that affect generated SQL
+The search guidance was checked on 2026-10-02 against **main at `169565ba`** and the supplied **stable-26-3-1 snapshot at `4cdb81ee`**. Match the requested server revision before applying branch-specific behavior.
 
 | Topic | stable-26-3-1 at `4cdb81ee` | main at `169565ba` |
 |---|---|---|
@@ -14,29 +10,8 @@ For a specified server version, consult that version's documentation and impleme
 | `EnableCompactFulltextIndex` | Proto default `false` | Proto default `true` |
 | `EnableFulltextIndexRowId` | Proto default `false` | Proto default `true` |
 
-Main therefore enables those four features by default unless the cluster overrides them. Do not carry stable-branch defaults into an answer about main. For an unknown target, establish the server revision and effective configuration. Feature verification is not an instruction to change cluster configuration.
+Main enables those four features by default unless the cluster overrides them. Do not carry stable-branch defaults into an answer about main. For an unknown target, establish its version and effective configuration; feature verification is not an instruction to change cluster configuration.
 
-For hybrid SQL, bind every prefix column unless the requested version has been verified to accept a partial prefix. For example, `ON (Region, Category, Embedding)` needs both `Region = $region` and `Category = $category` on main. The older `UsesLeadingSubPrefixWithPkInVectorIndex` test became `RejectsLeadingSubPrefixWithPkInVectorIndex` on main; it must not be used as evidence that current main accepts a leading subset.
+For hybrid SQL, bind every prefix column unless the requested version has been verified to accept a partial prefix. For a specified release, consult its documentation and implementation; source presence alone does not establish released availability.
 
-## Other source and documentation differences
-
-- `GetKMeansTreeSearchTopSize` uses 4 with overlapping clusters, 10 otherwise in both inspected snapshots; the older bundled docs say 1. Set the pragma explicitly.
-- Both inspected hybrid implementations require a single-column primary key. Standalone full-text row-ID support does not remove this restriction.
-- Prefixed `fulltext_relevance` requires the compact implementation and prefix support. These features default on in the inspected main revision.
-- Schema validation rejects a full-text prefix containing all primary-key columns; the older docs prohibit any overlap. Keep filter columns outside the key in the examples and inspect target support before using partial overlap with a composite key.
-- `vector_type="bit"` works in both snapshots: `OrderByCosineLevel1WithBitQuantization` creates the index and queries it. The older Knn documentation's blanket prohibition is stale. Main additionally has `HalfVectorIndex` coverage for `float16` and `bfloat16`; do not treat the older docs' `float`/`uint8`/`int8` list as exhaustive.
-
-## Evidence map
-
-- Vector documentation: `ydb/docs/en/core/dev/vector-indexes.md`, `ydb/docs/en/core/yql/reference/syntax/{create_table,select}/vector_index.md`, `ydb/docs/en/core/yql/reference/udf/list/knn.md`, and `ydb/docs/en/core/recipes/ydb-sdk/vector-search.md`.
-- Full-text documentation: `ydb/docs/en/core/dev/fulltext-indexes.md`, `ydb/docs/en/core/yql/reference/syntax/{create_table,select}/fulltext_index.md`, and `ydb/docs/en/core/yql/reference/builtins/fulltext.md`.
-- Hybrid documentation: `ydb/docs/en/core/dev/hybrid-search.md` and `ydb/docs/en/core/yql/reference/syntax/select/hybrid_search.md`.
-- Main optimizer, under `ydb/core/kqp/opt/logical/`: search for `GetKMeansTreeSearchTopSize`, `KqpRewriteHybridRankTopSort`, `extractPrefixColumns`, `single-column primary key`, and `branchLimit`.
-- Main hybrid tests, under `ydb/core/kqp/ut/indexes/hybrid/`: `UsesPrefixedVectorIndex`, `RejectsLeadingSubPrefixWithPkInVectorIndex`, `UsesPrefixedCompactFulltextIndexWithPlainVectorIndex`, `RejectsPartiallyBoundMultiColumnPrefixes`, `ParameterizedLimitWithExplicitLimits`, `AppliesWherePredicate`, and `DisabledByFlag`.
-- `EnableHybridSearch`: compare `ydb/core/protos/table_service_config.proto` at the main and stable-26-3-1 revisions above.
-- Full-text flags: compare `ydb/core/protos/feature_flags.proto` at those same revisions.
-- Vector tests, under `ydb/core/kqp/ut/indexes/vector/`: `OrderByCosineLevel1WithBitQuantization` on both revisions; `HalfVectorIndex` on main. `VectorIndexNoBulkUpsert` and the TTL rejection cases cover indexed-table write restrictions.
-- Main full-text query tests, under `ydb/core/kqp/ut/indexes/fulltext/`: `FulltextScore` with `"or" AS DefaultOperator` and `"50%" AS MinimumShouldMatch`, including query terms without `+`.
-- Main index schema validation, in `ydb/core/tx/schemeshard/index/index_utils.h`: `Only compact prefixed fulltext indexes with relevance are supported` and `index prefix must not contain all primary key columns`.
-
-For updated documentation, start at [YDB's documentation index](https://ydb.tech/llms.txt), preserve the requested product version when following links, and read the actual feature pages. If the requested version cannot be retrieved, state that limitation rather than presenting `main` as verified released behavior.
+For updated documentation, start at [YDB's documentation index](https://ydb.tech/llms.txt), preserve the requested product version when following links, and read the relevant feature pages. If the requested version cannot be retrieved, state that limitation rather than presenting `main` as verified released behavior.

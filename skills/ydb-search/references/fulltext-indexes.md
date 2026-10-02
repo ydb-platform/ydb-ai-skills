@@ -4,67 +4,29 @@ Use `fulltext_plain` for matching/filtering and `fulltext_relevance` for BM25 sc
 
 Sources: [full-text guide](https://ydb.tech/docs/en/dev/fulltext-indexes?version=main), [DDL](https://ydb.tech/docs/en/yql/reference/syntax/create_table/fulltext_index?version=main), [SELECT](https://ydb.tech/docs/en/yql/reference/syntax/select/fulltext_index?version=main), and [built-ins](https://ydb.tech/docs/en/yql/reference/builtins/fulltext?version=main). See [compatibility](compatibility.md) before using prefixes or non-integer/composite primary keys.
 
-## Create and rank
+## Runnable examples
 
-```yql
-CREATE TABLE articles (
-    id Uint64 NOT NULL,
-    tenant Utf8,
-    title Utf8,
-    body Utf8,
-    INDEX ft_idx GLOBAL USING fulltext_relevance
-      ON (body) COVER (title)
-      WITH (tokenizer=standard, use_filter_lowercase=true),
-    PRIMARY KEY (id)
-);
-```
+Use the shared `documents` schema in [create-table.sql](../assets/queries/create-table.sql), load it with [upsert.sql](../assets/queries/upsert.sql), add the index with [add-fulltext-index.sql](../assets/queries/add-fulltext-index.sql), and rank results with [fulltext-search.sql](../assets/queries/fulltext-search.sql). These are the same table and data used by vector and hybrid search. The [SDK workflow](sdk.md) and one language page supply parameter binding and execution.
 
-For an existing table, use the same index clause after `ALTER TABLE articles ADD INDEX ft_idx`. Unlike a k-means vector index, a full-text index can usefully be created before inserting documents.
+Unlike a k-means vector index, a full-text index can usefully be created before inserting documents. The shared walkthrough loads data first so it can support both search types with one setup sequence.
 
-```yql
-DECLARE $query_text AS String;
+## Query shape and term semantics
 
-SELECT id, title, FulltextScore(body, $query_text) AS relevance
-FROM articles VIEW ft_idx
-WHERE FulltextScore(body, $query_text) > 0
-ORDER BY relevance DESC
-LIMIT 10;
-```
+The ranking file uses an identical `FulltextScore(...)` expression, including named options, in `SELECT` and `WHERE ... > 0`, then sorts `score DESC`. A `SELECT` alias is unavailable in `WHERE`; standalone relevance access requires the positive-score predicate and a `fulltext_relevance` index.
 
-Use an identical scoring expression, including named options, in `SELECT` and `WHERE`; a `SELECT` alias is unavailable in `WHERE`. The standalone relevance access requires the `> 0` predicate. `FulltextScore` needs `fulltext_relevance`, while `FulltextMatch` can also use a plain index:
-
-```yql
-DECLARE $query_text AS String;
-
-SELECT id, title
-FROM articles VIEW ft_idx
-WHERE FulltextMatch(body, $query_text)
-LIMIT 20;
-```
+For a matching-only variation, use `fulltext_plain`, replace the scoring predicate with `FulltextMatch(body, $query_text)`, and remove the BM25 projection and sort. `FulltextMatch` can also use a relevance index.
 
 Standalone full-text functions require explicit `VIEW`. One read supports one full-text predicate, combined with other filters using `AND`; SQL `OR`/`NOT` around full-text predicates and mixing `FulltextMatch` with `FulltextScore` in one `WHERE` are unsupported. Query-language term operators are a separate mechanism.
 
-## Query semantics and analyzers
+Only the first two function arguments are positional; optional settings use `value AS Name`. `Keywords` is the default matching mode and `And` the default term operator. The runnable ranking query explicitly selects `"Or" AS DefaultOperator`.
 
-Only the first two function arguments are positional; optional settings use `value AS Name`:
+With `Or`, an optional `+` prefix marks that particular term as mandatory. Terms without `+` are optional, and `MinimumShouldMatch` counts only those optional terms (a number or percentage supplied as a string). If no term has `+`, all terms are optional and the threshold applies to all of them. Preserve the supplied query text; adding `+` changes which documents match. To require half the optional terms, add `"50%" AS MinimumShouldMatch` to both scoring expressions in the query.
 
-```yql
-DECLARE $query_text AS String;
+`FulltextMatch` also supports `"Query" AS Mode` for required/excluded terms and quoted phrases, and `"Wildcard" AS Mode` for `%`/`_` patterns backed by n-grams. `FulltextScore` accepts `DefaultOperator`, `MinimumShouldMatch` (with `Or`), and numeric `K1`/`B` BM25 settings. Keep its options distinct from the matching function's `Mode`.
 
-SELECT id
-FROM articles VIEW ft_idx
-WHERE FulltextMatch(body, $query_text,
-                    "Keywords" AS Mode,
-                    "Or" AS DefaultOperator,
-                    "50%" AS MinimumShouldMatch)
-LIMIT 20;
-```
+## Analyzer variations
 
-`Keywords` is the default mode and `And` the default term operator. With `Or`, an optional `+` prefix marks that particular term as mandatory. Terms without `+` are optional, and `MinimumShouldMatch` counts only those optional terms (a number or percentage supplied as a string). If no term has `+`, all terms are optional and the threshold applies to all of them. Preserve the supplied query text; adding `+` changes which documents match. The main full-text query tests exercise `FulltextScore` with `Or` and `"50%" AS MinimumShouldMatch` without `+` prefixes; see [compatibility](compatibility.md) for the source locations. `Query` mode supports required/excluded terms and quoted phrases. `Wildcard` mode uses `%` and `_` and requires n-grams.
-
-`FulltextScore` accepts `DefaultOperator`, `MinimumShouldMatch` (with `Or`), and numeric `K1`/`B` BM25 settings. Keep its options distinct from `FulltextMatch`'s `Mode`; do not infer that every matching option is also a scoring option.
-
-Choose analyzer settings at index creation according to the desired matching:
+Adapt the settings in [add-fulltext-index.sql](../assets/queries/add-fulltext-index.sql) at index creation according to the desired matching:
 
 | Requirement | Settings |
 |---|---|
@@ -78,52 +40,12 @@ Choose analyzer settings at index creation according to the desired matching:
 
 The numbers above are examples. Length filtering discards tokens outside the range during indexing and search. Source: [analyzer parameters](https://ydb.tech/docs/en/yql/reference/syntax/create_table/fulltext_index?version=main).
 
-## Substrings
-
-```yql
-ALTER TABLE articles
-  ADD INDEX ft_ngram_idx
-  GLOBAL USING fulltext_plain
-  ON (body)
-  WITH (tokenizer=standard, use_filter_lowercase=true,
-        use_filter_ngram=true,
-        filter_ngram_min_length=3, filter_ngram_max_length=5);
-```
-
-```yql
-DECLARE $pattern AS String;
-
-SELECT id, title
-FROM articles VIEW ft_ngram_idx
-WHERE FulltextMatch(body, $pattern, "Wildcard" AS Mode)
-LIMIT 20;
-```
-
-For example, bind `%learn%` as the pattern. `LIKE`/`ILIKE` on the indexed column through this `VIEW` can also use the n-gram index. Ordinary token indexing alone does not supply arbitrary substring search.
+For substring matching, create a separate plain index over `body` with n-grams, for example `use_filter_ngram=true`, `filter_ngram_min_length=3`, and `filter_ngram_max_length=5`. Query through that index with `FulltextMatch(body, $pattern, "Wildcard" AS Mode)`, binding a pattern such as `%learn%`. `LIKE`/`ILIKE` on the indexed column through its `VIEW` can also use the n-gram index. Ordinary token indexing alone does not supply arbitrary substring search.
 
 ## Filtered search and writes
 
-When the target supports full-text prefixes and compact relevance indexes, index `(tenant, body)` and constrain **every** filter column by equality:
+For tenant-scoped search, first extend the application schema and ingestion with a populated tenant column; it is absent from the shared demonstration schema. An index on `(tenant, body)` requires `tenant = $tenant` alongside the single full-text predicate. With more filter columns, constrain every one by equality; the text column is last and predicate order is unrestricted.
 
-```yql
-ALTER TABLE articles
-  ADD INDEX tenant_ft_idx
-  GLOBAL USING fulltext_relevance
-  ON (tenant, body)
-  WITH (tokenizer=standard, use_filter_lowercase=true);
-```
-
-```yql
-DECLARE $tenant AS Utf8;
-DECLARE $query_text AS String;
-
-SELECT id, title, FulltextScore(body, $query_text) AS relevance
-FROM articles VIEW tenant_ft_idx
-WHERE tenant = $tenant AND FulltextScore(body, $query_text) > 0
-ORDER BY relevance DESC
-LIMIT 10;
-```
-
-The text column is last, and equality predicates may be written in any order. Keep filter columns separate from the primary key in this pattern. The inspected schema validation prohibits a prefix containing all primary-key columns; older docs state the broader restriction that filter columns cannot be primary-key columns. Check the target if a prefix overlaps a composite key. Prefixed relevance indexes require both `EnableFulltextIndexPrefix` and the compact implementation selected by `EnableCompactFulltextIndex`. Both default to true on the inspected main revision, while the original stable-26-3-1 snapshot defaults to false; check effective cluster overrides and see [compatibility](compatibility.md).
+Keep filter columns separate from the primary key in this variation. The inspected schema validation prohibits a prefix containing all primary-key columns; older docs state the broader restriction that filter columns cannot be primary-key columns. Check the target if a prefix overlaps a composite key. Prefixed relevance indexes require `EnableFulltextIndexPrefix` and the compact implementation selected by `EnableCompactFulltextIndex`; their branch-specific defaults are in [compatibility](compatibility.md).
 
 Full-text indexes are maintained for `INSERT`, `UPSERT`, `REPLACE`, `UPDATE`, and `DELETE`; `BulkUpsert` on an indexed table is unsupported. A single `Uint64`/`Int64`/`Uint32`/`Int32` primary key supplies document IDs directly. With the row-ID feature enabled, other keys use the auto-managed `__ydb_row_id` column and `__ydb_unique_row_id` index. Omit the system column from writes; YDB populates it, and the unique index must remain while full-text indexes depend on it. Support for those keys in full-text search does not remove hybrid search's single-column key restriction.

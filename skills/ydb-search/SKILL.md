@@ -17,6 +17,8 @@ Design search indexes and write vector, full-text, and hybrid queries for YDB ro
 
 ## Load sources
 
+Use [assets/queries](assets/queries) as the canonical runnable SQL examples: one `documents` schema with three-dimensional embeddings. Load the relevant SQL files and, for SDK work, the shared workflow plus one language page. The references below explain constraints, tuning, and variations.
+
 | Task | Reference |
 |---|---|
 | Vector storage, exact/ANN queries, vector index DDL, coverage, filtering, recall, rebuilding | [Vector indexes](references/vector-indexes.md) |
@@ -28,7 +30,7 @@ Design search indexes and write vector, full-text, and hybrid queries for YDB ro
 | Search through the Java SDK | [Java](references/embed/java.md) |
 | Search through the C++ SDK | [C++](references/embed/cpp.md) |
 | Search through the JavaScript SDK | [JavaScript](references/embed/javascript.md) |
-| Feature availability, documentation/source disagreements, source provenance | [Compatibility](references/compatibility.md) |
+| Feature availability, branch differences, and flag defaults | [Compatibility](references/compatibility.md) |
 
 The SDK pages are focused on search and share executable SQL assets under `assets/queries/`. If installed, `ydb-table` covers general SDK usage and CLI execution, and `ydb-core` covers connection discovery. The examples can be used independently with the linked official SDK setup documentation.
 

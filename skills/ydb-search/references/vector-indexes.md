@@ -2,74 +2,37 @@
 
 Use `vector_kmeans_tree` for approximate nearest neighbors (ANN). Exact search evaluates distances across the eligible rows and is useful for small datasets and recall baselines. Both use `Knn` functions over binary `String` embeddings.
 
-Sources: [vector guide](https://ydb.tech/docs/en/dev/vector-indexes?version=main), [index DDL](https://ydb.tech/docs/en/yql/reference/syntax/create_table/vector_index?version=main), [indexed SELECT](https://ydb.tech/docs/en/yql/reference/syntax/select/vector_index?version=main), and [Knn functions and encoding](https://ydb.tech/docs/en/yql/reference/udf/list/knn?version=main). See [compatibility](compatibility.md) for the inspected source revision and differences from its docs.
+Sources: [vector guide](https://ydb.tech/docs/en/dev/vector-indexes?version=main), [index DDL](https://ydb.tech/docs/en/yql/reference/syntax/create_table/vector_index?version=main), [indexed SELECT](https://ydb.tech/docs/en/yql/reference/syntax/select/vector_index?version=main), and [Knn functions and encoding](https://ydb.tech/docs/en/yql/reference/udf/list/knn?version=main). See [compatibility](compatibility.md) for the inspected revisions.
+
+## Runnable examples
+
+Use the SQL files in [assets/queries](../assets/queries) and one SDK language page selected in `SKILL.md`. The shared [SDK workflow](sdk.md) describes operation order and parameter types. All examples use the `documents` table with `id`, `title`, `body`, and a three-dimensional `embedding`.
+
+| Step | SQL file |
+|---|---|
+| Create the shared table | [create-table.sql](../assets/queries/create-table.sql) |
+| Load documents with encoded embeddings | [upsert.sql](../assets/queries/upsert.sql) |
+| Build the index after loading representative data | [add-vector-index.sql](../assets/queries/add-vector-index.sql) |
+| Query through `VIEW vec_idx` | [vector-search.sql](../assets/queries/vector-search.sql) |
+| Compare against exact search | [exact-search.sql](../assets/queries/exact-search.sql) |
 
 ## Store and load embeddings
 
-```yql
-CREATE TABLE documents (
-    id Uint64 NOT NULL,
-    tenant Utf8,
-    title Utf8,
-    body Utf8,
-    embedding String,
-    PRIMARY KEY (id)
-);
-```
+Compute embeddings outside YDB with the same model for documents and queries. Serialize application-provided FloatVectors on the client and bind the completed bytes as YQL `String`. A FloatVector contains little-endian float32 coordinates followed by `0x01`: dimension `D` occupies `4 * D + 1` bytes.
 
-Compute embeddings outside YDB with the same model for documents and queries. For application input, serialize on the client and bind `String`; the [SDK recipe](https://ydb.tech/docs/en/recipes/ydb-sdk/vector-search?version=main) gives the serialization patterns. A `FloatVector` contains little-endian float32 coordinates followed by one byte `0x01`: dimension `D` occupies `4 * D + 1` bytes. Preserve binary bytes through parameter binding.
+Use that binary parameter directly in `Knn::CosineDistance(embedding, $query_vector)` or the corresponding similarity function. Sending `List<Float>` and converting it with `Knn::ToBinaryStringFloat`/`Untag` in SQL adds list serialization, element transfer/parsing, and server conversion. This recommendation applies to exact, indexed, and hybrid search, as well as every `embedding: String` member in the batch passed to [upsert.sql](../assets/queries/upsert.sql). See the [recommended SDK recipe](https://ydb.tech/docs/ru/recipes/ydb-sdk/vector-search?version=main#search-by-vector).
 
-For a FloatVector that already exists in the application, do not bind `List<Float>` and then call `Knn::ToBinaryStringFloat` or `Untag` in the query. That adds SDK list serialization, transfer and parsing of individual list elements, and conversion on the server. Bind the completed bytes through the SDK's binary value API as YQL `String`, then use `Knn::CosineDistance(embedding, $query_vector)` or the corresponding similarity function directly. This recommendation applies to exact, indexed, and hybrid search.
+When refactoring, retain the application interface, stored column format, and search semantics. Verify byte equality with the UDF representation, read back a stored vector, and check exact and indexed search. Measure performance on representative requests; a transfer benchmark does not establish a fixed speedup for complete ANN queries.
 
-Sources: [KIKIMR-27252](https://st.yandex-team.ru/KIKIMR-27252) and the [recommended vector-search recipe](https://ydb.tech/docs/ru/recipes/ydb-sdk/vector-search?version=main&tabs=tool_javascript#search-by-vector). The alternative list-based example on that page is not the recommended client parameter pattern.
+For vectors constructed inside SQL or list values already stored in YDB, server conversion remains appropriate: persist `Untag(Knn::ToBinaryStringFloat($vector), "FloatVector")` because the UDF returns a tagged value while the column stores `String`. This exception does not apply to a list supplied by the client. `Knn` comparisons return `NULL` for incompatible formats or lengths.
 
-Bind the serialized embedding for writes as well as queries:
+Supported index types include `float`, `uint8`, `int8`, and `bit`; the inspected main revision also accepts `float16` and `bfloat16`. Bit indexes already work on the inspected stable-26-3-1 snapshot, despite the older Knn documentation's prohibition. These types have their own encodings; the float32 layout above applies only to `FloatVector`.
 
-```yql
-DECLARE $id AS Uint64;
-DECLARE $embedding AS String;
+## Index settings and recall
 
-UPSERT INTO documents (id, embedding)
-VALUES ($id, $embedding);
-```
+The runnable [index definition](../assets/queries/add-vector-index.sql) uses `vector_dimension=3`, `clusters=2`, and `levels=1`. For a production model that emits 768-dimensional vectors, `vector_dimension=768` and a measured choice such as `clusters=128` are deployment-specific settings to tune on representative data.
 
-Use `String` for each embedding member in a batch parameter as well:
-
-```yql
-DECLARE $items AS List<Struct<id: Uint64, embedding: String>>;
-
-UPSERT INTO documents (id, embedding)
-SELECT id, embedding
-FROM AS_TABLE($items);
-```
-
-Serialize each row's embedding before binding `$items`; the embedding member should not be `List<Float>`. Keep the existing application interface, stored column format, and search semantics when refactoring. Verify byte equality with the UDF representation, read back a stored vector, and check exact and indexed search. Measure performance on representative requests; a transfer benchmark does not establish a fixed speedup for complete ANN queries.
-
-For vectors constructed inside SQL or list values already stored in YDB, conversion on the server remains appropriate: persist `Untag(Knn::ToBinaryStringFloat($vector), "FloatVector")` because the conversion UDF returns a tagged value while the column stores `String`. This exception does not apply to a list supplied by the client. `Knn` comparisons return `NULL` for incompatible formats or lengths.
-
-Supported index types include `float`, `uint8`, `int8`, and `bit`; the inspected main revision also accepts `float16` and `bfloat16`. `OrderByCosineLevel1WithBitQuantization` creates a cosine index with `vector_type="bit"` and searches through it, including on the original stable-26-3-1 pin. `HalfVectorIndex` on main verifies explicit and inferred `float16`/`bfloat16` types with Euclidean search. The older Knn documentation's bit-index prohibition is stale. See [compatibility](compatibility.md) for the source locations. These types have their own encodings; the float32 layout above applies only to `FloatVector`.
-
-## Build after initial loading
-
-Given a representative dataset of **768-dimensional float vectors** already loaded into `documents`:
-
-```yql
-ALTER TABLE documents
-  ADD INDEX vec_idx
-  GLOBAL USING vector_kmeans_tree
-  ON (embedding)
-  COVER (embedding, title)
-  WITH (
-    distance=cosine,
-    vector_type="float",
-    vector_dimension=768,
-    clusters=128,
-    levels=2,
-    overlap_clusters=3
-  );
-```
-
-The cluster values are an example to tune against data size and distribution. `COVER (embedding, title)` includes the actual vector needed for final distance sorting as well as the projected title. Without covering the vector, the engine still needs base-table reads even if other output columns are covered.
+`COVER (embedding, title)` includes the actual vector needed for final distance sorting as well as the projected title. Without covering the vector, the engine still needs base-table reads even if other output columns are covered.
 
 Choose one of `distance` or `similarity`, matching the query:
 
@@ -82,52 +45,20 @@ Choose one of `distance` or `similarity`, matching the query:
 
 Dimensions may be 1–16384, `clusters` 2–2048, and `levels` 1–16. The documented bounds also require `clusters ** levels <= 1073741824` and `vector_dimension * clusters <= 4194304`. Type and dimension can be inferred from a populated table, but explicit settings make the embedding contract clear. Source: [vector index parameters](https://ydb.tech/docs/en/yql/reference/syntax/create_table/vector_index?version=main).
 
-## Query and tune
+`KMeansTreeSearchTopSize` controls clusters probed at each tree level, independently of the result `LIMIT`. Set it explicitly, as in [vector-search.sql](../assets/queries/vector-search.sql). Increasing it generally trades latency for recall. The inspected revisions default to 4 with overlapping clusters and 10 otherwise; older docs may still say 1. `overlap_clusters` is a build-time setting that places vectors in multiple leaf clusters, increasing index size.
 
-```yql
-PRAGMA ydb.KMeansTreeSearchTopSize = "10";
-DECLARE $query_vector AS String;
+Measure recall@k against [exact-search.sql](../assets/queries/exact-search.sql) with the same data, metric, and filters, and account for the cost of that scan. Tune probing and cluster settings using recall and latency together; a small result limit does not by itself ensure a cheap query.
 
-SELECT id, title,
-       Knn::CosineDistance(embedding, $query_vector) AS distance
-FROM documents VIEW vec_idx
-ORDER BY distance ASC
-LIMIT 10;
-```
+## Scoped-search variation
 
-Bind an encoded 768-dimensional vector to `$query_vector`. For an exact baseline, use the same query without `VIEW vec_idx`; it computes distances over the eligible base-table rows. Keep the same filters and metric for recall comparisons, and account for the cost of that scan.
+If the application adds and populates a tenant/category column, put it before the vector column in the index, for example `ON (tenant, embedding)`, and bind `tenant = $tenant` in the query through that index. The shared demonstration schema has no `tenant` column; extend the schema and ingestion together before using this variation.
 
-`KMeansTreeSearchTopSize` controls clusters probed at each tree level; it is independent of the result `LIMIT`. Set it explicitly. Increasing it generally trades latency for recall. `overlap_clusters` is a build-time setting that places vectors in multiple leaf clusters, increasing index size. Measure recall@k against exact top-k and latency before choosing these values; a small result limit does not by itself ensure a cheap query.
-
-For tenant/category search, put filter columns before the vector column:
-
-```yql
-ALTER TABLE documents
-  ADD INDEX tenant_vec_idx
-  GLOBAL USING vector_kmeans_tree
-  ON (tenant, embedding)
-  COVER (embedding, title)
-  WITH (distance=cosine, vector_type="float", vector_dimension=768);
-```
-
-```yql
-PRAGMA ydb.KMeansTreeSearchTopSize = "10";
-DECLARE $tenant AS Utf8;
-DECLARE $query_vector AS String;
-
-SELECT id, title
-FROM documents VIEW tenant_vec_idx
-WHERE tenant = $tenant
-ORDER BY Knn::CosineDistance(embedding, $query_vector)
-LIMIT 10;
-```
-
-This binds the index prefix directly. When using multiple categories, a partial prefix, or additional filters, verify support and the actual plan for the target version; do not transfer standalone vector filtering rules to `HybridRank` without checking its stricter prefix extraction.
+For multiple categories, partial prefixes, or additional filters, verify support and the actual plan for the target version. Hybrid search has its own prefix requirements; see [compatibility](compatibility.md).
 
 ## Lifecycle and verification
 
 - Load representative data before building. Building on an empty table produces one cluster and no useful search acceleration.
-- Completed indexes assign new/modified rows to existing clusters; they do not retrain centroids. Distribution changes can reduce recall and unbalance query work. Build a replacement index when measurements justify it, then switch indexes using the documented [index rename/replacement operation](https://ydb.tech/docs/en/reference/ydb-cli/commands/secondary_index?version=main#rename).
-- Concurrent writes during vector index construction are not consistently reflected in the built index. If the application needs a fully consistent build, coordinate a write pause for its duration; writes are not paused automatically.
-- Use `BulkUpsert` before creating synchronous indexes and SQL `INSERT`/`UPSERT` afterward. The inspected implementation also rejects TTL on a table with a vector index. See [bulk loading](https://ydb.tech/docs/en/dev/batch-upload?version=main) and [compatibility](compatibility.md) for the source test locations.
+- Completed indexes assign new/modified rows to existing clusters; they do not retrain centroids. Distribution changes can reduce recall and unbalance query work. Build a replacement when measurements justify it, then switch indexes using the documented [index rename/replacement operation](https://ydb.tech/docs/en/reference/ydb-cli/commands/secondary_index?version=main#rename).
+- Concurrent writes during construction are not consistently reflected in the built vector index. If the application needs a fully consistent build, coordinate a write pause for its duration; writes are not paused automatically.
+- Use `BulkUpsert` before creating synchronous indexes and SQL writes afterward. The inspected implementation also rejects TTL on a table with a vector index. See [bulk loading](https://ydb.tech/docs/en/dev/batch-upload?version=main).
 - A non-executing explain should show access to the requested index rather than an unintended base-table scan. Base-table lookups can still be appropriate when the index does not cover needed columns. Exact search intentionally scans; label it accordingly.
