@@ -1,0 +1,10 @@
+description: Routing · 21-search-docs
+
+vars:
+  user_prompt: |
+    Find the official YDB 26.1 documentation for vector indexes in Russian.
+    I only need documentation links, not an implementation or generated SQL.
+
+assert:
+  - type: regex
+    value: ^\s*ydb-docs\s*$

@@ -1,0 +1,10 @@
+description: Routing · 20-hybrid-search
+
+vars:
+  user_prompt: |
+    Write YDB SQL that combines lexical and semantic retrieval with HybridRank,
+    weights the vector branch twice as much, and takes a parameterized LIMIT.
+
+assert:
+  - type: regex
+    value: ^\s*ydb-search\s*$

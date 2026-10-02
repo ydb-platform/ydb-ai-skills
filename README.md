@@ -10,6 +10,7 @@ Skill bodies are intentionally concise. Supporting references and rules are grou
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **ydb-core**         | YDB overview and comparisons, local setup, connection/auth, SDK selection, CLI namespace operations, driver balancing, sessions and shared client policy. Baseline skill — auto-installed.     |
 | **ydb-table**        | Application data access: SQL/YQL, query execution via SDK or `ydb sql`, schema design, transactions, optimization, SQL-dialect conversion and audits of data-access code/configuration.        |
+| **ydb-search**       | Vector and full-text indexes, nearest-neighbor queries, BM25, hybrid ranking with `HybridRank`, recall tuning, and index lifecycle. |
 | **ydb-docs** | Finds and verifies official YDB documentation through `llms.txt`, with language/version selection and source citations; can support core/table tasks. |
 
 Choose by the part of YDB involved, not by whether the request contains code.
@@ -41,6 +42,9 @@ cd ydb-ai-skills
 
 # Install only the standalone documentation lookup skill
 ./install.sh --agent=claude --skills=ydb-docs --no-core
+
+# Install search guidance (ydb-core auto-included)
+./install.sh --agent=codex --skills=ydb-search
 
 # Dry run — see what would be done
 ./install.sh --agent=claude --dry-run
@@ -95,6 +99,9 @@ Skills trigger automatically from the user's phrasing. Examples of queries that 
 > Write a YQL query to paginate users by created_at
   → ydb-table
 
+> Create YDB vector and full-text indexes and combine their rankings with HybridRank
+  → ydb-search
+
 > Review this Java/Hibernate code that calls saveAll in a loop
   → ydb-table (audit mode)
 ```
@@ -108,6 +115,7 @@ skills/                          Surface-aligned skills (universal format)
   ydb-core/                      SKILL.md + references/ + rules/ + canonical eval JSON
   ydb-docs/                      SKILL.md + canonical eval JSON
   ydb-table/                     SKILL.md + references/ + rules/ + canonical eval JSON
+  ydb-search/                    Search workflow + vector, full-text, hybrid, and compatibility references
 promptfooconfig.yaml             Preloaded API compatibility matrix
 promptfooconfig.codex.yaml       Local Codex solver and judge over canonical scenarios
 promptfooconfig.agent.yaml       Claude Code runtime selection and outcome fixtures

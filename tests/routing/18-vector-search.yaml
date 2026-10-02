@@ -1,0 +1,10 @@
+description: Routing · 18-vector-search
+
+vars:
+  user_prompt: |
+    Design a YDB vector_kmeans_tree index for 768-dimensional embeddings.
+    Show an ANN query and explain how to tune recall and rebuild after data changes.
+
+assert:
+  - type: regex
+    value: ^\s*ydb-search\s*$

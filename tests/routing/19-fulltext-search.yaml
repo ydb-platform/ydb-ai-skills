@@ -1,0 +1,10 @@
+description: Routing · 19-fulltext-search
+
+vars:
+  user_prompt: |
+    Add full-text search to a YDB articles table. I need BM25 ranking and
+    substring matching. Which indexes and FulltextScore queries should I use?
+
+assert:
+  - type: regex
+    value: ^\s*ydb-search\s*$

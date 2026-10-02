@@ -1,0 +1,24 @@
+description: Search · Hybrid prefix and primary-key compatibility
+
+vars:
+  user_prompt: |
+    Our YDB schema uses PRIMARY KEY (tenant, id). I want native HybridRank with
+    full-text ON (tenant, body) and vector ON (tenant, embedding), always filtered
+    to tenant = $tenant. The server version and feature flags are not yet known.
+    An old guide says hybrid prefixed indexes are unsupported. Assess the design
+    using the skill's source snapshot and explain what must be verified before
+    giving deployable DDL. Do not silently remove the tenant filter.
+
+assert:
+  - type: llm-rubric
+    value: |
+      Explain that the inspected hybrid implementation requires a single-column
+      primary key, so the supplied composite key is not supported by that rewrite.
+      Do not declare prefixes universally unsupported: the inspected implementation
+      and tests support full-text with every prefix equality and vector with a
+      nonempty contiguous leading prefix. Preserve tenant scoping. Distinguish
+      source support from deployed availability, verify server version and effective
+      EnableHybridSearch/EnableFulltextIndexPrefix settings and the compact-index
+      requirement for prefixed BM25. Avoid promising that these features are
+      enabled by default. No cluster configuration change
+      or destructive schema migration should be executed.

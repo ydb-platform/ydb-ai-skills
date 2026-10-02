@@ -66,6 +66,21 @@ _messages: &messages
       SKILL: ydb-docs
       {{ ydb_docs }}
 
+      SKILL: ydb-search
+      {{ ydb_search }}
+
+      --- ydb-search / references / vector-indexes.md ---
+      {{ ydb_search_refs_vector }}
+
+      --- ydb-search / references / fulltext-indexes.md ---
+      {{ ydb_search_refs_fulltext }}
+
+      --- ydb-search / references / hybrid-search.md ---
+      {{ ydb_search_refs_hybrid }}
+
+      --- ydb-search / references / compatibility.md ---
+      {{ ydb_search_refs_compatibility }}
+
       SKILL: ydb-table
       ══════════════════════════════════════════════════════════════════════════
       {{ ydb_table }}
@@ -254,6 +269,11 @@ defaultTest:
   # automatically flows into the prompt on the next eval run.
   vars:
     ydb_docs: file://skills/ydb-docs/SKILL.md
+    ydb_search: file://skills/ydb-search/SKILL.md
+    ydb_search_refs_vector: file://skills/ydb-search/references/vector-indexes.md
+    ydb_search_refs_fulltext: file://skills/ydb-search/references/fulltext-indexes.md
+    ydb_search_refs_hybrid: file://skills/ydb-search/references/hybrid-search.md
+    ydb_search_refs_compatibility: file://skills/ydb-search/references/compatibility.md
     ydb_core: file://skills/ydb-core/SKILL.md
     ydb_core_refs_balancing: file://skills/ydb-core/references/balancing.md
     ydb_core_refs_session_lifecycle: file://skills/ydb-core/references/session-lifecycle.md
