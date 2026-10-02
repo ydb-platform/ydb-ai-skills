@@ -2,7 +2,7 @@
 
 Hybrid search fuses candidate rankings from existing indexes on one table. For lexical plus semantic retrieval, use `fulltext_relevance` on the text and `vector_kmeans_tree` on the embedding. There is no separate hybrid index type.
 
-Sources: [hybrid guide](https://ydb.tech/docs/en/dev/hybrid-search?version=main), [HybridRank syntax](https://ydb.tech/docs/en/yql/reference/syntax/select/hybrid_search?version=main), and the pinned [main optimizer](https://github.com/ydb-platform/ydb/blob/169565bacd19165e6c2c6d5432db89f11b422189/ydb/core/kqp/opt/logical/kqp_opt_log_indexes.cpp) (`KqpRewriteHybridRankTopSort`). Read [compatibility](compatibility.md) for differences from stable-26-3-1. The inspected main implementation requires a single-column primary key and enables hybrid search by default unless the cluster overrides the setting.
+Sources: [hybrid guide](https://ydb.tech/docs/en/dev/hybrid-search?version=main) and [HybridRank syntax](https://ydb.tech/docs/en/yql/reference/syntax/select/hybrid_search?version=main). Read [compatibility](compatibility.md) for implementation evidence and differences from stable-26-3-1. The inspected main implementation requires a single-column primary key and enables hybrid search by default unless the cluster overrides the setting.
 
 ## Prepare the table and indexes
 
@@ -107,4 +107,4 @@ When a query fails, inspect:
 - Explicit `Limits` with a parameterized outer limit, and the unwrapped `HybridRank` sort key.
 - Prefix equalities and feature availability. Do not change a tenant-scoped request into an unfiltered search to make it compile.
 
-Use non-executing explain to inspect the target plan, then evaluate retrieval quality separately. Implementation checks and query examples are backed by the [main hybrid query tests](https://github.com/ydb-platform/ydb/blob/169565bacd19165e6c2c6d5432db89f11b422189/ydb/core/kqp/ut/indexes/hybrid/kqp_hybrid_search_ut.cpp).
+Use non-executing explain to inspect the target plan, then evaluate retrieval quality separately. Implementation checks and query examples are backed by the main hybrid query tests; see [compatibility](compatibility.md) for their source locations.

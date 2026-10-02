@@ -47,7 +47,7 @@ Serialize each row's embedding before binding `$items`; the embedding member sho
 
 For vectors constructed inside SQL or list values already stored in YDB, conversion on the server remains appropriate: persist `Untag(Knn::ToBinaryStringFloat($vector), "FloatVector")` because the conversion UDF returns a tagged value while the column stores `String`. This exception does not apply to a list supplied by the client. `Knn` comparisons return `NULL` for incompatible formats or lengths.
 
-Supported index types include `float`, `uint8`, `int8`, and `bit`; the inspected main revision also accepts `float16` and `bfloat16`. `OrderByCosineLevel1WithBitQuantization` creates a cosine index with `vector_type="bit"` and searches through it, including on the original stable-26-3-1 pin. `HalfVectorIndex` on main verifies explicit and inferred `float16`/`bfloat16` types with Euclidean search. The older Knn documentation's bit-index prohibition is stale. See the [main vector tests](https://github.com/ydb-platform/ydb/blob/169565bacd19165e6c2c6d5432db89f11b422189/ydb/core/kqp/ut/indexes/vector/kqp_indexes_vector_ut.cpp) and [compatibility](compatibility.md). These types have their own encodings; the float32 layout above applies only to `FloatVector`.
+Supported index types include `float`, `uint8`, `int8`, and `bit`; the inspected main revision also accepts `float16` and `bfloat16`. `OrderByCosineLevel1WithBitQuantization` creates a cosine index with `vector_type="bit"` and searches through it, including on the original stable-26-3-1 pin. `HalfVectorIndex` on main verifies explicit and inferred `float16`/`bfloat16` types with Euclidean search. The older Knn documentation's bit-index prohibition is stale. See [compatibility](compatibility.md) for the source locations. These types have their own encodings; the float32 layout above applies only to `FloatVector`.
 
 ## Build after initial loading
 
@@ -80,7 +80,7 @@ Choose one of `distance` or `similarity`, matching the query:
 | `distance=manhattan` | `Knn::ManhattanDistance(...) ASC` |
 | `similarity=inner_product` | `Knn::InnerProductSimilarity(...) DESC` |
 
-Dimensions may be 1–16384, `clusters` 2–2048, and `levels` 1–16. The documented bounds also require `clusters ** levels <= 1073741824` and `vector_dimension * clusters <= 4194304`. Type and dimension can be inferred from a populated table, but explicit settings make the embedding contract clear. Source: [parameter definitions](https://github.com/ydb-platform/ydb/blob/4cdb81ee6e8a3949acb6d6fb56eff0399d207eb7/ydb/docs/en/core/yql/reference/syntax/_includes/vector_index_parameters.md).
+Dimensions may be 1–16384, `clusters` 2–2048, and `levels` 1–16. The documented bounds also require `clusters ** levels <= 1073741824` and `vector_dimension * clusters <= 4194304`. Type and dimension can be inferred from a populated table, but explicit settings make the embedding contract clear. Source: [vector index parameters](https://ydb.tech/docs/en/yql/reference/syntax/create_table/vector_index?version=main).
 
 ## Query and tune
 
@@ -129,5 +129,5 @@ This binds the index prefix directly. When using multiple categories, a partial 
 - Load representative data before building. Building on an empty table produces one cluster and no useful search acceleration.
 - Completed indexes assign new/modified rows to existing clusters; they do not retrain centroids. Distribution changes can reduce recall and unbalance query work. Build a replacement index when measurements justify it, then switch indexes using the documented [index rename/replacement operation](https://ydb.tech/docs/en/reference/ydb-cli/commands/secondary_index?version=main#rename).
 - Concurrent writes during vector index construction are not consistently reflected in the built index. If the application needs a fully consistent build, coordinate a write pause for its duration; writes are not paused automatically.
-- Use `BulkUpsert` before creating synchronous indexes and SQL `INSERT`/`UPSERT` afterward. The inspected implementation also rejects TTL on a table with a vector index. Sources: [bulk loading](https://ydb.tech/docs/en/dev/batch-upload?version=main), [VectorIndexNoBulkUpsert and TTL tests](https://github.com/ydb-platform/ydb/blob/4cdb81ee6e8a3949acb6d6fb56eff0399d207eb7/ydb/core/kqp/ut/indexes/vector/kqp_indexes_vector_ut.cpp).
+- Use `BulkUpsert` before creating synchronous indexes and SQL `INSERT`/`UPSERT` afterward. The inspected implementation also rejects TTL on a table with a vector index. See [bulk loading](https://ydb.tech/docs/en/dev/batch-upload?version=main) and [compatibility](compatibility.md) for the source test locations.
 - A non-executing explain should show access to the requested index rather than an unintended base-table scan. Base-table lookups can still be appropriate when the index does not cover needed columns. Exact search intentionally scans; label it accordingly.

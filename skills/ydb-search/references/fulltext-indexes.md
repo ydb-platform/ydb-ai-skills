@@ -60,7 +60,7 @@ WHERE FulltextMatch(body, $query_text,
 LIMIT 20;
 ```
 
-`Keywords` is the default mode and `And` the default term operator. With `Or`, an optional `+` prefix marks that particular term as mandatory. Terms without `+` are optional, and `MinimumShouldMatch` counts only those optional terms (a number or percentage supplied as a string). If no term has `+`, all terms are optional and the threshold applies to all of them. Preserve the supplied query text; adding `+` changes which documents match. The [main full-text query tests](https://github.com/ydb-platform/ydb/blob/169565bacd19165e6c2c6d5432db89f11b422189/ydb/core/kqp/ut/indexes/fulltext/kqp_fulltext_search_ut.cpp) exercise `FulltextScore` with `Or` and `"50%" AS MinimumShouldMatch` without `+` prefixes. `Query` mode supports required/excluded terms and quoted phrases. `Wildcard` mode uses `%` and `_` and requires n-grams.
+`Keywords` is the default mode and `And` the default term operator. With `Or`, an optional `+` prefix marks that particular term as mandatory. Terms without `+` are optional, and `MinimumShouldMatch` counts only those optional terms (a number or percentage supplied as a string). If no term has `+`, all terms are optional and the threshold applies to all of them. Preserve the supplied query text; adding `+` changes which documents match. The main full-text query tests exercise `FulltextScore` with `Or` and `"50%" AS MinimumShouldMatch` without `+` prefixes; see [compatibility](compatibility.md) for the source locations. `Query` mode supports required/excluded terms and quoted phrases. `Wildcard` mode uses `%` and `_` and requires n-grams.
 
 `FulltextScore` accepts `DefaultOperator`, `MinimumShouldMatch` (with `Or`), and numeric `K1`/`B` BM25 settings. Keep its options distinct from `FulltextMatch`'s `Mode`; do not infer that every matching option is also a scoring option.
 
@@ -76,7 +76,7 @@ Choose analyzer settings at index creation according to the desired matching:
 | Substrings within words | `use_filter_ngram=true` plus n-gram length bounds |
 | Prefix completion | `use_filter_edge_ngram=true` plus n-gram length bounds |
 
-The numbers above are examples. Length filtering discards tokens outside the range during indexing and search. Source: [analyzer parameters](https://github.com/ydb-platform/ydb/blob/4cdb81ee6e8a3949acb6d6fb56eff0399d207eb7/ydb/docs/en/core/yql/reference/syntax/_includes/fulltext_index_parameters.md).
+The numbers above are examples. Length filtering discards tokens outside the range during indexing and search. Source: [analyzer parameters](https://ydb.tech/docs/en/yql/reference/syntax/create_table/fulltext_index?version=main).
 
 ## Substrings
 
