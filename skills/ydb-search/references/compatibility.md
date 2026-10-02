@@ -5,10 +5,10 @@ The search guidance was checked on 2026-10-02 against **main at `169565ba`** and
 | Topic | stable-26-3-1 at `4cdb81ee` | main at `169565ba` |
 |---|---|---|
 | Hybrid prefix equalities | Full-text requires every prefix column; vector accepts a nonempty contiguous leading prefix | Both full-text and vector require **every** prefix column; a leading subset is rejected |
-| `TTableServiceConfig.EnableHybridSearch` | Proto default `false` | Proto default `true` |
-| `EnableFulltextIndexPrefix` | Proto default `false` | Proto default `true` |
-| `EnableCompactFulltextIndex` | Proto default `false` | Proto default `true` |
-| `EnableFulltextIndexRowId` | Proto default `false` | Proto default `true` |
+| Hybrid search | Disabled by default | Enabled by default |
+| Filtered full-text indexes | Disabled by default | Enabled by default |
+| Compact full-text indexes, required for prefixed BM25 | Disabled by default | Enabled by default |
+| Automatic full-text document IDs for non-integer or composite primary keys | Disabled by default | Enabled by default |
 
 Main enables those four features by default unless the cluster overrides them. Do not carry stable-branch defaults into an answer about main. For an unknown target, establish its version and effective configuration; feature verification is not an instruction to change cluster configuration.
 

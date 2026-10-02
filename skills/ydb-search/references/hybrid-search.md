@@ -43,7 +43,7 @@ On the inspected main revision, both full-text and vector indexes require equali
 
 When a query fails, inspect:
 
-- Server support and the effective `EnableHybridSearch` setting.
+- Server version and whether hybrid search is enabled on the target cluster.
 - A single-column primary key; standalone full-text support for composite keys does not remove this hybrid restriction.
 - Both indexes ready, correct scored columns, compatible vector metric, and `fulltext_relevance` for BM25.
 - Ambiguous matches resolved with `Indexes`, and tuple lengths matching the number of branches.

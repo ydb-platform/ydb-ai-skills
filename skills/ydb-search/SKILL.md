@@ -30,7 +30,7 @@ Use [assets/queries](assets/queries) as the canonical runnable SQL examples: one
 | Search through the Java SDK | [Java](references/embed/java.md) |
 | Search through the C++ SDK | [C++](references/embed/cpp.md) |
 | Search through the JavaScript SDK | [JavaScript](references/embed/javascript.md) |
-| Feature availability, branch differences, and flag defaults | [Compatibility](references/compatibility.md) |
+| Feature availability, branch differences, and default behavior | [Compatibility](references/compatibility.md) |
 
 The SDK pages are focused on search and share executable SQL assets under `assets/queries/`. If installed, `ydb-table` covers general SDK usage and CLI execution, and `ydb-core` covers connection discovery. The examples can be used independently with the linked official SDK setup documentation.
 

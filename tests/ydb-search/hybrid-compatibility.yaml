@@ -4,10 +4,10 @@ vars:
   user_prompt: |
     Our YDB schema uses PRIMARY KEY (tenant, id). I want native HybridRank with
     full-text ON (tenant, body) and vector ON (tenant, embedding), always filtered
-    to tenant = $tenant. The server version and feature flags are not yet known.
+    to tenant = $tenant. The server version and enabled features are not yet known.
     An old guide says hybrid prefixed indexes are unsupported. Compare the skill's
-    verified main revision with stable-26-3-1 at 4cdb81ee, including the four
-    feature-flag defaults. After addressing the primary key, would extending the
+    verified main revision with stable-26-3-1 at 4cdb81ee, including which search
+    features are enabled by default. After addressing the primary key, would extending the
     vector index to ON (tenant, region, embedding) while filtering only tenant
     work on main? Explain what to verify before giving deployable DDL. Preserve
     tenant scoping.
@@ -22,9 +22,10 @@ assert:
       ON (tenant, region, embedding) with only tenant bound on main; require region
       equality too. Distinguish the older stable-26-3-1 behavior that accepted a
       nonempty contiguous leading prefix for vector branches. Preserve tenant
-      scoping. State that EnableHybridSearch, EnableFulltextIndexPrefix,
-      EnableCompactFulltextIndex, and EnableFulltextIndexRowId default to true on
-      the inspected main revision and false on the specified stable snapshot.
+      scoping. State that hybrid search, filtered full-text indexes, compact
+      full-text indexes, and automatic full-text document IDs for non-integer or
+      composite primary keys are enabled by default on the inspected main revision
+      and disabled by default on the specified stable snapshot.
       Distinguish these defaults from effective cluster overrides and verify the
       unknown target version. Mention the compact-index requirement for prefixed
       BM25. No cluster configuration change or destructive schema migration should
