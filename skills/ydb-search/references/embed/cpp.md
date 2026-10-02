@@ -1,6 +1,6 @@
 # Search with the C++ SDK
 
-Read [the shared SDK workflow](../sdk.md) and copy its SQL assets to `queries/`. Use `NYdb::NQuery::TQueryClient` from `ydb-cpp-sdk`. Sources: [recommended vector recipe](https://ydb.tech/docs/ru/recipes/ydb-sdk/vector-search?version=main&tabs=tool_cpp#search-by-vector), [driver initialization](https://ydb.tech/docs/en/recipes/ydb-sdk/init), and [SDK retries](https://ydb.tech/docs/en/recipes/ydb-sdk/retry).
+Read [the shared SDK workflow](../sdk.md) and copy its SQL assets to `queries/`. Use `NYdb::NQuery::TQueryClient` from `ydb-cpp-sdk`. Sources: [recommended vector recipe](https://ydb.tech/docs/ru/recipes/ydb-sdk/vector-search?tabs=tool_cpp#search-by-vector), [driver initialization](https://ydb.tech/docs/en/recipes/ydb-sdk/init), and [SDK retries](https://ydb.tech/docs/en/recipes/ydb-sdk/retry).
 
 The encoder below writes little-endian bytes explicitly. Its output does not depend on the host's byte order.
 

@@ -2,7 +2,7 @@
 
 Use `fulltext_plain` for matching/filtering and `fulltext_relevance` for BM25 scoring. Each index has one indexed text column (`String` or `Utf8`), optionally preceded by filter columns; `COVER` adds payload columns. These are synchronous indexes on row-oriented tables.
 
-Sources: [full-text guide](https://ydb.tech/docs/en/dev/fulltext-indexes?version=main), [DDL](https://ydb.tech/docs/en/yql/reference/syntax/create_table/fulltext_index?version=main), [SELECT](https://ydb.tech/docs/en/yql/reference/syntax/select/fulltext_index?version=main), and [built-ins](https://ydb.tech/docs/en/yql/reference/builtins/fulltext?version=main). See [compatibility](compatibility.md) before using prefixes or non-integer/composite primary keys.
+Sources: [full-text guide](https://ydb.tech/docs/en/dev/fulltext-indexes), [DDL](https://ydb.tech/docs/en/yql/reference/syntax/create_table/fulltext_index), [SELECT](https://ydb.tech/docs/en/yql/reference/syntax/select/fulltext_index), and [built-ins](https://ydb.tech/docs/en/yql/reference/builtins/fulltext).
 
 ## Runnable examples
 
@@ -38,7 +38,7 @@ Adapt the settings in [add-fulltext-index.sql](../assets/queries/add-fulltext-in
 | Substrings within words | `use_filter_ngram=true` plus n-gram length bounds |
 | Prefix completion | `use_filter_edge_ngram=true` plus n-gram length bounds |
 
-The numbers above are examples. Length filtering discards tokens outside the range during indexing and search. Source: [analyzer parameters](https://ydb.tech/docs/en/yql/reference/syntax/create_table/fulltext_index?version=main).
+The numbers above are examples. Length filtering discards tokens outside the range during indexing and search. Source: [analyzer parameters](https://ydb.tech/docs/en/yql/reference/syntax/create_table/fulltext_index).
 
 For substring matching, create a separate plain index over `body` with n-grams, for example `use_filter_ngram=true`, `filter_ngram_min_length=3`, and `filter_ngram_max_length=5`. Query through that index with `FulltextMatch(body, $pattern, "Wildcard" AS Mode)`, binding a pattern such as `%learn%`. `LIKE`/`ILIKE` on the indexed column through its `VIEW` can also use the n-gram index. Ordinary token indexing alone does not supply arbitrary substring search.
 
@@ -46,6 +46,6 @@ For substring matching, create a separate plain index over `body` with n-grams, 
 
 For tenant-scoped search, first extend the application schema and ingestion with a populated tenant column; it is absent from the shared demonstration schema. An index on `(tenant, body)` requires `tenant = $tenant` alongside the single full-text predicate. With more filter columns, constrain every one by equality; the text column is last and predicate order is unrestricted.
 
-Keep filter columns separate from the primary key in this variation. The inspected schema validation prohibits a prefix containing all primary-key columns; older docs state the broader restriction that filter columns cannot be primary-key columns. Check the target if a prefix overlaps a composite key. Prefixed relevance indexes require support for filtered full-text indexes and the compact full-text implementation; their default availability by branch is in [compatibility](compatibility.md).
+Keep filter columns separate from the primary key in this variation. A prefix containing all primary-key columns is rejected; verify target support before using a prefix that overlaps only part of a composite key. Prefixed relevance indexes require support for filtered full-text indexes and the compact full-text implementation. Check that these capabilities are enabled on the target database.
 
 Full-text indexes are maintained for `INSERT`, `UPSERT`, `REPLACE`, `UPDATE`, and `DELETE`; `BulkUpsert` on an indexed table is unsupported. A single `Uint64`/`Int64`/`Uint32`/`Int32` primary key supplies document IDs directly. With the row-ID feature enabled, other keys use the auto-managed `__ydb_row_id` column and `__ydb_unique_row_id` index. Omit the system column from writes; YDB populates it, and the unique index must remain while full-text indexes depend on it. Support for those keys in full-text search does not remove hybrid search's single-column key restriction.

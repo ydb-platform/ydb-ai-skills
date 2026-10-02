@@ -4,29 +4,23 @@ vars:
   user_prompt: |
     Our YDB schema uses PRIMARY KEY (tenant, id). I want native HybridRank with
     full-text ON (tenant, body) and vector ON (tenant, embedding), always filtered
-    to tenant = $tenant. The server version and enabled features are not yet known.
-    An old guide says hybrid prefixed indexes are unsupported. Compare the skill's
-    verified main revision with stable-26-3-1 at 4cdb81ee, including which search
-    features are enabled by default. After addressing the primary key, would extending the
-    vector index to ON (tenant, region, embedding) while filtering only tenant
-    work on main? Explain what to verify before giving deployable DDL. Preserve
-    tenant scoping.
+    to tenant = $tenant. The target database's enabled features are not yet known.
+    After addressing the primary key, can I extend the vector index to
+    ON (tenant, region, embedding) while filtering only tenant? Explain the
+    schema, index, and feature requirements before giving deployable DDL.
+    Preserve tenant scoping.
 
 assert:
   - type: llm-rubric
     value: |
-      Explain that the inspected hybrid implementation requires a single-column
+      Explain that hybrid search requires a single-column
       primary key, so the supplied composite key is not supported by that rewrite.
-      Do not declare prefixes universally unsupported: main supports full-text and
+      Do not declare prefixes universally unsupported: hybrid search supports full-text and
       vector prefixes when every prefix column has an equality predicate. Reject
-      ON (tenant, region, embedding) with only tenant bound on main; require region
-      equality too. Distinguish the older stable-26-3-1 behavior that accepted a
-      nonempty contiguous leading prefix for vector branches. Preserve tenant
-      scoping. State that hybrid search, filtered full-text indexes, compact
-      full-text indexes, and automatic full-text document IDs for non-integer or
-      composite primary keys are enabled by default on the inspected main revision
-      and disabled by default on the specified stable snapshot.
-      Distinguish these defaults from effective cluster overrides and verify the
-      unknown target version. Mention the compact-index requirement for prefixed
-      BM25. No cluster configuration change or destructive schema migration should
-      be executed.
+      ON (tenant, region, embedding) with only tenant bound; require region equality
+      too. Preserve tenant scoping. Verify that hybrid search and filtered full-text
+      indexes are supported and enabled on the target database, and that the
+      required indexes are ready. Mention the compact-index requirement for
+      prefixed BM25. Standalone full-text support for composite keys does not remove
+      the hybrid primary-key restriction. No cluster configuration change or
+      destructive schema migration should be executed.

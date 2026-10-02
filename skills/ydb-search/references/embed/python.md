@@ -1,6 +1,6 @@
 # Search with the Python SDK
 
-Read [the shared SDK workflow](../sdk.md) and copy its SQL assets to `queries/`. Install `ydb`; use the Query Service `QuerySessionPool`. Sources: [recommended SDK recipe](https://ydb.tech/docs/ru/recipes/ydb-sdk/vector-search?version=main&tabs=tool_python#search-by-vector) and [driver initialization](https://ydb.tech/docs/en/recipes/ydb-sdk/init).
+Read [the shared SDK workflow](../sdk.md) and copy its SQL assets to `queries/`. Install `ydb`; use the Query Service `QuerySessionPool`. Sources: [recommended SDK recipe](https://ydb.tech/docs/ru/recipes/ydb-sdk/vector-search?tabs=tool_python#search-by-vector) and [driver initialization](https://ydb.tech/docs/en/recipes/ydb-sdk/init).
 
 ## Encoding, writes, and reads
 
@@ -101,4 +101,4 @@ with ydb.Driver(
 
 The vectors above are illustrative. In an application, the query vector is the model's embedding of the supplied search text. For an exact baseline, call `search(pool, "exact", vector=...)`.
 
-For asyncio, use `ydb.aio.Driver` and `ydb.aio.QuerySessionPool`, await readiness and `execute_with_retries`, and retain the same encoder and typed parameters. The [SDK recipe](https://ydb.tech/docs/ru/recipes/ydb-sdk/vector-search?version=main&tabs=tool_python#search-by-vector) supplies the async variant. Propagate the application's timeouts when adapting these synchronous examples to request handlers.
+For asyncio, use `ydb.aio.Driver` and `ydb.aio.QuerySessionPool`, await readiness and `execute_with_retries`, and retain the same encoder and typed parameters. The [SDK recipe](https://ydb.tech/docs/ru/recipes/ydb-sdk/vector-search?tabs=tool_python#search-by-vector) supplies the async variant. Propagate the application's timeouts when adapting these synchronous examples to request handlers.

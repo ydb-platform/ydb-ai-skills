@@ -1,6 +1,6 @@
 # Search with the Go SDK
 
-Read [the shared SDK workflow](../sdk.md) and copy its SQL assets to `queries/`. Use `ydb-go-sdk/v3` and its Query Service client. Sources: [vector-search recipe](https://ydb.tech/docs/ru/recipes/ydb-sdk/vector-search?version=main&tabs=tool_go#search-by-vector) and [initialization](https://ydb.tech/docs/en/recipes/ydb-sdk/init).
+Read [the shared SDK workflow](../sdk.md) and copy its SQL assets to `queries/`. Use `ydb-go-sdk/v3` and its Query Service client. Sources: [vector-search recipe](https://ydb.tech/docs/ru/recipes/ydb-sdk/vector-search?tabs=tool_go#search-by-vector) and [initialization](https://ydb.tech/docs/en/recipes/ydb-sdk/init).
 
 The helper takes the caller's context. Give it a deadline at the request boundary; the SDK retry scope uses the same context and budget.
 

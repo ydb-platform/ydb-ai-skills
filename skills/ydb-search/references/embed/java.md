@@ -1,6 +1,6 @@
 # Search with the Java SDK
 
-Read [the shared SDK workflow](../sdk.md) and copy its SQL assets to `queries/`. Use `tech.ydb:ydb-sdk-query` and a reusable `QueryClient`. The example uses Java 17 records. Sources: [recommended vector recipe](https://ydb.tech/docs/ru/recipes/ydb-sdk/vector-search?version=main&tabs=tool_java#search-by-vector) and [driver initialization](https://ydb.tech/docs/en/recipes/ydb-sdk/init).
+Read [the shared SDK workflow](../sdk.md) and copy its SQL assets to `queries/`. Use `tech.ydb:ydb-sdk-query` and a reusable `QueryClient`. The example uses Java 17 records. Sources: [recommended vector recipe](https://ydb.tech/docs/ru/recipes/ydb-sdk/vector-search?tabs=tool_java#search-by-vector) and [driver initialization](https://ydb.tech/docs/en/recipes/ydb-sdk/init).
 
 ```java
 import java.io.IOException;

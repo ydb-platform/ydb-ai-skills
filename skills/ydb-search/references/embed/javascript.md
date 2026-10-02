@@ -1,6 +1,6 @@
 # Search with the JavaScript SDK
 
-Read [the shared SDK workflow](../sdk.md) and copy its SQL assets to `queries/`. Install `@ydbjs/core`, `@ydbjs/query`, and `@ydbjs/value`. Sources: [recommended vector recipe](https://ydb.tech/docs/ru/recipes/ydb-sdk/vector-search?version=main&tabs=tool_javascript#search-by-vector) and [SDK initialization](https://ydb.tech/docs/en/recipes/ydb-sdk/init).
+Read [the shared SDK workflow](../sdk.md) and copy its SQL assets to `queries/`. Install `@ydbjs/core`, `@ydbjs/query`, and `@ydbjs/value`. Sources: [recommended vector recipe](https://ydb.tech/docs/ru/recipes/ydb-sdk/vector-search?tabs=tool_javascript#search-by-vector) and [SDK initialization](https://ydb.tech/docs/en/recipes/ydb-sdk/init).
 
 The `@ydbjs/query` client accepts a trusted SQL string as well as a tagged template. `.parameter()` binds an explicitly typed value and supplies its `DECLARE`; use the shared SQL files without adding duplicate declarations. Application values do not pass through `unsafe()`.
 

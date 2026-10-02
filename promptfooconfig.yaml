@@ -78,9 +78,6 @@ _messages: &messages
       --- ydb-search / references / hybrid-search.md ---
       {{ ydb_search_refs_hybrid }}
 
-      --- ydb-search / references / compatibility.md ---
-      {{ ydb_search_refs_compatibility }}
-
       --- ydb-search / references / sdk.md ---
       {{ ydb_search_refs_sdk }}
 
@@ -309,7 +306,6 @@ defaultTest:
     ydb_search_refs_vector: file://skills/ydb-search/references/vector-indexes.md
     ydb_search_refs_fulltext: file://skills/ydb-search/references/fulltext-indexes.md
     ydb_search_refs_hybrid: file://skills/ydb-search/references/hybrid-search.md
-    ydb_search_refs_compatibility: file://skills/ydb-search/references/compatibility.md
     ydb_search_refs_sdk: file://skills/ydb-search/references/sdk.md
     ydb_search_refs_python: file://skills/ydb-search/references/embed/python.md
     ydb_search_refs_go: file://skills/ydb-search/references/embed/go.md

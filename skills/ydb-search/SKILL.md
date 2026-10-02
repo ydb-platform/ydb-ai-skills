@@ -10,7 +10,7 @@ Design search indexes and write vector, full-text, and hybrid queries for YDB ro
 ## Workflow
 
 1. Identify the retrieval task: exact nearest neighbors, approximate vector search, lexical matching, BM25 ranking, or fusion of lexical and semantic results. Reuse the supplied schema, embedding model and dimension, metric, filters, and result limit; state assumptions where these are missing.
-2. Establish the server version and relevant enabled features when available. Read [compatibility](references/compatibility.md) before relying on hybrid search, prefixed indexes, or non-integer full-text primary keys. A source checkout or documentation branch does not establish deployed availability.
+2. Check that the target database supports the requested search features and that the required indexes are ready. For hybrid search, prefixed indexes, or non-integer full-text primary keys, read the prerequisites in the relevant reference below.
 3. Load only the relevant reference below. Produce matching DDL and parameterized SQL, distinguishing schema creation, initial data loading, index construction, and querying. Serialize application-provided FloatVectors on the client and bind the completed binary `String`; do not send `List<Float>` and convert it with `Knn::ToBinaryStringFloat` in SQL. Apply this to exact, indexed, and hybrid search, and to embedding fields in batch writes.
 4. For diagnosis, compare the query with the index's columns, metric, readiness, and filter requirements. Use a non-executing explain when a target is available. Evaluate recall and latency with representative queries; compare ANN results with exact search on the same data and filters when practical.
 5. Report the SQL, assumptions, applicable build/update limitations, and what was actually verified. Writing a query or skill does not require connecting to or changing a database.
@@ -30,7 +30,6 @@ Use [assets/queries](assets/queries) as the canonical runnable SQL examples: one
 | Search through the Java SDK | [Java](references/embed/java.md) |
 | Search through the C++ SDK | [C++](references/embed/cpp.md) |
 | Search through the JavaScript SDK | [JavaScript](references/embed/javascript.md) |
-| Feature availability, branch differences, and default behavior | [Compatibility](references/compatibility.md) |
 
 The SDK pages are focused on search and share executable SQL assets under `assets/queries/`. If installed, `ydb-table` covers general SDK usage and CLI execution, and `ydb-core` covers connection discovery. The examples can be used independently with the linked official SDK setup documentation.
 
@@ -40,11 +39,11 @@ The SDK pages are focused on search and share executable SQL assets under `asset
 - Vectors are serialized binary `String` values. FloatVectors use little-endian float32 bytes followed by `0x01`. Pass that parameter directly to `Knn` functions, without `Knn::ToBinaryStringFloat` or `Untag` around it. Match stored and query vectors to the model, dimension, and index type; SQL-side conversion remains appropriate for vectors constructed or already stored as lists inside YDB.
 - Build a vector index after loading representative data. An index built on an empty table has one cluster; later writes do not retrain the cluster tree. Writes during the build are not consistently captured.
 - Standalone BM25 requires `fulltext_relevance` and the same `FulltextScore(...)` expression in `SELECT` and `WHERE ... > 0`. The hybrid rewrite supplies the branch access; do not copy this standalone `WHERE` requirement into a hybrid query.
-- `HybridRank(...)` is the entire `ORDER BY` key. A parameterized outer `LIMIT` requires explicit candidate `Limits` for every branch. The inspected implementation also requires a single-column primary key.
+- `HybridRank(...)` is the entire `ORDER BY` key. A parameterized outer `LIMIT` requires explicit candidate `Limits` for every branch. Hybrid search also requires a single-column primary key.
 - `BulkUpsert` is unavailable once these synchronous search indexes exist. Plan bulk initial loading before index creation; use supported SQL writes afterward.
 
 ## Content rules
 
-Ground YDB syntax in the linked documentation and pinned implementation. Do not substitute PostgreSQL vector operators, HNSW settings, Elasticsearch query DSL, or an invented hybrid index type. Preserve the requested retrieval semantics: ANN is approximate, and fusion ranks the union of branch candidates. Tune candidate pools and vector probing separately.
+Ground YDB syntax in the linked documentation and confirmed target behavior. Do not substitute PostgreSQL vector operators, HNSW settings, Elasticsearch query DSL, or an invented hybrid index type. Preserve the requested retrieval semantics: ANN is approximate, and fusion ranks the union of branch candidates. Tune candidate pools and vector probing separately.
 
-Treat examples as query patterns, not measured capacity recommendations. State version uncertainty explicitly and use [compatibility](references/compatibility.md) to resolve stale documentation before claiming a feature is supported or unsupported.
+Treat examples as query patterns, not measured capacity recommendations. If a capability is uncertain, state what needs verification against the documentation and the target database.
