@@ -1,0 +1,28 @@
+description: Search · YDB 26.3 hybrid enablement and prefix compatibility
+
+vars:
+  user_prompt: |
+    We use YDB 26.3.1.16 RC with its default features and PRIMARY KEY (tenant, id).
+    I want native HybridRank with
+    full-text ON (tenant, body) and vector ON (tenant, embedding), always filtered
+    to tenant = $tenant. The versioned docs have a page for every feature.
+    After addressing the primary key, can I extend the vector index to
+    ON (tenant, region, embedding) while filtering only tenant? Explain the
+    schema, index, and feature requirements before giving deployable DDL.
+    Preserve tenant scoping.
+
+assert:
+  - type: llm-rubric
+    value: |
+      Explain that 26.3.1.16 RC documents native hybrid search, filtered full-text
+      indexes, and arbitrary full-text primary keys as disabled by default; feature
+      pages alone do not establish enablement. Hybrid search requires a single-column
+      primary key, so the supplied composite key is not supported by that rewrite.
+      State that the 26.3 hybrid guide excludes prefixed vector indexes, so adding
+      more equality predicates is not sufficient to make this a documented native
+      hybrid path. Use an unprefixed vector index for the documented shape, or
+      require independent proof of an extended target's capabilities. Preserve
+      tenant scoping; do not silently remove the filter. Verify enablement and ready
+      indexes before native execution. Standalone full-text support for composite keys does not remove
+      the hybrid primary-key restriction. No cluster configuration change or
+      destructive schema migration should be executed.

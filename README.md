@@ -10,6 +10,7 @@ AI coding agent skills for [YDB](https://ydb.tech) — for writing YQL, designin
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **ydb-core**         | Entry point / router. YDB overview, auth and connection, schema basics, CLI discovery and scheme inspection. Baseline skill — auto-installed.     |
 | **ydb-table**        | Writing YQL and executing it (SDK-embedded or with `ydb sql`). Optimization, schema design for query patterns, SQL-to-YQL conversion, audit.        |
+| **ydb-search**       | Vector and full-text indexes, BM25, `HybridRank`, release compatibility for 25.1–26.3, recall tuning, index lifecycle, and search examples for Python, Go, Java, C++, and JavaScript SDKs. |
 | **ydb-docs** | Finds official documentation through `llms.txt`, with language and product-version selection. |
 
 ## Installation
@@ -34,6 +35,9 @@ cd ydb-ai-skills
 
 # Install only the standalone documentation lookup skill
 ./install.sh --agent=claude --skills=ydb-docs --no-core
+
+# Install search guidance (ydb-core auto-included)
+./install.sh --agent=codex --skills=ydb-search
 
 # Dry run — see what would be done
 ./install.sh --agent=claude --dry-run
@@ -88,6 +92,9 @@ Skills trigger automatically from the user's phrasing. Examples of queries that 
 > Write a YQL query to paginate users by created_at
   → ydb-table
 
+> Create YDB vector and full-text indexes and combine their rankings with HybridRank
+  → ydb-search
+
 > Review this Java/Hibernate code that calls saveAll in a loop
   → ydb-table (audit mode)
 ```
@@ -100,6 +107,7 @@ For agents that don't auto-trigger skills, reference the skill name explicitly i
 skills/                          Surface-aligned skills (universal format)
   ydb-core/SKILL.md              Single-file router — overview, auth, schema basics, CLI discovery
   ydb-table/                     SKILL.md + references/ + rules/
+  ydb-search/                    Search references + SDK examples in references/embed/ + shared SQL assets
   ydb-docs/SKILL.md               Standalone documentation lookup via llms.txt
 promptfooconfig.yaml             Compatibility matrix config — provider list, test discovery
 prompts/coding-agent.yaml        Shared system prompt for all tests

@@ -7,6 +7,8 @@ description: Writing and auditing code that runs YQL against YDB tables. Use whe
 
 Writing YQL against YDB tables, designing schemas to back those queries, and auditing application code that runs them.
 
+For vector/full-text index design and search ranking (`vector_kmeans_tree`, `FulltextMatch`, `FulltextScore`, `HybridRank`), use `ydb-search` when installed. Keep SDK binding, CLI execution, and general table work here. If it is absent, consult the official YDB search documentation.
+
 ## Workflow
 
 1. **Classify the task.** Write a new query or schema, execute SQL with YDB CLI, audit existing code, convert from another SQL dialect, or read an `EXPLAIN`.

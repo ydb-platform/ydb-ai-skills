@@ -1,0 +1,28 @@
+description: Search · YDB 25.1 vector lifecycle and recall
+
+vars:
+  user_prompt: |
+    On YDB 25.1, I plan to create an empty documents table with a vector_kmeans_tree
+    cosine index, BulkUpsert a million 768-dimensional float embeddings, then
+    query ORDER BY Knn::CosineDistance(embedding, $q) DESC LIMIT 10 without VIEW.
+    The index covers only title. A teammate says SQL UPSERT after the build will
+    always keep ANN results fresh. Fix the plan, explain how to assess recall and
+    handle continued writes, and tell me whether the fulltext/hybrid examples
+    apply to this release. Write guidance only.
+
+assert:
+  - type: llm-rubric
+    value: |
+      The answer must load representative data before building the vector index,
+      and place BulkUpsert before index creation because synchronous indexes do
+      not support it. Verify vector-index availability and the exact 25.1 build;
+      introduction is documented in 25.1.2.7 RC. Do not promise later writes are
+      supported or automatically reflected in the 25.1 index: the guide warns
+      that updates need rebuilding, and the DDL page also warns against mutations.
+      Require target verification or use an unindexed/exact-search or validated
+      rebuild workflow for changing data. It must show indexed search with
+      VIEW, cosine distance ascending, an explicit KMeansTreeSearchTopSize, and
+      an encoded binary String query vector matching dimension 768. Covering the
+      embedding as well as title avoids the vector lookup. Recall should be
+      compared with an exact baseline using the same filters. Do not prescribe
+      fulltext indexes or native HybridRank as documented 25.1 capabilities.

@@ -14,6 +14,8 @@ Every eval runs this shape:
 
 This approximates the *ceiling* per model — every loadable file is fully in context. A model that fails this can't work in a real runtime (Claude Code, Codex, Cursor, etc.) where the agent additionally has to decide which skill to load and which references to read.
 
+`ydb-search` is loaded with its release compatibility, vector, full-text, hybrid, and SDK references, including all five language pages and the shared SQL assets. Its cases under `tests/ydb-search/` exercise early-release vector lifecycle limits, standalone full-text query shape, hybrid candidate limits, and 26.3 enablement/schema/prefix requirements. Run just these cases with `--filter-pattern 'Search ·'`; routing cases are in `tests/routing/18-*` through `21-*`. Source inspection and static validation do not substitute for running the model matrix or executing SQL against a matching server.
+
 Runtime-specific behavior (how Claude Code chooses skills vs. how Codex does) is **not** tested here. That requires installing each runtime and running against it, which is a manual exercise — see the [known gap](#runtime-level-testing-known-gap) below.
 
 ## Setup

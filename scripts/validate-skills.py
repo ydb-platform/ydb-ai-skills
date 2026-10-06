@@ -9,7 +9,8 @@ docs/authoring.md:
   2. No `TODO(author)` markers anywhere under skills/.
   3. Files under skills/<surface>/references/ that are NOT inside an
      embed/<lang>/ subdirectory must not contain language-specific tokens
-     (JDBC / Hibernate / Spring / Java / JPA / Python / Go / .NET / C++).
+     (JDBC / Hibernate / Spring / Java / JPA / Python / Go / .NET / C++)
+     in their prose. Markdown link destinations may name implementation files.
   4. Every relative markdown link in skills/**/*.md resolves to a real file.
   5. Every `RULE-<PREFIX>-<NN>` ID uses a prefix listed in the registry
      table in docs/authoring.md.
@@ -108,7 +109,9 @@ def check_language_agnostic(path: pathlib.Path, violations: list[str]) -> None:
         return
     if parts[2] == "embed":
         return
-    text = path.read_text()
+    # A source URL ending in .cpp is evidence, not language-specific guidance.
+    # Keep link labels in the check, but omit their destinations.
+    text = re.sub(r"\]\([^)]*\)", "]", path.read_text())
     hits = LANG_TOKENS.findall(text)
     if hits:
         fail(

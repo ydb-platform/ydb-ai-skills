@@ -1,0 +1,23 @@
+description: Search · Hybrid branch selection and parameterized limit
+
+vars:
+  user_prompt: |
+    On a YDB server with HybridRank enabled, documents has primary key id Uint64,
+    body Utf8 and embedding String containing 768-dimensional FloatVectors.
+    Ready indexes are ft_a and ft_b (both fulltext_relevance on body), and vec_idx
+    (vector_kmeans_tree, cosine, on embedding). Write SQL using ft_b with 100 text
+    candidates, 200 vector candidates, vector weight 2, text weight 1, and final
+    result count $limit. The query text and encoded vector are parameters.
+    Explain the three different limits/probing controls. Do not run anything.
+
+assert:
+  - type: llm-rubric
+    value: |
+      Read documents without VIEW. Use HybridRank as the entire ORDER BY key with
+      a FulltextScore branch and cosine Knn branch. Use positionally matching
+      Weights, Indexes selecting ft_b and vec_idx, and Limits selecting 100 and 200.
+      Bind query text, binary String query vector, and outer $limit. Do not copy
+      the standalone WHERE FulltextScore > 0 into the hybrid query or add another
+      sort key. Set KMeansTreeSearchTopSize explicitly. Explain that it controls
+      vector probing, Limits controls candidates before fusion, and the outer
+      LIMIT controls output rows. Explicit Limits permits parameterized LIMIT.
