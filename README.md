@@ -10,7 +10,7 @@ Skill bodies are intentionally concise. Supporting references and rules are grou
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **ydb-core**         | YDB overview and comparisons, local setup, connection/auth, SDK selection, CLI namespace operations, driver balancing, sessions and shared client policy. Baseline skill — auto-installed.     |
 | **ydb-table**        | Application data access: SQL/YQL, query execution via SDK or `ydb sql`, schema design, transactions, optimization, SQL-dialect conversion and audits of data-access code/configuration.        |
-| **ydb-search**       | Vector and full-text indexes, BM25, `HybridRank`, recall tuning, index lifecycle, and search examples for Python, Go, Java, C++, and JavaScript SDKs. |
+| **ydb-search**       | Vector and full-text indexes, BM25, `HybridRank`, release compatibility for 25.1–26.3, recall tuning, index lifecycle, and search examples for Python, Go, Java, C++, and JavaScript SDKs. |
 | **ydb-docs** | Finds and verifies official YDB documentation through `llms.txt`, with language/version selection and source citations; can support core/table tasks. |
 
 Choose by the part of YDB involved, not by whether the request contains code.

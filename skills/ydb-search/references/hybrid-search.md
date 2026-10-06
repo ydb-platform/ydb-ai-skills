@@ -2,7 +2,9 @@
 
 Hybrid search fuses candidate rankings from existing indexes on one table. For lexical plus semantic retrieval, use `fulltext_relevance` on the text and `vector_kmeans_tree` on the embedding. There is no separate hybrid index type.
 
-Sources: [hybrid guide](https://ydb.tech/docs/en/dev/hybrid-search) and [HybridRank syntax](https://ydb.tech/docs/en/yql/reference/syntax/select/hybrid_search). Hybrid search requires a single-column primary key and support for the selected index types on the target database.
+Sources: [hybrid guide](https://ydb.tech/docs/en/dev/hybrid-search?version=v26.3) and [HybridRank syntax](https://ydb.tech/docs/en/yql/reference/syntax/select/hybrid_search?version=v26.3). Hybrid search requires a single-column primary key and support for the selected index types on the target database.
+
+**Release selection:** native `HybridRank` is documented in 26.3, and **26.3.1.16 RC lists it as disabled by default**. Verify enablement before using the native query. For 26.2 with standalone full-text support, retrieve vector and lexical candidates separately and fuse their rankings in the application. Earlier documentation does not establish this native hybrid contract. See [version compatibility](version-compatibility.md).
 
 ## Runnable example
 
@@ -39,7 +41,7 @@ Two or more scoring branches are supported, including additional vector columns 
 
 If the application extends the schema with tenant data, preserve its `WHERE tenant = $tenant` predicate. General predicates are reapplied after candidate lookup, so small pools can leave fewer rows than requested. Increasing pools may help; measure the result and do not promise exact filtered top-k from ANN.
 
-For hybrid search, bind every prefix column of both full-text and vector indexes by equality. For example, `(tenant, region, embedding)` requires both `tenant = $tenant` and `region = $region`; a leading subset is insufficient. Predicates under SQL `OR` do not establish those equalities. Prefixed relevance indexes also require compact full-text indexes.
+The [26.3 hybrid guide](https://ydb.tech/docs/en/dev/hybrid-search.md?version=v26.3#limitations) explicitly excludes prefixed vector indexes. Use the non-prefixed `vec_idx` in the shared assets for the documented native path; do not infer support from standalone filtered vector indexes. If an extended target has independently verified support for hybrid index prefixes, bind all required prefix columns by equality and verify the plan. Predicates under SQL `OR` do not establish those equalities. Prefixed relevance indexes also require enabled filtered full-text support and compact full-text indexes.
 
 When a query fails, inspect:
 

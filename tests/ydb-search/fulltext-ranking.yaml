@@ -2,7 +2,7 @@ description: Search · Full-text ranking query repair
 
 vars:
   user_prompt: |
-    In YDB, articles has id Uint64 as its primary key, body Utf8, and a
+    In YDB 26.2.1.14, articles has id Uint64 as its primary key, body Utf8, and a
     fulltext_plain index ft_idx on body. This query fails:
       SELECT id, FulltextScore(body, $q) AS score
       FROM articles

@@ -1,6 +1,6 @@
 ---
 name: ydb-search
-description: Designs YDB vector indexes, fulltext indexes, and hybrid search queries, including SDK examples for Python, Go, Java, C++, and JavaScript. Use for YDB semantic search, ANN or exact nearest neighbors, vector_kmeans_tree, Knn distance and similarity ranking, KMeansTreeSearchTopSize, fulltext_plain, fulltext_relevance, FulltextMatch, FulltextScore, BM25, tokenizers, n-grams, HybridRank, RRF, and search recall or index lifecycle problems. Covers index DDL, binary embedding parameters, batch writes, filtered search, ranking, and query troubleshooting. For general SDK usage or SQL execution use ydb-table; for finding documentation use ydb-docs. Does not cover YQL on YT or other search engines.
+description: Designs YDB vector indexes, fulltext indexes, and hybrid search queries, including SDK examples for Python, Go, Java, C++, and JavaScript. Use for YDB semantic search, ANN or exact nearest neighbors, vector_kmeans_tree, Knn distance and similarity ranking, KMeansTreeSearchTopSize, fulltext_plain, fulltext_relevance, FulltextMatch, FulltextScore, BM25, tokenizers, n-grams, HybridRank, RRF, and search recall or index lifecycle problems. Covers index DDL, release compatibility, binary embedding parameters, batch writes, filtered search, ranking, and query troubleshooting. For general SDK usage or SQL execution use ydb-table; for finding documentation use ydb-docs. Does not cover YQL on YT or other search engines.
 ---
 
 # YDB Search
@@ -10,7 +10,7 @@ Design search indexes and write vector, full-text, and hybrid queries for YDB ro
 ## Workflow
 
 1. Identify the retrieval task: exact nearest neighbors, approximate vector search, lexical matching, BM25 ranking, or fusion of lexical and semantic results. Reuse the supplied schema, embedding model and dimension, metric, filters, and result limit; state assumptions where these are missing.
-2. Check that the target database supports the requested search features and that the required indexes are ready. For hybrid search, prefixed indexes, or non-integer full-text primary keys, read the prerequisites in the relevant reference below.
+2. Establish the target server release and patch when available, then read [version compatibility](references/version-compatibility.md) for 25.1–26.3 before selecting SQL files or SDK modes. Check that the required features are enabled and indexes are ready; documentation presence alone does not establish enablement.
 3. Load only the relevant reference below. Produce matching DDL and parameterized SQL, distinguishing schema creation, initial data loading, index construction, and querying. Serialize application-provided FloatVectors on the client and bind the completed binary `String`; do not send `List<Float>` and convert it with `Knn::ToBinaryStringFloat` in SQL. Apply this to exact, indexed, and hybrid search, and to embedding fields in batch writes.
 4. For diagnosis, compare the query with the index's columns, metric, readiness, and filter requirements. Use a non-executing explain when a target is available. Evaluate recall and latency with representative queries; compare ANN results with exact search on the same data and filters when practical.
 5. Report the SQL, assumptions, applicable build/update limitations, and what was actually verified. Writing a query or skill does not require connecting to or changing a database.
@@ -21,6 +21,7 @@ Use [assets/queries](assets/queries) as the canonical runnable SQL examples: one
 
 | Task | Reference |
 |---|---|
+| Release support, early vector-update limitations, full-text/hybrid availability, and example selection | [Version compatibility, 25.1–26.3](references/version-compatibility.md) |
 | Vector storage, exact/ANN queries, vector index DDL, coverage, filtering, recall, rebuilding | [Vector indexes](references/vector-indexes.md) |
 | Text matching, BM25, analyzers, n-grams, filtered full-text indexes | [Full-text indexes](references/fulltext-indexes.md) |
 | HybridRank, RRF/linear fusion, branch weights and candidate limits | [Hybrid search](references/hybrid-search.md); load the individual index references when changing their DDL |
@@ -41,6 +42,8 @@ The SDK pages are focused on search and share executable SQL assets under `asset
 - Standalone BM25 requires `fulltext_relevance` and the same `FulltextScore(...)` expression in `SELECT` and `WHERE ... > 0`. The hybrid rewrite supplies the branch access; do not copy this standalone `WHERE` requirement into a hybrid query.
 - `HybridRank(...)` is the entire `ORDER BY` key. A parameterized outer `LIMIT` requires explicit candidate `Limits` for every branch. Hybrid search also requires a single-column primary key.
 - `BulkUpsert` is unavailable once these synchronous search indexes exist. Plan bulk initial loading before index creation; use supported SQL writes afterward.
+
+Full-text indexes are documented as enabled by default in 26.2.1.14. Native hybrid search, full-text filter columns, and arbitrary full-text primary keys are listed as disabled by default in 26.3.1.16 RC. Follow the compatibility reference before using the complete SDK walkthrough.
 
 ## Content rules
 
