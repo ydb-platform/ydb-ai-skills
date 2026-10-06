@@ -1,0 +1,25 @@
+description: Search · Full-text ranking query repair
+
+vars:
+  user_prompt: |
+    In YDB 26.2.1.14, articles has id Uint64 as its primary key, body Utf8, and a
+    fulltext_plain index ft_idx on body. This query fails:
+      SELECT id, FulltextScore(body, $q) AS score
+      FROM articles
+      WHERE score > 0 OR FulltextMatch(body, $q)
+      ORDER BY score DESC LIMIT 10;
+    I want BM25 results matching at least half of the optional query terms.
+    The query text has no + prefixes; preserve those term semantics.
+    Give the corrected index choice and parameterized SQL. Do not execute it.
+
+assert:
+  - type: llm-rubric
+    value: |
+      Require fulltext_relevance for BM25 and show a query through that index
+      using VIEW. Repeat the identical FulltextScore expression in SELECT and
+      WHERE ... > 0, with "Or" AS DefaultOperator and "50%" AS MinimumShouldMatch.
+      Do not use the SELECT alias in WHERE or combine scoring with FulltextMatch
+      via SQL OR. Sort the score descending. Distinguish query-term Or semantics
+      from SQL OR around full-text predicates. Bind the query text as a parameter.
+      Do not add + prefixes or require a mandatory term: with Or and no +, all
+      supplied terms are optional and MinimumShouldMatch applies to all of them.

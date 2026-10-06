@@ -15,6 +15,8 @@ Skills are decomposed **by YDB surface**, not by developer medium (code vs SQL v
 
 `ydb-docs` is a standalone documentation-discovery utility, not a new YDB surface. It routes explicit documentation lookup to the official `llms.txt` indexes; implementation and audit tasks remain with the surface skills. The core skill also carries a short, self-contained lookup procedure.
 
+`ydb-search` specializes the table surface for vector indexes, full-text indexes, and hybrid retrieval. It owns search DDL, ranking patterns, recall tuning, search constraints, documentation-based release compatibility, and focused SDK examples under `references/embed/`, backed by shared SQL in `assets/queries/`. `ydb-table` retains general table queries, SDK binding, and execution. The search skill's authoring and troubleshooting guidance lives in `references/`; it does not ship a separate audit ruleset.
+
 `ydb-ops` (cluster operations) is deferred as a separate future skill.
 
 ### Surface-boundary decision principle

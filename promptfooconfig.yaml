@@ -66,6 +66,57 @@ _messages: &messages
       SKILL: ydb-docs
       {{ ydb_docs }}
 
+      SKILL: ydb-search
+      {{ ydb_search }}
+
+      --- ydb-search / references / version-compatibility.md ---
+      {{ ydb_search_refs_versions }}
+
+      --- ydb-search / references / vector-indexes.md ---
+      {{ ydb_search_refs_vector }}
+
+      --- ydb-search / references / fulltext-indexes.md ---
+      {{ ydb_search_refs_fulltext }}
+
+      --- ydb-search / references / hybrid-search.md ---
+      {{ ydb_search_refs_hybrid }}
+
+      --- ydb-search / references / sdk.md ---
+      {{ ydb_search_refs_sdk }}
+
+      --- ydb-search / references / embed / python.md ---
+      {{ ydb_search_refs_python }}
+
+      --- ydb-search / references / embed / go.md ---
+      {{ ydb_search_refs_go }}
+
+      --- ydb-search / references / embed / java.md ---
+      {{ ydb_search_refs_java }}
+
+      --- ydb-search / references / embed / cpp.md ---
+      {{ ydb_search_refs_cpp }}
+
+      --- ydb-search / references / embed / javascript.md ---
+      {{ ydb_search_refs_javascript }}
+
+      --- ydb-search / assets / queries ---
+      create-table.sql:
+      {{ ydb_search_sql_create }}
+      upsert.sql:
+      {{ ydb_search_sql_upsert }}
+      add-vector-index.sql:
+      {{ ydb_search_sql_vector_index }}
+      add-fulltext-index.sql:
+      {{ ydb_search_sql_fulltext_index }}
+      exact-search.sql:
+      {{ ydb_search_sql_exact }}
+      vector-search.sql:
+      {{ ydb_search_sql_vector }}
+      fulltext-search.sql:
+      {{ ydb_search_sql_fulltext }}
+      hybrid-search.sql:
+      {{ ydb_search_sql_hybrid }}
+
       SKILL: ydb-table
       ══════════════════════════════════════════════════════════════════════════
       {{ ydb_table }}
@@ -229,6 +280,25 @@ defaultTest:
   # automatically flows into the prompt on the next eval run.
   vars:
     ydb_docs: file://skills/ydb-docs/SKILL.md
+    ydb_search: file://skills/ydb-search/SKILL.md
+    ydb_search_refs_versions: file://skills/ydb-search/references/version-compatibility.md
+    ydb_search_refs_vector: file://skills/ydb-search/references/vector-indexes.md
+    ydb_search_refs_fulltext: file://skills/ydb-search/references/fulltext-indexes.md
+    ydb_search_refs_hybrid: file://skills/ydb-search/references/hybrid-search.md
+    ydb_search_refs_sdk: file://skills/ydb-search/references/sdk.md
+    ydb_search_refs_python: file://skills/ydb-search/references/embed/python.md
+    ydb_search_refs_go: file://skills/ydb-search/references/embed/go.md
+    ydb_search_refs_java: file://skills/ydb-search/references/embed/java.md
+    ydb_search_refs_cpp: file://skills/ydb-search/references/embed/cpp.md
+    ydb_search_refs_javascript: file://skills/ydb-search/references/embed/javascript.md
+    ydb_search_sql_create: file://skills/ydb-search/assets/queries/create-table.sql
+    ydb_search_sql_upsert: file://skills/ydb-search/assets/queries/upsert.sql
+    ydb_search_sql_vector_index: file://skills/ydb-search/assets/queries/add-vector-index.sql
+    ydb_search_sql_fulltext_index: file://skills/ydb-search/assets/queries/add-fulltext-index.sql
+    ydb_search_sql_exact: file://skills/ydb-search/assets/queries/exact-search.sql
+    ydb_search_sql_vector: file://skills/ydb-search/assets/queries/vector-search.sql
+    ydb_search_sql_fulltext: file://skills/ydb-search/assets/queries/fulltext-search.sql
+    ydb_search_sql_hybrid: file://skills/ydb-search/assets/queries/hybrid-search.sql
     ydb_core: file://skills/ydb-core/SKILL.md
     ydb_core_refs_balancing: file://skills/ydb-core/references/balancing.md
     ydb_core_refs_session_lifecycle: file://skills/ydb-core/references/session-lifecycle.md
@@ -304,3 +374,4 @@ tests:
   - file://tests/ydb-core/*.yaml
   - file://tests/ydb-table/*.yaml
   - file://tests/ydb-docs/*.yaml
+  - file://tests/ydb-search/*.yaml
