@@ -1,0 +1,62 @@
+# Ground truth: ydb-platform/ydb tag 24.2.8
+# - ydb/core/protos/table_service_config.proto: EnableSequences defaults false
+# - yql/essentials/sql/v1/translation/sql_translation.cpp: serial syntax exists behind the feature
+description: Query · Do not assume SERIAL is enabled in YDB 24.2
+
+vars:
+  user_prompt: |
+    I'm porting this PostgreSQL table to YDB 24.2.8. I cannot change the
+    cluster configuration:
+
+    ```sql
+    CREATE TABLE orders (
+        id SERIAL PRIMARY KEY,
+        customer_id BIGINT NOT NULL
+    );
+    ```
+
+    Give me a table definition and an insert strategy that work on that
+    deployment.
+
+assert:
+  - type: regex
+    value: \bid\s+Int64\b
+  - type: regex
+    value: \bcustomer_id\s+Int64\b
+  - type: regex
+    value: INSERT\s+INTO\s+orders\s*\(\s*id\s*,\s*customer_id
+  # These target concrete bad recommendations observed in cheap-model runs.
+  # Keep them narrow so correct contrastive explanations are still accepted.
+  - type: not-regex
+    value: does not support [`]?SERIAL[`]? syntax by default
+  - type: not-regex
+    value: UUID\s*(?:→|->)\s*Int64
+  - type: not-regex
+    value: dedicated sequence table
+  - type: llm-rubric
+    value: |
+      The response should:
+      - Recognize that serial/sequences support in YDB 24.2.8 is gated by
+        `EnableSequences`, which defaults to false. Because the user cannot
+        change cluster configuration, do not present `Serial` or `BigSerial`
+        as usable in the requested DDL. The serial syntax exists in this
+        release; do not misdescribe the disabled feature as absent parser
+        syntax.
+      - Provide a compatible fallback such as an `Int64` identifier generated
+        by the application and include that identifier explicitly in the
+        `INSERT`. Keep the generator and column type consistent: a numeric
+        generator may use `Int64`. The shown `Int64` fallback should not be
+        described as UUID-based.
+      - Preserve PostgreSQL `BIGINT` signedness as YDB `Int64` and use a
+        separate table-level `PRIMARY KEY (id)` clause.
+      - It may recommend upgrading to a release with unconditional serial
+        support, but the shown solution must work on the stated deployment.
+      - Do not invent a home-grown sequence table or unsupported allocation
+        SQL; a type-consistent client-generated identifier is sufficient.
+
+      Full fail if the usable DDL contains `id Serial` or `id BigSerial`, if
+      the only insert omits `id`, or if the response treats all YDB versions
+      as having the same serial behavior. Also fail if it says the 24.2.8
+      parser lacks serial syntax instead of saying the feature is disabled,
+      even if another sentence later acknowledges that the parser accepts it.
+      Fail if it describes a UUID as a numeric `Int64` generator.

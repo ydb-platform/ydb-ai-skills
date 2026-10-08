@@ -150,8 +150,54 @@ Yandex Cloud Managed YDB uses the same engine and same open-source SDKs; only en
 
 Dominant LLM failure modes when generating YDB schemas:
 
-- **Monotonic first-column PK → hot partition.** Common trigger: porting PostgreSQL `SERIAL` / `AUTO_INCREMENT` or a plain timestamp. First PK column determines partition; writes to a monotonic key concentrate on one tablet = one CPU. Use a hash prefix: `PRIMARY KEY (Digest::NumericHash(id), id)` for `id Uint64`. Signature: `Digest::NumericHash(Uint64{Flags:AutoMap}) -> Uint64` (https://ydb.tech/docs/en/yql/reference/udf/list/digest).
-- **YDB has no `SERIAL` / `AUTO_INCREMENT` / `CREATE SEQUENCE`.** Don't emit those keywords in YQL — they'll fail. Use client-generated UUIDs or a hash-prefix + id-service design.
+- **Serial support is version-dependent.** Determine the YDB server version before recommending a serial type. If it is unknown, ask for it or give explicit version-conditioned alternatives; never present `Serial` as universal.
+
+  | Server version | Serial availability |
+  |---|---|
+  | 23.2 and older | Serial syntax is unavailable. |
+  | 23.3–23.4 | Experimental and gated by `EnableSequences`, which defaults to `false`. |
+  | 24.1.1–24.1.2 | `EnableSequences` defaults to `true`. |
+  | 24.1.3–24.3.3 | `EnableSequences` defaults to `false`. Verify cluster configuration before using serial types. |
+  | 24.3.4–24.4 | `EnableSequences` defaults to `true`. Public release notes announce primary-key auto-increment support in 24.3.11.13. |
+  | 25.1 and newer | The feature flag is removed; serial types are supported directly. |
+
+  For an unknown server version, show both concrete paths, never only the fallback: (1) YDB 25.1+ with the `BigSerial` table and an `INSERT` that omits `id`, using the current-version example below; (2) pre-25.1, where behavior varies by exact patch and cluster configuration, with the numeric `Int64` fallback and an `INSERT` that supplies `id`. Introduce them with: "YDB 25.1+ supports serial types directly. On pre-25.1 releases, behavior varies by exact patch and cluster configuration; verify both before using serial DDL." Do not reuse the 24.2.8 parser/default statement for the whole pre-25.1 group.
+
+  For YDB 24.2.8 specifically, say: "The parser recognizes serial types, but `EnableSequences` defaults to `false`, so the server rejects serial DDL under the default configuration." Describe the feature as disabled, never as unsupported syntax. Do not generalize this default to every release older than 25.1; when the exact older version is unknown, say that its patch version and configuration must be checked. When serial support is absent or disabled for a PostgreSQL integer ID, use a client-generated numeric identifier with `Int64` and supply it explicitly in writes. For the `orders` migration used below, the compatible fallback is:
+
+  ```sql
+  CREATE TABLE orders (
+      id Int64 NOT NULL,
+      customer_id Int64 NOT NULL,
+      PRIMARY KEY (id)
+  );
+
+  INSERT INTO orders (id, customer_id)
+  VALUES (42, 1001);
+  ```
+
+  Do not emit serial DDL that cannot run on the stated deployment. Keep this `Int64` fallback numeric. The insert strategy is: generate that numeric `Int64` in the application and always send it in the write. Stop there. Do not suggest a shared counter, a sequence-table emulation, an unsupported allocation query, or a CLI command for discovering the server version unless the user explicitly asks for one and the syntax is verified.
+- **Generated integer identifiers on supported versions.** `SmallSerial` / `Serial2` map to `Int16`, `Serial` / `Serial4` to `Int32`, and `BigSerial` / `Serial8` to `Int64`. Omit the serial column from `INSERT` or `UPSERT` to let YDB generate its next value. Prefer `BigSerial` when the table can exceed the `Int32` range. `AUTO_INCREMENT` is not YQL.
+- **Serial DDL restrictions.** Declare serial columns when creating the table. `ALTER TABLE ... ADD COLUMN ... Serial` and altering an existing serial column are unsupported. Translate PostgreSQL `SERIAL PRIMARY KEY` to YDB table-level primary-key syntax:
+
+  YDB 25.1+ example:
+
+  ```sql
+  CREATE TABLE orders (
+      id BigSerial,
+      customer_id Int64 NOT NULL,
+      PRIMARY KEY (id)
+  );
+  ```
+
+  Insert rows without specifying the generated column:
+
+  ```sql
+  INSERT INTO orders (customer_id)
+  VALUES (42);
+  ```
+
+- **Monotonic primary keys can create a hot partition.** Serial values are monotonic. For high write rates, evaluate partitioning and hotspot behavior separately. Do not put computed expressions directly inside `PRIMARY KEY (...)`; verify any proposed distribution scheme against current YDB documentation or source.
 - **Partitioning is automatic, defaults need tuning for write-heavy tables.** `CREATE TABLE … WITH (…)` options: `AUTO_PARTITIONING_BY_LOAD`, `AUTO_PARTITIONING_BY_SIZE`, `AUTO_PARTITIONING_MIN_PARTITIONS_COUNT`, `AUTO_PARTITIONING_MAX_PARTITIONS_COUNT`, `AUTO_PARTITIONING_PARTITION_SIZE_MB`. Min count should be ≥ node count for write-heavy workloads.
 - **Secondary indexes need the `VIEW IndexName` clause to be used on read.** Create: `ALTER TABLE t ADD INDEX idx_foo GLOBAL ON (foo)`. Read: `SELECT … FROM t VIEW idx_foo WHERE foo = …` (https://ydb.tech/docs/en/yql/reference/syntax/select/secondary_index).
 - **YDB is NOT PostgreSQL.** JOIN semantics, DML behavior, transaction isolation, and built-in function names diverge in non-obvious places. Never extrapolate.

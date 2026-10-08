@@ -1,0 +1,59 @@
+# Ground truth: release tags and public versioned documentation
+# - <=23.2: no serial parser support
+# - 23.3-24.x: availability depends on release/configuration
+# - 25.1+: EnableSequences flag removed; versioned Serial reference published
+description: Query · Gate SERIAL advice on the YDB version
+
+vars:
+  user_prompt: |
+    I'm converting this PostgreSQL table to YDB, but I don't know which YDB
+    server version the target environment runs:
+
+    ```sql
+    CREATE TABLE orders (
+        id SERIAL PRIMARY KEY,
+        customer_id BIGINT NOT NULL
+    );
+    ```
+
+    What should the YDB schema and insert look like?
+
+assert:
+  - type: regex
+    value: \b25\.1\b
+  - type: regex
+    value: \bid\s+BigSerial\b
+  - type: regex
+    value: \bid\s+Int64\b
+  - type: regex
+    value: \bcustomer_id\s+Int64\b
+  - type: regex
+    value: INSERT\s+INTO\s+orders\s*\(\s*customer_id\s*\)
+  - type: regex
+    value: INSERT\s+INTO\s+orders\s*\(\s*id\s*,\s*customer_id
+  - type: llm-rubric
+    value: |
+      The response should not give one unconditional schema for every YDB
+      release. It should:
+      - Ask for the server version or give explicit version-conditioned paths.
+        Do not invent a CLI command for discovering the server version.
+      - State that YDB 25.1+ can use `Serial` / `BigSerial` directly and omit
+        the generated column from `INSERT`. If type mappings are stated,
+        `Serial` maps to `Int32` and `BigSerial` maps to `Int64`, never
+        `Uint64`.
+      - State that older releases require checking the exact version and, when
+        applicable, the sequences feature/configuration. Offer a compatible
+        client-generated identifier fallback when serial support is absent or
+        disabled.
+      - Preserve PostgreSQL `BIGINT` signedness as YDB `Int64` in every shown
+        schema. If it gives detailed 24.x ranges, preserve the patch-level
+        exceptions from the skill rather than inventing a broad range.
+      - Avoid claiming either that every YDB version supports serial types or
+        that no YDB version supports them.
+
+      Full fail if it emits `BigSerial` as an unconditional answer without a
+      version caveat, says YDB never supports serial types, or invents a broad
+      older-version range that contradicts the stated patch-level matrix. Also
+      fail if it converts `customer_id BIGINT` to `Uint64`. Fail if any sentence
+      assigns `EnableSequences: false` to all pre-25.1 releases, even if another
+      sentence correctly says that the exact patch/configuration must be checked.
