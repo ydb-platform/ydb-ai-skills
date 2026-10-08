@@ -1,11 +1,11 @@
 ---
 name: ydb-docs
-description: Finds official YDB documentation through ydb.tech/llms.txt, including language- and version-specific sources. Use when the user asks to find YDB documentation, locate an official reference, or verify a claim against the docs (including «найди документацию YDB»). For implementation, query writing, or code audits, use the corresponding YDB skill; this skill handles documentation lookup. Does not cover YQL on YT.
+description: Finds official public open-source YDB documentation through ydb.tech/llms.txt, including language- and version-specific sources. Use when the user asks to find YDB documentation, locate an official reference, or verify a claim against the docs (including «найди документацию YDB»). For implementation, query writing, or code audits, use the corresponding YDB skill; this skill handles documentation lookup. Does not cover YQL on YT.
 ---
 
-# YDB Documentation
+# YDB Open Source Documentation
 
-Find and read official YDB documentation starting at https://ydb.tech/llms.txt.
+Find and read official public documentation of open-source YDB starting at https://ydb.tech/llms.txt.
 
 ## Workflow
 

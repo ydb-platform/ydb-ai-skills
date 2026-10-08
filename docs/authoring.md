@@ -173,3 +173,9 @@ See [`docs/testing.md`](testing.md) for how to run evals.
 - [`docs/schemas.md`](schemas.md) — canonical JSON shapes for `evals.json`, `grading.json`, `benchmark.json`.
 - [`docs/testing.md`](testing.md) — how to run the promptfoo compatibility matrix.
 - [Upstream `skill-creator` SKILL.md](https://github.com/anthropics/skills/blob/main/skills/skill-creator/SKILL.md) — general skill-authoring principles.
+
+## Public ydb-docs export
+
+`skills/ydb-docs/SKILL.md` is the complete, standalone skill for public open-source YDB documentation at `ydb.tech`. Keep its language and product-version discovery instructions in this file.
+
+Downstream packages can import this file as an OSS reference alongside separately maintained deployment instructions. Consumers should resolve the source revision to a full commit SHA, copy the file without rewriting it, and record its content hash. Changes to downstream instructions belong in their owning repository; this public skill remains usable independently.
