@@ -1,0 +1,598 @@
+{
+  "ydb-core:balancing-nearest-dc": {
+    "metric": "core-balancing",
+    "checks": {}
+  },
+  "ydb-core:cli-admin-safety": {
+    "metric": "core-cli",
+    "checks": {}
+  },
+  "ydb-core:cli-command-discovery": {
+    "metric": "core-cli",
+    "checks": {}
+  },
+  "ydb-core:cli-noninteractive": {
+    "metric": "core-cli",
+    "checks": {}
+  },
+  "ydb-core:cli-scheme-mutation-safety": {
+    "metric": "core-cli",
+    "checks": {}
+  },
+  "ydb-core:cloud-auth": {
+    "metric": "core-cloud",
+    "checks": {}
+  },
+  "ydb-core:deadline-budget": {
+    "metric": "core-deadline",
+    "checks": {}
+  },
+  "ydb-core:go-rule-cgo-01-long-lived-session": {
+    "metric": "core-go-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-CGO-01",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-core:local-docker": {
+    "metric": "core-local",
+    "checks": {}
+  },
+  "ydb-core:onboarding": {
+    "metric": "core-onboarding",
+    "checks": {}
+  },
+  "ydb-core:package-integration-selection": {
+    "metric": "core-package",
+    "checks": {}
+  },
+  "ydb-docs:default-main-fallback": {
+    "metric": "outcome",
+    "checks": {}
+  },
+  "ydb-docs:lookup-offline": {
+    "metric": "outcome",
+    "checks": {}
+  },
+  "ydb-docs:verify-source-chain": {
+    "metric": "outcome",
+    "checks": {}
+  },
+  "ydb-table:batch-as-table": {
+    "metric": "table-batch",
+    "checks": {}
+  },
+  "ydb-table:bulk-upsert-boundaries": {
+    "metric": "table-bulk",
+    "checks": {}
+  },
+  "ydb-table:cli-explain-analyze": {
+    "metric": "table-cli",
+    "checks": {}
+  },
+  "ydb-table:cli-explain-before-execute": {
+    "metric": "table-cli",
+    "checks": {}
+  },
+  "ydb-table:cli-file-parameter-formats": {
+    "metric": "table-cli",
+    "checks": {}
+  },
+  "ydb-table:cli-safe-exploration": {
+    "metric": "table-cli",
+    "checks": {}
+  },
+  "ydb-table:cli-typed-parameters": {
+    "metric": "table-cli",
+    "checks": {}
+  },
+  "ydb-table:cpp-rule-cpp-01-unbounded-read": {
+    "metric": "table-cpp-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-CPP-01",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:cpp-rule-cpp-02-closure-mutation": {
+    "metric": "table-cpp-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-CPP-02",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:cpp-rule-cpp-03-missing-idempotent": {
+    "metric": "table-cpp-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-CPP-03",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:cpp-rule-cpp-04-outer-retry-loop": {
+    "metric": "table-cpp-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-CPP-04",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:cpp-rule-cpp-05-custom-sleep-retrier": {
+    "metric": "table-cpp-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-CPP-05",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:cpp-rule-cpp-06-driver-per-call": {
+    "metric": "table-cpp-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-CPP-06",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:cpp-rule-cpp-07-string-built-yql": {
+    "metric": "table-cpp-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-CPP-07",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:cpp-rule-cpp-08-explicit-begin-commit": {
+    "metric": "table-cpp-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-CPP-08",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:cpp-rule-cpp-09-stream-duplicates": {
+    "metric": "table-cpp-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-CPP-09",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:cpp-rule-cpp-10-insert-with-idempotent": {
+    "metric": "table-cpp-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-CPP-10",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:cpp-rule-cpp-11-ddl-in-retry": {
+    "metric": "table-cpp-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-CPP-11",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:cpp-rule-cpp-12-missing-cancel-deadline": {
+    "metric": "table-cpp-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-CPP-12",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:cpp-rule-cpp-13-client-floatvector": {
+    "metric": "table-cpp-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-CPP-13",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:go-rule-go-01-table-service-read": {
+    "metric": "table-go-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-GO-01",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:go-rule-go-01b-ignore-truncated": {
+    "metric": "table-go-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-GO-01",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:go-rule-go-02-retry-closure-mutation": {
+    "metric": "table-go-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-GO-02",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:go-rule-go-03-missing-idempotent": {
+    "metric": "table-go-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-GO-03",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:go-rule-go-04-outer-loop-around-do": {
+    "metric": "table-go-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-GO-04",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:go-rule-go-05-custom-retrier": {
+    "metric": "table-go-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-GO-05",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:go-rule-go-06-nested-do": {
+    "metric": "table-go-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-GO-06",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:go-rule-go-07-non-parametrized": {
+    "metric": "table-go-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-GO-07",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:go-rule-go-08-prefer-dc-balancer": {
+    "metric": "table-go-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-GO-08",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:go-rule-go-08b-prefer-nearest-dc": {
+    "metric": "table-go-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-GO-08",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:go-rule-go-09-explicit-begin": {
+    "metric": "table-go-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-GO-09",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:go-rule-go-09b-dotx-without-lazytx": {
+    "metric": "table-go-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-GO-09",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:go-rule-go-10-separate-commit": {
+    "metric": "table-go-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-GO-10",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:go-rule-go-10b-interactive-table-commit": {
+    "metric": "table-go-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-GO-10",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:go-rule-go-10c-dotx-missing-withcommit": {
+    "metric": "table-go-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-GO-10",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:go-rule-go-11-stats-before-close": {
+    "metric": "table-go-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-GO-11",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:go-rule-go-12-detached-context": {
+    "metric": "table-go-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-GO-12",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:go-rule-go-13-client-floatvector": {
+    "metric": "table-go-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-GO-13",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:java-rule-jv-01-findbyid-loop": {
+    "metric": "table-java-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-JV-01",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:java-rule-jv-02-batch-size-unset": {
+    "metric": "table-java-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-JV-02",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:java-rule-jv-03-save-in-loop": {
+    "metric": "table-java-audit",
+    "checks": {}
+  },
+  "ydb-table:java-rule-jv-04-deleteallbyid-bulk": {
+    "metric": "table-java-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-JV-04",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:java-rule-jv-05-jpa-version": {
+    "metric": "table-java-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-JV-05",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:java-rule-jv-06-swallow-sqlexception": {
+    "metric": "table-java-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-JV-06",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:java-rule-jv-07-detached-session-retry-context": {
+    "metric": "table-java-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-JV-07",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:java-rule-jv-08-client-floatvector": {
+    "metric": "table-java-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-JV-08",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:keyset-pagination": {
+    "metric": "table-keyset",
+    "checks": {}
+  },
+  "ydb-table:pk-design-iot": {
+    "metric": "table-pk",
+    "checks": {}
+  },
+  "ydb-table:python-rule-py-01-client-floatvector": {
+    "metric": "table-python-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-PY-01",
+        "metric": "exact-rule-id"
+      }
+    ]
+  },
+  "ydb-table:query-parameters-cli-declare": {
+    "metric": "table-query",
+    "checks": {}
+  },
+  "ydb-table:query-parameters-declare": {
+    "metric": "table-query",
+    "checks": {}
+  },
+  "ydb-table:sql-to-yql-serial": {
+    "metric": "table-sql",
+    "checks": {}
+  },
+  "ydb-table:java-rule-jv-03-save-without-transaction": {
+    "metric": "table-java-audit",
+    "checks": {},
+    "additional_checks": [
+      {
+        "expectation": 0,
+        "type": "contains",
+        "value": "RULE-JV-03",
+        "metric": "exact-rule-id"
+      }
+    ]
+  }
+}

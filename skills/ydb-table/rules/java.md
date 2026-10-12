@@ -22,43 +22,31 @@ List<Token> tokens = repository.findAllById(ids);
 
 **Severity**: High
 
-**What to look for**: `application.properties` / `application.yml` files without `spring.jpa.properties.hibernate.jdbc.batch_size`, or Hibernate `persistence.xml` / `hibernate.cfg.xml` without `hibernate.jdbc.batch_size`. Also missing `hibernate.order_inserts` / `hibernate.order_updates`.
+**What to look for**: bulk writes without a positive `hibernate.jdbc.batch_size` (Spring Boot: `spring.jpa.properties.hibernate.jdbc.batch_size`).
 
-**Problem**: Hibernate's default JDBC batch size is 1 — every `INSERT` / `UPDATE` / `DELETE` is a separate JDBC statement, a separate network round trip from the application, and a separate query plan on the server. On YDB this hurts in two places at once: the network/RPC layer carries one frame per statement, and the server-side query layer resolves the tablet map and rebuilds the plan per statement. Rows are sharded across tablets across nodes, so there's no single locality the server can use to amortize.
+**Problem**: JDBC batching is disabled by default. A positive batch size enables grouping; `hibernate.order_inserts` and `hibernate.order_updates` can improve grouping but are not prerequisites.
 
-JDBC batching folds N statements into one prepared-statement batch sent in one round trip. Plan resolution amortizes over the batch; only the per-tablet writes still scale with N, and the server dispatches them to the owning tablets in parallel. Batches form only when **both** `batch_size` and the ordering flags are set — without `order_inserts` / `order_updates`, the session can't group like statements together and the batch_size setting silently does nothing.
-
-**Fix**:
+**Fix**: configure and measure a suitable batch size, for example:
 
 ```properties
 spring.jpa.properties.hibernate.jdbc.batch_size=1000
-spring.jpa.properties.hibernate.order_inserts=true
-spring.jpa.properties.hibernate.order_updates=true
 ```
 
-The upstream `ydb-token-app` example (`ydb-java-examples/jdbc/ydb-token-app/src/main/resources/application.properties`) uses `batch_size=1000`.
+Consider the ordering options and benchmark their effect. Check identifier generation: Hibernate disables insert batching for identity-generated identifiers.
 
-**Source**: Hibernate user guide — JDBC batching configuration. <https://docs.hibernate.org/orm/6.6/userguide/html_single/#batch>. YDB JDBC driver examples: <https://github.com/ydb-platform/ydb-jdbc-driver>.
+**Source**: <https://docs.hibernate.org/orm/6.6/userguide/html_single/#batch>.
 
-### RULE-JV-03: Spring `save()` in a loop
+### RULE-JV-03: Per-entity saves without a shared transaction
 
 **Severity**: High
 
-**What to look for**: `repository.save(` (or `entityManager.persist(`) inside `for` / `while` / `forEach` / `stream` blocks.
+**What to look for**: repeated repository `save()` calls without a surrounding transaction, or flushing after every entity. A loop inside one transaction with batching configured is not enough to establish this finding.
 
-**Problem**: per-entity `save()` (or `entityManager.persist()`) defeats JDBC batching even when `hibernate.jdbc.batch_size` is set — the session flushes per call, so each save becomes its own JDBC statement, its own round trip to YDB, and its own server-side query plan. On YDB the cost compounds with RULE-JV-02: the per-statement plan/route overhead can't be amortized, and the writes can't be dispatched to their owning tablets in parallel because they arrive one at a time. `saveAll(batch)` queues all entities for one session flush, so Hibernate emits one batched JDBC statement and the server fans out writes to the owning tablets internally.
+**Problem**: separate transactions or per-entity flushes prevent useful grouping. `saveAll()` itself loops over `save()`; replacing the loop alone does not create one SQL statement or fix batching inside an existing transaction.
 
-**Fix**:
+**Fix**: group writes in one transaction with batching enabled. `saveAll(batch)` is a convenient transactional wrapper. For large imports, consider bounded chunks and deliberate flush/clear boundaries.
 
-```java
-List<Token> batch = new ArrayList<>();
-for (long id = firstId; id < lastId; id++) {
-    batch.add(new Token("user_" + id));
-}
-repository.saveAll(batch);
-```
-
-**Source**: Spring Data JPA — `CrudRepository#saveAll(Iterable<S>)`. <https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/CrudRepository.html>.
+**Source**: <https://github.com/spring-projects/spring-data-jpa/blob/main/spring-data-jpa/src/main/java/org/springframework/data/jpa/repository/support/SimpleJpaRepository.java>; <https://docs.hibernate.org/orm/6.6/userguide/html_single/#batch>.
 
 ### RULE-JV-04: Spring `delete()` / `deleteAllById()` for bulk paths
 

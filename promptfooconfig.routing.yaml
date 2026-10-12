@@ -166,6 +166,5 @@ defaultTest:
     - type: not-contains
       value: "[provider error]"
 
-# Routing tests are discovered from tests/routing/*.yaml.
-tests:
-  - file://tests/routing/*.yaml
+# Primary-selector assertions reuse canonical activation prompts.
+tests: file://tests/adapters/read-routing.cjs

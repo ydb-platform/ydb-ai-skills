@@ -5,11 +5,9 @@ assert:
   - type: skill-used
     metric: activation-recall
     value: ydb-table
-  - type: not-skill-used
-    metric: activation-isolation
-    value: ydb-core
   - type: javascript
     metric: outcome
     value: |
       const s = String(output);
-      return s.includes('DECLARE $id AS Uint64;') && !s.includes('DECLARE $id AS "Uint64";');
+      // Quoting the original mistake while explaining the correction is valid.
+      return s.includes('DECLARE $id AS Uint64;');

@@ -98,11 +98,16 @@ For agents that don't auto-trigger skills, reference the skill name explicitly i
 
 ```
 skills/                          Surface-aligned skills (universal format)
-  ydb-core/                      SKILL.md + references/ + rules/ + Arcadia scenarios/activations
-  ydb-docs/                      SKILL.md + Arcadia scenarios/activations
-  ydb-table/                     SKILL.md + references/ + rules/ + Arcadia scenarios/activations
-promptfooconfig.yaml             Compatibility matrix config — provider list, test discovery
-tests/                           Test cases per skill (YAML, one per file)
+  ydb-core/                      SKILL.md + references/ + rules/ + canonical eval JSON
+  ydb-docs/                      SKILL.md + canonical eval JSON
+  ydb-table/                     SKILL.md + references/ + rules/ + canonical eval JSON
+promptfooconfig.yaml             Preloaded API compatibility matrix
+promptfooconfig.codex.yaml       Local Codex solver and judge over canonical scenarios
+promptfooconfig.agent.yaml       Claude Code runtime selection and outcome fixtures
+tests/
+  adapters/                     Read canonical evals into Promptfoo in memory
+  runtime/                      Deterministic checks and routing metadata
+  agent/                        Separate agent-runtime fixtures
 agents/grader.md                 Reference grader prompt (from anthropics/skills)
 docs/
   authoring.md                   How to write a skill — structure, conventions, review checklist
@@ -113,34 +118,47 @@ install.sh                       Universal installer
 
 ## Testing
 
-A compatibility matrix built with [promptfoo](https://www.promptfoo.dev). Each `(provider, model)` pair runs every test; the grader scores each result via `llm-rubric`. Identifies the minimum model per vendor family that still works.
+Edit response-quality cases in `skills/<skill>/evals/scenarios.json` and
+activation cases in the companion `activations.json`. These are the single
+editable source for their prompts and criteria. The files travel with the
+skill; the Promptfoo adapter reads them in memory without generating another
+suite.
 
-Quick run:
+Start with checks that make no model calls:
 
 ```bash
-export OPENROUTER_API_BASE_URL="..."
-export OPENROUTER_API_KEY="..."
-npx promptfoo@latest eval
-npx promptfoo@latest view
-
-# Real Claude Code skill activation + outcome checks, three trials each
 npm install
-npx promptfoo@latest eval -c promptfooconfig.agent.yaml
+npm run validate
+npm run test:tools
+npm run test:adapters
 ```
 
-All providers route through one OpenAI-compatible endpoint. Default model set skews toward enterprise-deployed open-source (Qwen, DeepSeek, Mistral, Llama, GLM, Kimi) with one baseline per major cloud vendor (Anthropic, Google, OpenAI, xAI).
-
-Details — adding tests, adding models, reading the matrix, known gaps — in [`docs/testing.md`](docs/testing.md).
-
-The same YAML cases generate Arcadia `evals/scenarios.json` files that travel
-with each skill during sync:
+Run one quality case with the local Codex app-server and its existing login. The judge
+uses the same Codex authentication route; no OpenRouter judge is added:
 
 ```bash
-python3 scripts/export-arcadia-evals.py
-python3 scripts/export-arcadia-activations.py
-python3 scripts/eval-coverage.py
-python3 scripts/validate-arcadia-evals.py
+npm run eval:codex -- --filter-first-n 1
+
+# Separate real-Claude runtime fixtures: activation and outcome checks
+npm run eval:claude -- --filter-first-n 1
 ```
+
+These commands create temporary solver and judge workspaces outside the repo,
+copy the skill resources without evals or test answers, and clean up afterward.
+They consume the selected account's model allowance. The preloaded multi-model
+API matrix remains an explicit alternative with its own API credentials and
+grading configuration.
+
+Compare results only with the model, judge, and runtime settings recorded.
+The 66 migrated rubrics preserve their original alternatives, partial
+credit, and explicit failure conditions as complete expectations. The 63
+explicit case-level 0.8 thresholds remain part of the textual acceptance
+policy; the three documentation rubrics use a complete-criterion PASS verdict.
+Historical numeric scores are not directly comparable with the new verdicts.
+
+See [`docs/testing.md`](docs/testing.md) for runtime choices, focused runs,
+static validation, current check wiring, and result interpretation, and [`docs/schemas.md`](docs/schemas.md)
+for the JSON contract.
 
 ## Contributing
 

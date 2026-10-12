@@ -13,7 +13,7 @@ Skills are decomposed **by YDB surface**, not by developer medium (code vs SQL v
 | `ydb-topics` | Pub/sub API + native Kafka adapter. |
 | `ydb-coordination` | Distributed locks, semaphores, leader election. |
 
-`ydb-docs` is a standalone documentation-discovery utility, not a new YDB surface. It routes explicit documentation lookup to the official `llms.txt` indexes; implementation and audit tasks remain with the surface skills. The core skill also carries a short, self-contained lookup procedure.
+`ydb-docs` is a standalone documentation-discovery utility, not a new YDB surface. It handles explicit documentation lookup and may accompany a surface skill when official sources are needed to check YDB facts. Implementation and audit tasks remain primarily with the surface skills. The core skill also carries a short, self-contained lookup procedure.
 
 `ydb-ops` (cluster operations) is deferred as a separate future skill.
 
@@ -36,7 +36,7 @@ skills/ydb-core/
     activations.json
 ```
 
-The body of `SKILL.md` carries stable section anchors so other skills can deep-link to it:
+The body of `SKILL.md` carries stable section anchors for navigation within the package:
 
 - `## overview` — what YDB is + the "don't invent, read docs" behavioral rule + doc map
 - `## versioning` — server + SDK release cadence
@@ -96,10 +96,10 @@ Rules must be self-contained — a surface skill installed without `ydb-core` mu
 Relative Markdown links must stay inside the current skill package. A
 `references/` or `embed/` file may link to another file in the same package.
 To direct the runtime to another installed skill, name its slug in prose; for
-product facts, prefer an official external documentation URL. Arcadia Skill
-Eval rejects resource links that escape the package and warns about
-reference-to-reference chains, so important resources must be linked directly
-from `SKILL.md`.
+product facts, prefer an official external documentation URL. The repository
+validator rejects resource links that escape the package. Link important
+resources directly from `SKILL.md` so an agent can discover them without
+following a chain of references.
 
 ## Rule ID scheme
 
@@ -128,12 +128,15 @@ More precise definitions evolve alongside real rules. Don't invent cutoffs up fr
 
 ## Frontmatter
 
-Required fields: `name`, `description`. Nothing else.
+Required fields: `name`, `description`. Public packages keep frontmatter minimal.
 
 - `name` — kebab-case matching the directory.
 - `description` — a selector-facing scope statement. State the closed positive scope first (for example, `Use only for ...`) and include grounded trigger phrases for the intended requests. Avoid listing detailed negative keywords: semantic selectors can match those words and overtrigger. Measure both recall and false activation with activation evals. See [`skill-creator`, "Write the SKILL.md"](https://github.com/anthropics/skills/blob/main/skills/skill-creator/SKILL.md#write-the-skillmd).
 
-Do not add `version:`, `compatibility:` (unless you really mean it), or other fields — they are not part of the Agent Skills spec and get ignored or, worse, cause confusion in other runtimes.
+Do not add unrelated metadata or a package version to frontmatter. Add optional
+fields only when a supported consumer needs them. Deployment-specific installer
+metadata belongs in the downstream import configuration, not in the public
+skill's instructions.
 
 ## SKILL.md body shape
 
@@ -159,23 +162,57 @@ A trigger phrase without a corresponding grep hit in upstream code is a bug.
 
 ## Evals
 
-Write response-quality cases as promptfoo YAML under `tests/<skill>/`. The
-Arcadia-compatible `skills/<skill>/evals/scenarios.json` is generated from
-those files and travels with the skill during sync. Its schema is documented
-in [`docs/schemas.md`](schemas.md).
+Edit `skills/<skill>/evals/scenarios.json` directly. It is the canonical source
+for response-quality prompts and expectations and travels with the package.
+Edit `evals/activations.json` in the same package for activation cases. There is
+no second YAML copy and no export step. Promptfoo reads these canonical JSON files
+through an in-memory adapter; see [`docs/schemas.md`](schemas.md).
 
-After adding or changing a case, regenerate and check the Arcadia form:
+For a new scenario:
+
+1. Write a realistic prompt covering a documented behavior and assign a stable
+   positive integer `id` and stable `name`.
+2. State the expected result and clear, independently judgeable PASS criteria.
+   Ground them in the shipped skill and its sources. Include explicit failure
+   conditions where a dangerous recommendation must fail the case.
+3. Try a focused run and inspect the response and judge reasoning. Before
+   changing a failed case or the skill, establish the useful user outcome
+   independently of the observed answer and ground factual requirements in
+   authoritative sources. Correct ambiguous or unnecessary criteria; preserve
+   valid alternatives. Do not add instructions solely to satisfy a rubric,
+   weaken valid criteria to accept an error, or turn an incidental phrase or
+   tool sequence into a requirement.
+4. Update the coverage mapping and validate before running a larger suite:
 
 ```bash
-python3 scripts/export-arcadia-evals.py
-python3 scripts/export-arcadia-evals.py --check
+python3 scripts/validate-skills.py
+python3 scripts/eval-coverage.py --check
 ```
 
-Do not edit `scenarios.json` directly. Follow this authoring workflow:
+Unchanged migrated core/table rubrics retain their original wording in
+one expectation each, including alternatives, partial-credit allowances, and
+explicit failure conditions. Mandatory exact rule IDs are full-fail conditions
+in the same expectation, with an additional deterministic Promptfoo check. Their
+original 0.8 threshold remains in that expectation's policy. Do not split these rubrics into independently mandatory
+requirements as a formatting edit: that changes what counts as a pass.
 
-1. Write prompts first. Leave `expectations` empty.
-2. Run once to observe behavior.
-3. Draft `expectations` based on what the model actually did, not what you imagined it would do.
+The three documentation scenarios have independent requirements and keep each
+one in a separate expectation. All must pass. This avoids nested bullet lists
+being mistaken for additional expectation IDs by the judge. See
+[the grading semantics](schemas.md#preserving-the-migrated-rubrics) for the
+acceptance-policy change from the original numeric matrix. Current binary
+verdicts are not directly comparable with its historical scores.
+
+For activation cases, `true` means the target skill must activate and `false`
+means it must not. If another skill may legitimately load as a companion,
+omit that prompt from the companion's activation suite; absence means no
+assertion, whereas `false` forbids loading it.
+
+Runtime-specific deterministic assertions and metric labels live in
+`tests/runtime/scenario-checks.json`, keyed by the canonical scenario identity.
+Do not copy prompts or quality rubrics there. Separate selector experiments
+and agent fixtures can retain their own test inputs because they test a
+different contract.
 
 See [`docs/testing.md`](testing.md) for how to run evals.
 
@@ -186,12 +223,16 @@ See [`docs/testing.md`](testing.md) for how to run evals.
 3. No `version:` or other non-spec frontmatter fields.
 4. Body ≤150 lines (surface skills) / ≤500 lines (`ydb-core`).
 5. No cross-references from `rules/` to any other skill.
-6. `references/` cross-references use relative paths and point only to `ydb-core` anchor sections.
+6. Relative links in every resource stay inside its skill package; companion skills are named by slug.
 7. All `RULE-<PREFIX>-<NN>` IDs use a prefix listed in the registry above.
 8. Any trigger phrase or API name in `description:` can be found by grep in the upstream SDK source.
+9. Canonical scenario/activation JSON and coverage are current; no duplicated response prompts or rubrics are added under `tests/`.
 
 ## See also
 
-- [`docs/schemas.md`](schemas.md) — Arcadia `scenarios.json` shape used by this repository.
+- [`docs/schemas.md`](schemas.md) — canonical scenario and activation JSON contracts.
 - [`docs/testing.md`](testing.md) — how to run the promptfoo compatibility matrix.
 - [Upstream `skill-creator` SKILL.md](https://github.com/anthropics/skills/blob/main/skills/skill-creator/SKILL.md) — general skill-authoring principles.
+
+See [the eval schema notes](schemas.md) for the intentional Java batching
+corrections and the transaction-boundary regression pair.

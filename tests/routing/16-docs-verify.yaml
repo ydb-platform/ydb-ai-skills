@@ -1,9 +1,0 @@
-description: Routing · 16-docs-verify
-
-vars:
-  user_prompt: |
-    Find the official YDB reference that documents transaction isolation. I need sources to verify a claim, not implementation code.
-
-assert:
-  - type: regex
-    value: ^\s*ydb-docs\s*$

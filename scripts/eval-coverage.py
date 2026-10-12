@@ -7,62 +7,67 @@ import argparse
 import json
 import pathlib
 import re
+import runpy
 import sys
 from collections import Counter, defaultdict
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-SKILLS = tuple(
-    skill_dir.name
-    for skill_dir in sorted((ROOT / "skills").iterdir())
-    if (skill_dir / "SKILL.md").is_file()
-    and (ROOT / "tests" / skill_dir.name).is_dir()
-)
-RULE_RE = re.compile(r"^### (RULE-[A-Z]+-\d+):", re.MULTILINE)
+RULE_RE = re.compile(r"^### (RULE-[A-Z][A-Z0-9]*-\d+):", re.MULTILINE)
+RULE_ID_RE = re.compile(r"\bRULE-[A-Z][A-Z0-9]*-\d+\b")
+NATIVE = runpy.run_path(str(pathlib.Path(__file__).with_name("validate-evals.py")))
 
 
-def load_json(path: pathlib.Path):
-    return json.loads(path.read_text())
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--json", action="store_true", dest="as_json")
-    parser.add_argument("--check", action="store_true")
-    args = parser.parse_args()
+def calculate_coverage(root: pathlib.Path) -> dict[str, object]:
+    validation_errors = NATIVE["validate_repository"](root)
+    if validation_errors:
+        raise ValueError("\n".join(validation_errors))
+    skills = NATIVE["discover_skills"](root)
+    load_json = NATIVE["load_document"]
     errors: list[str] = []
 
     scenarios: dict[str, dict[str, object]] = {}
     expectation_count = 0
     category_counts: Counter[str] = Counter()
-    for skill in SKILLS:
-        doc = load_json(ROOT / "skills" / skill / "evals" / "scenarios.json")
+    for skill in skills:
+        doc = load_json(root / "skills" / skill / "evals" / "scenarios.json")
         for case in doc.get("evals", []):
             key = f"{skill}:{case['name']}"
             scenarios[key] = case
             expectation_count += len(case.get("expectations", []))
             category_counts[f"{skill}/{case.get('category', 'uncategorized')}"] += 1
 
-    manifest = load_json(ROOT / "evals" / "coverage.json")
-    requirements = manifest.get("requirements", [])
+    manifest = load_json(root / "evals" / "coverage.json")
+    requirements = manifest.get("requirements")
+    if not isinstance(requirements, list) or not requirements:
+        raise ValueError("evals/coverage.json: requirements must be a non-empty array")
     ids: set[str] = set()
     total_weight = covered_weight = 0
     critical_total = critical_covered = 0
+    covered_requirements = 0
     missing_requirements = []
     by_skill = defaultdict(lambda: [0, 0])
-    for req in requirements:
+    for index, req in enumerate(requirements, 1):
+        if not isinstance(req, dict):
+            errors.append(f"requirement {index}: must be an object")
+            continue
         req_id = req.get("id")
-        if not isinstance(req_id, str) or not req_id or req_id in ids:
+        if not isinstance(req_id, str) or not req_id.strip() or req_id in ids:
             errors.append(f"invalid or duplicate requirement id: {req_id!r}")
             continue
         ids.add(req_id)
         weight = req.get("weight")
         cases = req.get("cases")
         skill = req.get("skill")
-        if skill not in SKILLS or not isinstance(weight, int) or weight <= 0:
+        if skill not in skills or type(weight) is not int or weight <= 0:
             errors.append(f"{req_id}: invalid skill or weight")
+            missing_requirements.append(req_id)
             continue
-        if not isinstance(cases, list) or not cases:
-            errors.append(f"{req_id}: cases must be non-empty")
+        if (
+            not isinstance(cases, list)
+            or not cases
+            or not all(isinstance(case, str) and case.strip() for case in cases)
+        ):
+            errors.append(f"{req_id}: cases must be a non-empty array of scenario names")
             cases = []
         missing = [case for case in cases if case not in scenarios]
         covered = bool(cases) and not missing
@@ -73,24 +78,31 @@ def main() -> int:
         if weight >= 3:
             critical_total += weight
         if covered:
+            covered_requirements += 1
             covered_weight += weight
             by_skill[skill][0] += weight
             if weight >= 3:
                 critical_covered += weight
         else:
             missing_requirements.append(req_id)
+    for skill in skills:
+        if skill not in by_skill:
+            errors.append(f"{skill}: no behavior requirements declared")
 
+    checked_rules = {
+        key: set(RULE_ID_RE.findall("\n".join(case["expectations"])))
+        for key, case in scenarios.items()
+    }
     rule_locations: dict[str, list[str]] = defaultdict(list)
     rule_covered: dict[str, bool] = {}
-    for path in sorted((ROOT / "skills").glob("*/rules/**/*.md")):
-        skill = path.relative_to(ROOT / "skills").parts[0]
+    for path in sorted((root / "skills").glob("*/rules/**/*.md")):
+        skill = path.relative_to(root / "skills").parts[0]
         for rule_id in RULE_RE.findall(path.read_text()):
             qualified = f"{skill}:{rule_id}"
-            rule_locations[rule_id].append(str(path.relative_to(ROOT)))
+            rule_locations[rule_id].append(str(path.relative_to(root)))
             rule_covered[qualified] = any(
-                key.startswith(f"{skill}:")
-                and rule_id in json.dumps(case, ensure_ascii=False)
-                for key, case in scenarios.items()
+                key.startswith(f"{skill}:") and rule_id in expected_rules
+                for key, expected_rules in checked_rules.items()
             )
     duplicates = {rule: paths for rule, paths in rule_locations.items() if len(paths) > 1}
     for rule, paths in duplicates.items():
@@ -100,8 +112,8 @@ def main() -> int:
         errors.append(f"uncovered rules: {', '.join(uncovered_rules)}")
 
     activation = {}
-    for skill in SKILLS:
-        doc = load_json(ROOT / "skills" / skill / "evals" / "activations.json")
+    for skill in skills:
+        doc = load_json(root / "skills" / skill / "evals" / "activations.json")
         cases = doc.get("cases", [])
         positive = sum(case.get("should_activate") is True for case in cases)
         negative = sum(case.get("should_activate") is False for case in cases)
@@ -109,9 +121,9 @@ def main() -> int:
         if positive < 5 or negative < 5:
             errors.append(f"{skill}: need >=5 positive and >=5 negative activations")
 
-    result = {
+    return {
         "requirements": {
-            "covered": len(requirements) - len(missing_requirements),
+            "covered": covered_requirements,
             "total": len(requirements),
             "weighted_coverage_percent": round(100 * covered_weight / total_weight, 1) if total_weight else 0,
             "critical_coverage_percent": round(100 * critical_covered / critical_total, 1) if critical_total else 0,
@@ -134,6 +146,21 @@ def main() -> int:
         "errors": errors,
     }
 
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--json", action="store_true", dest="as_json")
+    parser.add_argument("--check", action="store_true")
+    args = parser.parse_args()
+    try:
+        result = calculate_coverage(ROOT)
+    except (OSError, UnicodeError, ValueError) as error:
+        if args.as_json:
+            print(json.dumps({"errors": [str(error)]}, ensure_ascii=False, indent=2))
+        else:
+            print(f"Coverage validation failed: {error}", file=sys.stderr)
+        return 1
+
     if args.as_json:
         print(json.dumps(result, ensure_ascii=False, indent=2))
     else:
@@ -142,15 +169,15 @@ def main() -> int:
         print(f"Behavior coverage: {req['weighted_coverage_percent']:.1f}% ({req['covered']}/{req['total']} requirements)")
         print(f"Critical coverage: {req['critical_coverage_percent']:.1f}%")
         print(f"Explicit rule coverage: {rules['coverage_percent']:.1f}% ({rules['covered']}/{rules['total']})")
-        print(f"Response suite: {len(scenarios)} scenarios, {expectation_count} expectations")
-        for skill, counts in activation.items():
+        print(f"Response suite: {result['suite']['scenarios']} scenarios, {result['suite']['expectations']} expectations")
+        for skill, counts in result["suite"]["activations"].items():
             print(f"Activation {skill}: {counts['positive']} positive, {counts['negative']} negative")
-        if errors:
+        if result["errors"]:
             print("Coverage validation errors:", file=sys.stderr)
-            for error in errors:
+            for error in result["errors"]:
                 print(f"  - {error}", file=sys.stderr)
 
-    return 1 if args.check and errors else 0
+    return 1 if args.check and result["errors"] else 0
 
 
 if __name__ == "__main__":

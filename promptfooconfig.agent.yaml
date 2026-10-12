@@ -1,6 +1,6 @@
 # End-to-end Claude Code skill routing and outcome checks.
-# Uses the local Claude Agent SDK / Claude Code authentication and reads project
-# skills from .claude/skills. Each case runs three fresh trials.
+# Run via npm run eval:claude, which prepares an answer-free temporary workspace.
+# Uses local Claude Agent SDK authentication. Each case runs three fresh trials.
 description: YDB skills · Claude Code runtime
 
 evaluateOptions:
@@ -17,7 +17,7 @@ providers:
     label: Claude Code · project skills
     config:
       apiKeyRequired: false
-      working_dir: .
+      working_dir: '{{ env.YDB_EVAL_WORKSPACE }}'
       setting_sources: ['project']
       skills: 'all'
       append_allowed_tools: ['Read', 'Grep', 'Glob']

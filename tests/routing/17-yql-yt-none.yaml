@@ -1,9 +1,0 @@
-description: Routing · 17-yql-yt-none
-
-vars:
-  user_prompt: |
-    Find the YQL documentation for querying YT tables on Hahn; this is not about YDB.
-
-assert:
-  - type: regex
-    value: ^\s*none\s*$

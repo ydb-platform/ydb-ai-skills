@@ -44,7 +44,9 @@ spring.jpa.properties.hibernate.order_inserts=true
 spring.jpa.properties.hibernate.order_updates=true
 ```
 
-Why: each method issues one statement instead of N. Batches form only when `batch_size` is set *and* statements are ordered — without `order_inserts` / `order_updates`, the session can't group like statements together. `deleteAllByIdInBatch` is the only delete variant that emits a single `DELETE … WHERE id IN (?, ?, …)`; `deleteAllById` does a SELECT per id before deleting.
+`saveAll()` loops over entity saves; it does not imply one SQL statement. A shared transaction and enabled JDBC batching allow grouping; the ordering options can improve it. `deleteAllByIdInBatch` uses a bulk delete for the supplied IDs. Confirm the actual statements through SQL logging.
+
+Sources: [Spring Data implementation](https://github.com/spring-projects/spring-data-jpa/blob/main/spring-data-jpa/src/main/java/org/springframework/data/jpa/repository/support/SimpleJpaRepository.java), [Hibernate batching](https://docs.hibernate.org/orm/6.6/userguide/html_single/#batch).
 
 For the underlying YDB-level mechanisms (`AS_TABLE`, `BulkUpsert`), see `references/working-with-data.md`.
 

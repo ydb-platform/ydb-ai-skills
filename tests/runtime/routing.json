@@ -1,0 +1,152 @@
+[
+  {
+    "skill": "ydb-core",
+    "id": 1943444,
+    "description": "Routing · Onboarding question → ydb-core",
+    "primary_target": "ydb-core"
+  },
+  {
+    "skill": "ydb-core",
+    "id": 405013215,
+    "description": "Routing · Setup / connection question → ydb-core",
+    "primary_target": "ydb-core"
+  },
+  {
+    "skill": "ydb-table",
+    "id": 709902074,
+    "description": "Routing · YQL writing → ydb-table",
+    "primary_target": "ydb-table"
+  },
+  {
+    "skill": "ydb-table",
+    "id": 577997682,
+    "description": "Routing · Schema / primary-key design → ydb-table",
+    "primary_target": "ydb-table"
+  },
+  {
+    "skill": "ydb-table",
+    "id": 694709353,
+    "description": "Routing · Java/Spring/Hibernate audit → ydb-table",
+    "primary_target": "ydb-table"
+  },
+  {
+    "skill": "ydb-table",
+    "id": 1565543388,
+    "description": "Routing · PostgreSQL → YDB conversion → ydb-table",
+    "primary_target": "ydb-table"
+  },
+  {
+    "skill": "ydb-docs",
+    "id": 1157819430,
+    "description": "Routing · Unrelated PostgreSQL question → none",
+    "primary_target": "none"
+  },
+  {
+    "skill": "ydb-table",
+    "id": 1381113715,
+    "description": "Routing · Go ydb-go-sdk/v3 audit → ydb-table",
+    "primary_target": "ydb-table"
+  },
+  {
+    "skill": "ydb-table",
+    "id": 1373048237,
+    "description": "Routing · C++ RetryQuerySync audit routes to ydb-table",
+    "primary_target": "ydb-table"
+  },
+  {
+    "skill": "ydb-table",
+    "id": 110492441,
+    "description": "Routing · DECLARE syntax → ydb-table",
+    "primary_target": "ydb-table"
+  },
+  {
+    "skill": "ydb-core",
+    "id": 70502633,
+    "description": "Routing · YDB CLI scheme inspection → ydb-core",
+    "primary_target": "ydb-core"
+  },
+  {
+    "skill": "ydb-table",
+    "id": 108320976,
+    "description": "Routing · ydb sql query execution → ydb-table",
+    "primary_target": "ydb-table"
+  },
+  {
+    "skill": "ydb-table",
+    "id": 2044872961,
+    "description": "Routing · SDK deadline/cancellation audit → ydb-table",
+    "primary_target": "ydb-table"
+  },
+  {
+    "skill": "ydb-core",
+    "id": 528648311,
+    "description": "Routing · general YDB deadline propagation → ydb-core",
+    "primary_target": "ydb-core"
+  },
+  {
+    "skill": "ydb-docs",
+    "id": 1141022594,
+    "description": "Routing · 15-docs-ru-version",
+    "primary_target": "ydb-docs"
+  },
+  {
+    "skill": "ydb-docs",
+    "id": 182345071,
+    "description": "Routing · 16-docs-verify",
+    "primary_target": "ydb-docs"
+  },
+  {
+    "skill": "ydb-docs",
+    "id": 503872993,
+    "description": "Routing · 17-yql-yt-none",
+    "primary_target": "none"
+  },
+  {
+    "skill": "ydb-core",
+    "id": 1290417410,
+    "description": "Routing · Local YDB Docker setup → ydb-core",
+    "primary_target": "ydb-core"
+  },
+  {
+    "skill": "ydb-docs",
+    "id": 947204090,
+    "description": "Routing · PostgreSQL-only pagination → none",
+    "primary_target": "none"
+  },
+  {
+    "skill": "ydb-docs",
+    "id": 1713661359,
+    "description": "Routing · Generic Go HTTP retries → none",
+    "primary_target": "none"
+  },
+  {
+    "skill": "ydb-docs",
+    "id": 2052011815,
+    "description": "Routing · Kubernetes service account → none",
+    "primary_target": "none"
+  },
+  {
+    "skill": "ydb-docs",
+    "id": 1825452386,
+    "description": "Routing · ClickHouse partition design → none",
+    "primary_target": "none"
+  },
+  {
+    "skill": "ydb-docs",
+    "id": 1167974717,
+    "description": "Routing · Direct YDB documentation index lookup → ydb-docs",
+    "primary_target": "ydb-docs"
+  },
+  {
+    "skill": "ydb-docs",
+    "id": 329699816,
+    "description": "Routing · Verify a YDB claim from official docs → ydb-docs",
+    "primary_target": "ydb-docs"
+  },
+  {
+    "skill": "ydb-docs",
+    "id": 1729618281,
+    "description": "Routing · Versioned English YDB reference → ydb-docs",
+    "primary_target": "ydb-docs"
+  }
+]

@@ -112,7 +112,9 @@ Auth env vars (canonical reference: https://ydb.tech/docs/en/reference/ydb-sdk/a
 
 ## balancing
 
-Client-side balancer defaults, session lifecycle, `shutdownHint` / `BAD_SESSION` behaviour under rolling restart, and end-to-end deadline / cancellation budgets: `references/balancing.md`, `references/session-lifecycle.md`.
+Client-side balancer defaults, session lifecycle, `shutdownHint` / `BAD_SESSION` behaviour under rolling restart, and end-to-end deadline / cancellation budgets: [balancing](references/balancing.md) and [session lifecycle](references/session-lifecycle.md).
+
+For Go driver and session-lifecycle work, read [Go patterns](embed/go.md) when writing code and [Go audit rules](rules/go.md) when reviewing existing code. Report each matched audit finding as **rule ID — problem — why it matters — fix**, using the actual ID from the loaded rule. The ID lets the user trace the finding to its rationale.
 
 ## local-deployment
 
@@ -150,8 +152,8 @@ Yandex Cloud Managed YDB uses the same engine and same open-source SDKs; only en
 
 Dominant LLM failure modes when generating YDB schemas:
 
-- **Monotonic first-column PK → hot partition.** Common trigger: porting PostgreSQL `SERIAL` / `AUTO_INCREMENT` or a plain timestamp. First PK column determines partition; writes to a monotonic key concentrate on one tablet = one CPU. Use a hash prefix: `PRIMARY KEY (Digest::NumericHash(id), id)` for `id Uint64`. Signature: `Digest::NumericHash(Uint64{Flags:AutoMap}) -> Uint64` (https://ydb.tech/docs/en/yql/reference/udf/list/digest).
-- **YDB has no `SERIAL` / `AUTO_INCREMENT` / `CREATE SEQUENCE`.** Don't emit those keywords in YQL — they'll fail. Use client-generated UUIDs or a hash-prefix + id-service design.
+- **Monotonic first-column PK → hot partition.** Common trigger: porting PostgreSQL `SERIAL` / `AUTO_INCREMENT` or a plain timestamp. Writes with a monotonically increasing key prefix concentrate on the last partition. Store the hash in a separate column, for example `id_hash Uint64`, and use `PRIMARY KEY (id_hash, id)`. Compute the same `id_hash = Digest::NumericHash(id)` on writes and keyed reads; `PRIMARY KEY` lists column names, not function calls. See [primary-key design](https://ydb.tech/docs/en/dev/primary-key/row-oriented) and [Digest functions](https://ydb.tech/docs/en/yql/reference/udf/list/digest).
+- **Check auto-increment support against the target YDB version.** YDB v26.1 documents `Serial` types for primary-key columns; do not claim that YDB never supports them. A monotonic generated key can still create hot partitions. Consult the [versioned Serial documentation](https://ydb.tech/docs/en/yql/reference/types/serial?version=v26.1); do not copy PostgreSQL/MySQL sequence syntax without checking YQL support.
 - **Partitioning is automatic, defaults need tuning for write-heavy tables.** `CREATE TABLE … WITH (…)` options: `AUTO_PARTITIONING_BY_LOAD`, `AUTO_PARTITIONING_BY_SIZE`, `AUTO_PARTITIONING_MIN_PARTITIONS_COUNT`, `AUTO_PARTITIONING_MAX_PARTITIONS_COUNT`, `AUTO_PARTITIONING_PARTITION_SIZE_MB`. Min count should be ≥ node count for write-heavy workloads.
 - **Secondary indexes need the `VIEW IndexName` clause to be used on read.** Create: `ALTER TABLE t ADD INDEX idx_foo GLOBAL ON (foo)`. Read: `SELECT … FROM t VIEW idx_foo WHERE foo = …` (https://ydb.tech/docs/en/yql/reference/syntax/select/secondary_index).
 - **YDB is NOT PostgreSQL.** JOIN semantics, DML behavior, transaction isolation, and built-in function names diverge in non-obvious places. Never extrapolate.
@@ -161,3 +163,5 @@ Authoritative: https://ydb.tech/docs/en/yql/reference/syntax/create_table and ht
 ## Content rules
 
 Route to a specialist skill (`ydb-table` / `ydb-topics` / `ydb-coordination`) when the question is clearly surface-specific. State uncertainty when this file doesn't cover the question — link the relevant doc page instead of improvising.
+
+For introductory and setup answers, include a relevant official documentation link so the user can continue with the configuration or learning steps. Distinguish a link for further reading from a page you actually retrieved and checked.

@@ -1,6 +1,43 @@
 # Working with data in YDB tables
 
-How application code reads and writes YDB tables: which transaction mode applies, how to write many rows at once, and which API to pick when. Pair it with the `ydb-core` skill's schema fundamentals when that companion skill is installed.
+How application code reads and writes YDB tables: key design, SQL conversion, transaction modes, batch writes, and API selection. The `ydb-core` companion covers general database and connection guidance.
+
+## Primary keys for row-oriented tables
+
+Rows are partitioned by primary-key ranges. A monotonically increasing leading key sends new writes to the last partition; adding more partitions alone does not distribute that stream. Use a non-monotonic leading key, such as a suitably distributed identifier or a stored hash column:
+
+```yql
+CREATE TABLE events (
+    event_hash Uint64,
+    event_id Uint64,
+    payload String,
+    PRIMARY KEY (event_hash, event_id)
+);
+```
+
+Populate `event_hash` consistently on every write, for example with `Digest::NumericHash(event_id)` in the write query. Compute the same value for keyed reads and filter by both `event_hash` and `event_id`; a read by `event_id` alone does not constrain the leading key. `PRIMARY KEY` lists declared column names, not expressions such as `Digest::NumericHash(event_id)`.
+
+For write-heavy workloads, consider `AUTO_PARTITIONING_BY_LOAD = ENABLED`, an `AUTO_PARTITIONING_MIN_PARTITIONS_COUNT` appropriate to available nodes and expected load, and an `AUTO_PARTITIONING_MAX_PARTITIONS_COUNT` that fits capacity. Ask for node count before choosing a numeric minimum; these options do not repair a monotonic key prefix.
+
+Sources: [primary-key design](https://ydb.tech/docs/en/dev/primary-key/row-oriented), [CREATE TABLE](https://ydb.tech/docs/en/yql/reference/syntax/create_table), [row-table partitioning](https://ydb.tech/docs/en/concepts/datamodel/table#partitioning).
+
+## Serial columns and SQL conversion
+
+YDB v26.1 documents automatically generated integer `Serial` types. The direct conversion of a PostgreSQL `id SERIAL PRIMARY KEY` column uses a separate YQL primary-key clause:
+
+```yql
+CREATE TABLE users (
+    id Serial,
+    name Utf8,
+    PRIMARY KEY (id)
+);
+```
+
+Omitting `id` on insert requests a generated value. Only primary-key columns may have a serial type; its sequence is private to the column. Do not translate this into an inline `id Serial PRIMARY KEY`, `AUTO_INCREMENT`, or a user-created `CREATE SEQUENCE`. Check the target YDB version before promising availability.
+
+This is a direct syntax conversion, not necessarily a good physical design for heavy writes: a serial leading key can create the hot partition described above. When distribution matters, consider a client-generated random identifier or a stored hash prefix with an externally generated id. Do not assume the server-generated serial id is available to compute that prefix before insertion.
+
+Source: [Serial types, v26.1](https://ydb.tech/docs/en/yql/reference/types/serial?version=v26.1).
 
 ## Terminology
 
@@ -92,4 +129,4 @@ Source: <https://ydb.tech/docs/en/dev/paging>.
 
 ## Related
 
-- The separate `ydb-core` skill's schema guidance covers how primary-key shape and partitioning determine batch-ingest efficiency and transaction-conflict locality.
+- The separate `ydb-core` skill covers foundational database guidance, connection setup, and SDK selection.
