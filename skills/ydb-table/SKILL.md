@@ -11,7 +11,7 @@ Writing YQL against YDB tables, designing schemas to back those queries, and aud
 
 1. **Classify the task.** Write a new query or schema, execute SQL with YDB CLI, audit existing code, convert from another SQL dialect, or read an `EXPLAIN`.
 2. **Load sources** per the table below before drafting YQL or reviewing code. For an audit, read the matching language rules and match the findings to the supplied code.
-3. **Do the work.** Report each matched audit finding as **rule ID — problem — why it matters — fix**. Use the actual `RULE-JV-NN`, `RULE-GO-NN`, `RULE-CPP-NN`, or `RULE-PY-NN` from the loaded rule; the ID lets the user trace the finding to its rationale. C++ findings use the format in [C++ rules](rules/cpp.md).
+3. **Do the work.** Report each matched audit finding as **rule ID — problem — why it matters — fix**. Use the actual `RULE-JV-NN`, `RULE-GO-NN`, `RULE-CPP-NN`, or `RULE-PY-NN` from the loaded rule; the ID lets the user trace the finding to its rationale. Check the rule's preconditions against the supplied code before assigning a finding or severity. Keep optional style improvements separate from defects and required fixes; when surrounding configuration or code is missing, state what needs verification rather than treating it as absent. C++ findings use the format in [C++ rules](rules/cpp.md).
 
 ## Load sources
 

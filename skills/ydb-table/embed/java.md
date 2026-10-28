@@ -44,7 +44,9 @@ spring.jpa.properties.hibernate.order_inserts=true
 spring.jpa.properties.hibernate.order_updates=true
 ```
 
-`saveAll()` loops over entity saves; it does not imply one SQL statement. A shared transaction and enabled JDBC batching allow grouping; the ordering options can improve it. `deleteAllByIdInBatch` uses a bulk delete for the supplied IDs. Confirm the actual statements through SQL logging.
+`saveAll()` loops over entity saves; it does not imply one SQL statement. A shared transaction and enabled JDBC batching allow grouping; the ordering options can improve it. An existing `save()` loop with those conditions does not require replacement with `saveAll()` to enable batching; that replacement is an optional API/style choice. `deleteAllByIdInBatch` uses a bulk delete for the supplied IDs. Confirm the actual statements through SQL logging.
+
+For large imports, distinguish persistence-context memory from transaction size. `flush()` sends pending writes and `clear()` releases managed entities; neither commits the transaction. To bound transaction size, use explicit committed transaction boundaries per chunk only when partial completion is acceptable. Flush/clear inside one outer `@Transactional` does not create those boundaries.
 
 Sources: [Spring Data implementation](https://github.com/spring-projects/spring-data-jpa/blob/main/spring-data-jpa/src/main/java/org/springframework/data/jpa/repository/support/SimpleJpaRepository.java), [Hibernate batching](https://docs.hibernate.org/orm/6.6/userguide/html_single/#batch).
 
@@ -59,6 +61,8 @@ The `ydb-jdbc-driver` classifies retryability through the standard `java.sql` ex
 - `YdbConditionallyRetryableException extends SQLTransientException` — other transient statuses including `TIMEOUT`. Retry only for idempotent operations.
 
 So in plain JDBC: catch `SQLRecoverableException` unconditionally; catch `SQLTransientException` (and its `SQLTransientConnectionException` subtype) only when the call is idempotent.
+
+Check retry handling at the whole call boundary: it may live in the caller or an interceptor, so its absence in one method does not prove that no retry policy exists. Determine idempotency from key generation, statement semantics, and side effects; neither `repository.save()` nor a caller-supplied ID settles it by itself. State the missing context rather than selecting a policy from a method name.
 
 ```java
 static final int MAX_RETRIES = 15;

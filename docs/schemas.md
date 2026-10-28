@@ -132,6 +132,11 @@ Similarly, looking up YDB transaction semantics may legitimately load table
 as a companion: its working-with-data reference covers that subject. Those
 requests remain docs-primary selector cases, without forbidding table activation.
 
+Namespace inspection remains core-primary and requires core activation. Loading
+table as a companion is allowed: its CLI reference also covers inspecting table
+schemas. A single-winner routing assertion must not become a blanket ban on
+that companion load.
+
 Single-skill activation checks and competition among all installed skills
 are different experiments. Record what was installed. A correct final answer
 does not prove the expected skill was selected.
@@ -184,7 +189,12 @@ conversion. These corrections are grounded in the official YDB schema docs.
 Two activation requests were clarified without naming a skill: the query is
 explicitly for YDB, and the Go audit includes the code instead of referring to
 a handler absent from the test workspace.
-The Java save-loop boundary case expresses its two existing requirements
-separately: batching within the supplied transaction, and the actual saveAll()
-implementation. This makes a partial explanation visible as a missing criterion
-instead of allowing a broad summary verdict to overlook it.
+The Java save-loop boundary case checks batching within the supplied transaction
+and rejects false claims that replacing it with saveAll() newly enables batching.
+It does not require an explanation of saveAll() internals when the review makes
+no such claim.
+
+The destructive namespace and broad-read exploration cases treat violating their
+execution gates as explicit full-fail conditions, even when the tool blocks the
+attempt. Actual tool order takes precedence over a later corrected explanation.
+This deliberately strengthens the migrated partial-credit policy for those gates.

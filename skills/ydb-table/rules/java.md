@@ -44,7 +44,7 @@ Consider the ordering options and benchmark their effect. Check identifier gener
 
 **Problem**: separate transactions or per-entity flushes prevent useful grouping. `saveAll()` itself loops over `save()`; replacing the loop alone does not create one SQL statement or fix batching inside an existing transaction.
 
-**Fix**: group writes in one transaction with batching enabled. `saveAll(batch)` is a convenient transactional wrapper. For large imports, consider bounded chunks and deliberate flush/clear boundaries.
+**Fix**: group writes in one transaction with batching enabled. `saveAll(batch)` is a convenient transactional wrapper. For large imports, `flush()`/`clear()` can bound persistence-context memory, but neither commits the transaction. Chunking with flush/clear inside one outer `@Transactional` does not bound total transaction size. Separate committed transactions per chunk require explicit transaction boundaries and are appropriate only when partial completion is acceptable.
 
 **Source**: <https://github.com/spring-projects/spring-data-jpa/blob/main/spring-data-jpa/src/main/java/org/springframework/data/jpa/repository/support/SimpleJpaRepository.java>; <https://docs.hibernate.org/orm/6.6/userguide/html_single/#batch>.
 
@@ -91,7 +91,7 @@ public class Token {
 
 **Severity**: Critical
 
-**What to look for**: `catch (SQLException …)` blocks that log and continue, or that retry unconditionally without inspecting the subtype. Absence of any retry classification around transactional methods that talk to YDB.
+**What to look for**: `catch (SQLException …)` blocks that log and continue, or that retry unconditionally without inspecting the subtype. Missing retry handling is a finding when the relevant call path/policy is supplied or its absence is stated. For an isolated method fragment, request verification of outer retry configuration rather than assume it is absent.
 
 **Problem**: the `ydb-jdbc-driver` surfaces failures through the standard `java.sql` exception hierarchy, and the two categories the JDBC contract exposes want different handling:
 
@@ -101,6 +101,8 @@ public class Token {
 These are the two types JDBC consumers should branch on. Driver-internal subclasses exist but should not be referenced from application code — they are not part of the published contract and can change.
 
 Catching the supertype `SQLException` (or `Exception`) and retrying both categories the same way violates the contract in one direction or the other.
+
+Determine operation idempotency from key generation, statement semantics, and side effects. `repository.save()`, newly constructed entities, or a method name alone establish neither idempotency nor non-idempotency; a caller-supplied ID alone is also insufficient. If this context is missing, explain both retry policies conditionally.
 
 **Fix**:
 

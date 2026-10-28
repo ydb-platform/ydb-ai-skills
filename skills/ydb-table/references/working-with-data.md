@@ -4,7 +4,7 @@ How application code reads and writes YDB tables: key design, SQL conversion, tr
 
 ## Primary keys for row-oriented tables
 
-Rows are partitioned by primary-key ranges. A monotonically increasing leading key sends new writes to the last partition; adding more partitions alone does not distribute that stream. Use a non-monotonic leading key, such as a suitably distributed identifier or a stored hash column:
+Rows are partitioned by primary-key ranges. A monotonically increasing leading key sends new writes to the last partition; adding more partitions alone does not distribute that stream. An externally assigned identifier is not necessarily monotonic: ask about its distribution and the access patterns before choosing a key. Use a non-monotonic leading key, such as a suitably distributed identifier or a stored hash column:
 
 ```yql
 CREATE TABLE events (
@@ -17,7 +17,7 @@ CREATE TABLE events (
 
 Populate `event_hash` consistently on every write, for example with `Digest::NumericHash(event_id)` in the write query. Compute the same value for keyed reads and filter by both `event_hash` and `event_id`; a read by `event_id` alone does not constrain the leading key. `PRIMARY KEY` lists declared column names, not expressions such as `Digest::NumericHash(event_id)`.
 
-For write-heavy workloads, consider `AUTO_PARTITIONING_BY_LOAD = ENABLED`, an `AUTO_PARTITIONING_MIN_PARTITIONS_COUNT` appropriate to available nodes and expected load, and an `AUTO_PARTITIONING_MAX_PARTITIONS_COUNT` that fits capacity. Ask for node count before choosing a numeric minimum; these options do not repair a monotonic key prefix.
+For write-heavy workloads, consider `AUTO_PARTITIONING_BY_LOAD = ENABLED`, an `AUTO_PARTITIONING_MIN_PARTITIONS_COUNT` appropriate to available nodes and expected load, and an `AUTO_PARTITIONING_MAX_PARTITIONS_COUNT` that fits capacity. Ask for node count before choosing a numeric minimum; if it is unknown, omit that number from executable DDL or explicitly label it as an illustrative assumption. These options do not repair a monotonic key prefix.
 
 Sources: [primary-key design](https://ydb.tech/docs/en/dev/primary-key/row-oriented), [CREATE TABLE](https://ydb.tech/docs/en/yql/reference/syntax/create_table), [row-table partitioning](https://ydb.tech/docs/en/concepts/datamodel/table#partitioning).
 
