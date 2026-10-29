@@ -33,7 +33,7 @@ One primary rule per question. **Mis-routing fails:** `INSERT INTO` + `.Idempote
 | `TDriver` inside handler | **RULE-CPP-06** | |
 | String-built YQL | **RULE-CPP-07** | |
 | `BeginTransaction` + `Commit` for one statement | **RULE-CPP-08** | |
-| `ExecuteSchemeQuery` / `CREATE TABLE` in retrier lambda | **RULE-CPP-11** | |
+| Schema provisioning and DML together on the hot write path | **RULE-CPP-11** | Standalone replay-safe schema provisioning |
 | Caller stop/deadline ignored by retry or query settings | **RULE-CPP-12** | CPP-03 |
 | Client vector bound as `List<Float>` + `Knn::ToBinaryStringFloat` | **RULE-CPP-13** | |
 
@@ -155,23 +155,23 @@ One primary rule per question. **Mis-routing fails:** `INSERT INTO` + `.Idempote
 
 **What to look for**: `INSERT INTO` in lambda + `.Idempotent(true)` on same retrier.
 
-**Problem**: idempotent replay after `UNDETERMINED` hits duplicate PK → hard error for a landed write.
+**Problem**: `.Idempotent(true)` permits replay after an uncertain outcome such as `UNDETERMINED` or `TRANSPORT_UNAVAILABLE`. The first attempt may have committed even though the client did not receive success. Repeating the `INSERT` then hits the existing primary key and returns `PRECONDITION_FAILED` (`insert_pk`), reporting an error for a write that already landed.
 
-**Fix**: `UPSERT INTO`, or drop flag, or server-side idempotency guard.
+**Fix**: choose a replay policy that preserves the intended event semantics. For a stable key and payload, use `UPSERT INTO` with `.Idempotent(true)` only when updating an existing row is acceptable. If the operation must remain create-only, remove the flag and handle the uncertain outcome, or add a server-side idempotency guard that checks and writes atomically in one transaction. A separate client-side existence check is not sufficient. Removing the flag does not prove that an uncertain write had no effect.
 
-**Source**: <https://ydb.tech/docs/en/yql/reference/syntax/insert_into>.
+**Source**: [C++ SDK retry classification](https://github.com/ydb-platform/ydb-cpp-sdk/blob/3cf2e488a19fd8327b11a0ae43249b08bab261ea/src/client/impl/internal/retry/retry.cpp); [INSERT semantics](https://github.com/ydb-platform/ydb/blob/3d6ec8b5d594147f74bdeacd5dff0d0775cf81a6/ydb/docs/en/core/yql/reference/syntax/insert_into.md); [UPSERT semantics](https://github.com/ydb-platform/ydb/blob/3d6ec8b5d594147f74bdeacd5dff0d0775cf81a6/ydb/docs/en/core/yql/reference/syntax/upsert_into.md).
 
-### RULE-CPP-11: DDL inside retrier lambda
+### RULE-CPP-11: Schema provisioning on the hot write path
 
-**Severity**: Medium | **Opener**: `RULE-CPP-11` — `ExecuteSchemeQuery`/`CREATE TABLE` must not run inside `RetryOperationSync` alongside DML.
+**Severity**: Medium | **Opener**: `RULE-CPP-11` — separate schema provisioning from the hot write path; putting it beside DML in one retry callback repeats provisioning work without making schema and data changes atomic.
 
-**What to look for**: DDL + DML in same retrier lambda.
+**What to look for**: `ExecuteSchemeQuery`/`CREATE TABLE` followed by DML in the same retrier callback on each write. Standalone schema provisioning with an appropriate retry policy is not this anti-pattern.
 
-**Problem**: DDL not transactional; retried schema ops can double-apply.
+**Problem**: the SDK retries the whole callback, so a retried write also re-enters schema provisioning, adding schema requests and latency to the hot path. DDL is outside the DML transaction: successful table creation is not rolled back if the subsequent write fails. `CREATE TABLE IF NOT EXISTS` tolerates an existing table but does not check that its schema matches the requested definition. An individual schema action is transactional; do not claim that this single `CREATE` partially applies or necessarily creates the table twice.
 
-**Fix**: DDL at startup/migration; retrier lambda DML-only.
+**Fix**: provision and verify the table during controlled tenant initialization or migration, before accepting writes; keep the hot-path retry callback DML-only. For tenants created dynamically, coordinate a separate bounded provisioning step before the first write. Schema provisioning may itself use an SDK retrier when the operation is replay-safe and its outcome is handled correctly; there is no blanket SDK ban on retrying DDL.
 
-**Source**: <https://ydb.tech/docs/en/reference/ydb-sdk/error_handling>.
+**Source**: [YDB transaction and DDL semantics](https://github.com/ydb-platform/ydb/blob/3d6ec8b5d594147f74bdeacd5dff0d0775cf81a6/ydb/docs/en/core/concepts/_includes/transactions.md); [CREATE TABLE IF NOT EXISTS](https://github.com/ydb-platform/ydb/blob/3d6ec8b5d594147f74bdeacd5dff0d0775cf81a6/ydb/docs/en/core/yql/reference/syntax/create_table/index.md); [official C++ example retrying table creation](https://github.com/ydb-platform/ydb-cpp-sdk/blob/3cf2e488a19fd8327b11a0ae43249b08bab261ea/examples/pagination/pagination.cpp).
 
 ### RULE-CPP-12: Caller stop and deadline omitted from retry settings
 

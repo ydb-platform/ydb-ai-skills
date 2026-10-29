@@ -1,6 +1,6 @@
 ---
 name: ydb-table
-description: "Write, explain, and audit YDB table queries, schemas, and data access. Use for YQL pagination, primary keys and partitioning, query parameters, `ydb sql`, SQL-to-YQL conversion, and reviews of Java JDBC/Hibernate/Spring Data configuration or write patterns, Go query/transaction handlers, and C++ query/retry code. Includes caller deadline and cancellation propagation in query code and Python FloatVector parameter encoding. Use ydb-core for connection/authentication, SDK selection, or general client policy without a query/code audit. YQL on YT alone is outside this skill."
+description: "Use for YDB table queries, schemas and application data access. Consult before answering SQL/YQL questions, writing pagination or primary-key designs, explaining DECLARE and typed parameters, running `ydb sql`, or converting PostgreSQL/MySQL syntax to YDB. Also use when reviewing YDB Go SDK query/retry/transaction code, C++ ydb-cpp-sdk calls, Java JDBC/Hibernate/Spring Data JPA configuration and write patterns, or Python FloatVector parameter encoding. A short request to check a snippet or transaction is a code review even if it does not say audit. Covers performance, correctness, caller deadlines and cancellation in query code. Use ydb-core for connection/authentication or SDK selection, and ydb-docs for standalone documentation lookup. YQL on YT without YDB is outside this skill."
 ---
 
 # YDB Table
@@ -10,8 +10,8 @@ Writing YQL against YDB tables, designing schemas to back those queries, and aud
 ## Workflow
 
 1. **Classify the task.** Write a new query or schema, execute SQL with YDB CLI, audit existing code, convert from another SQL dialect, or read an `EXPLAIN`.
-2. **Load sources** per the table below before drafting YQL or reviewing code. For an audit, read the matching language rules and match the findings to the supplied code.
-3. **Do the work.** Report each matched audit finding as **rule ID — problem — why it matters — fix**. Use the actual `RULE-JV-NN`, `RULE-GO-NN`, `RULE-CPP-NN`, or `RULE-PY-NN` from the loaded rule; the ID lets the user trace the finding to its rationale. Check the rule's preconditions against the supplied code before assigning a finding or severity. Keep optional style improvements separate from defects and required fixes; when surrounding configuration or code is missing, state what needs verification rather than treating it as absent. C++ findings use the format in [C++ rules](rules/cpp.md).
+2. **Load sources** per the table below before drafting YQL or reviewing code. A request to check an existing SDK snippet, find a bug, or assess its safety or performance is an audit. Read the matching language rules before evaluating it, even when the question is short or the API looks familiar.
+3. **Do the work.** Report each matched audit finding as **rule ID — problem — why it matters — fix**. Use the actual `RULE-JV-NN`, `RULE-GO-NN`, `RULE-CPP-NN`, or `RULE-PY-NN` from the loaded rule; the ID lets the user trace the finding to its rationale. Check the rule's preconditions against the supplied code before assigning a finding or severity. Keep optional style improvements separate from defects and required fixes; when surrounding configuration or code is missing, state what needs verification rather than treating it as absent. Before sending an audit, check that every rule-based finding names its ID in the answer and gives a concrete correction; do not cite a rule whose preconditions are not established. C++ findings use the format in [C++ rules](rules/cpp.md).
 
 ## Load sources
 

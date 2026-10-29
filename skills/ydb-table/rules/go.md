@@ -92,19 +92,28 @@ Audit rules for application code talking to YDB through the Go SDK. Each rule is
 
 **Fix**: bind values through `ydb.ParamsBuilder().Param("$name").<Type>(value).Build()` and pass them via `query.WithParameters(...)` (or `table.NewQueryParameters(...)` for Table Service).
 
-**Source**: `ydb-platform/ydb-go-sdk` — `ParamsBuilder` in <https://github.com/ydb-platform/ydb-go-sdk/blob/master/params_builder.go>; `query.WithParameters` in <https://github.com/ydb-platform/ydb-go-sdk/blob/master/query/execute_options.go>. YQL parameters reference: <https://ydb.tech/docs/en/yql/reference/syntax/declare>.
+Show the actual bindings when proposing a corrected query, and preserve its predicates. For a `Text` parameter used as `name LIKE $namePrefix`, keep the trailing wildcard in the bound value:
 
-### RULE-GO-08: `PreferLocalDC` / `PreferNearestDC` balancer in production
+```go
+query.WithParameters(ydb.ParamsBuilder().
+    Param("$namePrefix").Text(namePrefix + "%").Build())
+```
+
+Bind every other caller value too, including numeric filters. Choose the YQL parameter type from the schema and the Go value from the builder's method signature: for example, `.Int32` takes `int32`, not Go `int`. Check range before a narrowing conversion; do not guess the column type. Appending `%` to a bound string does not interpolate SQL text. If the intended prefix is literal rather than a LIKE pattern, handle wildcard characters in the input separately.
+
+**Source**: `ydb-platform/ydb-go-sdk` — `ParamsBuilder` in <https://github.com/ydb-platform/ydb-go-sdk/blob/master/params_builder.go>; typed methods in <https://github.com/ydb-platform/ydb-go-sdk/blob/987aa9c180ff6622e4249ec714b926d93d46230a/internal/params/parameters.go>; `query.WithParameters` in <https://github.com/ydb-platform/ydb-go-sdk/blob/master/query/execute_options.go>. YQL parameters reference: <https://ydb.tech/docs/en/yql/reference/syntax/declare>.
+
+### RULE-GO-08: Locality-restricted balancing without a capacity and failover plan
 
 **Severity**: High
 
-**What to look for**: `ydb.WithBalancer(balancers.PreferLocalDC(...))` or `ydb.WithBalancer(balancers.PreferNearestDC(...))` (the rename — `PreferLocalDC` is marked `// Deprecated`, but `PreferNearestDC` has the same effect) in driver construction.
+**What to look for**: `ydb.WithBalancer(balancers.PreferLocalDC(...))` or `ydb.WithBalancer(balancers.PreferNearestDC(...))` in driver construction. Check application placement, discovery's location metadata, capacity in the selected location, and behavior during maintenance or location failure. The option alone is not proof of a defect; when these facts are missing, state the risk and what must be verified.
 
-**Problem**: prefer-DC balancers concentrate all client traffic on nodes in the chosen "local" / "nearest" datacenter, turning the cluster's other DCs into idle hot-standbys and the chosen DC into a saturation bottleneck. Cross-DC latency savings on individual requests are dwarfed by the throughput cliff once the chosen DC's nodes saturate.
+**Problem**: `PreferNearestDC` uses only endpoints in the location selected as nearest by discovery. If application replicas share that location, their load can concentrate on its nodes while capacity elsewhere is unused by those clients. The policy does not provide cross-location fallback when those endpoints become unavailable. Whether locality improves latency depends on the workload and topology; do not promise either a latency improvement or a throughput regression from this initialization alone. Session queries remain attached to the session's node; the policy does not rebalance each query within an existing session.
 
-**Fix**: drop the `WithBalancer(...)` option (or pass `balancers.RandomChoice()` explicitly — that's what `balancers.Default()` returns). `RandomChoice` picks an endpoint at random per request and spreads load evenly across every available node in the cluster.
+**Fix**: use the Go default (`balancers.Default()` returns `balancers.RandomChoice()`) as the baseline when locality is not required: drop `WithBalancer(...)` or pass `RandomChoice()` explicitly. If locality is intentional, verify the selected location's capacity and failure behavior with representative load, keep the choice configurable, and consider `PreferNearestDCWithFallBack` when cross-location fallback is required. That variant uses other locations only when all nearer endpoints are unavailable; it does not spread normal traffic across all locations. `PreferLocalDC` is deprecated in favor of `PreferNearestDC`; renaming it preserves the restriction and does not by itself fix a capacity or failover problem. Locality is a supported policy, not a blanket production anti-pattern.
 
-**Source**: `ydb-platform/ydb-go-sdk/balancers/balancers.go` — `PreferLocalDC` is marked `// Deprecated: use PreferNearestDC instead`; both have the same balancing semantics. <https://github.com/ydb-platform/ydb-go-sdk/blob/master/balancers/balancers.go>.
+**Source**: SDK policy semantics and defaults in <https://github.com/ydb-platform/ydb-go-sdk/blob/987aa9c180ff6622e4249ec714b926d93d46230a/balancers/balancers.go>; supported locality recipe in <https://ydb.tech/docs/en/recipes/ydb-sdk/balancing-prefer-local>; session affinity in <https://ydb.tech/docs/en/recipes/ydb-sdk/balancing>.
 
 ### RULE-GO-09: Transaction begin as a separate RPC
 

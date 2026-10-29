@@ -58,7 +58,7 @@
     },
     {
       "id": 110492441,
-      "prompt": "In YQL, should I write `DECLARE $id AS \"Uint64\";`, or can I omit\nthe declaration when the SDK sends a typed parameter?",
+      "prompt": "In YDB's YQL, should I write `DECLARE $id AS \"Uint64\";`, or can I omit\nthe declaration when the SDK sends a typed parameter?",
       "should_activate": true,
       "note": "Routing · DECLARE syntax → ydb-table This request requires ydb-table activation."
     },
