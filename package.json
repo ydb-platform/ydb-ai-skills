@@ -4,6 +4,7 @@
     "test:tools": "python3 -m unittest discover -s tests/unit",
     "test:adapters": "node --test tests/unit/*.test.cjs",
     "eval:codex": "python3 scripts/run-promptfoo.py --config promptfooconfig.codex.yaml --",
+    "eval:codex:online": "python3 scripts/run-promptfoo.py --config promptfooconfig.codex-online.yaml --",
     "eval:claude": "python3 scripts/run-promptfoo.py --config promptfooconfig.agent.yaml --"
   },
   "devDependencies": {

@@ -2,7 +2,7 @@
 
 AI coding agent skills for [YDB](https://ydb.tech) — for writing YQL, designing schemas, and reviewing Java application code against YDB. Skills auto-trigger based on context.
 
-> **Status:** framework and scaffolding. Skill bodies are intentionally thin — content is migrated surface-by-surface, grounded in live YDB SDK source and upstream docs.
+Skill bodies are intentionally concise. Supporting references and rules are grounded in YDB SDK source and official documentation.
 
 ## What's Inside
 
@@ -139,6 +139,9 @@ uses the same Codex authentication route; no OpenRouter judge is added:
 ```bash
 npm run eval:codex -- --filter-first-n 1
 
+# Optional: actual official-documentation retrieval, with network access
+npm run eval:codex:online
+
 # Separate real-Claude runtime fixtures: activation and outcome checks
 npm run eval:claude -- --filter-first-n 1
 ```
@@ -149,12 +152,16 @@ They consume the selected account's model allowance. The preloaded multi-model
 API matrix remains an explicit alternative with its own API credentials and
 grading configuration.
 
+There are 67 quality scenarios and 44 activation cases. The offline Codex and
+HTTP matrix profiles run 66 quality scenarios and explicitly exclude the one
+requiring live source retrieval; the opt-in online Codex profile runs that case.
+CLI scenarios check proposed workflows and commands, without a database or CLI
+execution. These runs do not certify a live YDB integration.
+
 Compare results only with the model, judge, and runtime settings recorded.
-The 66 migrated rubrics preserve their original alternatives, partial
-credit, and explicit failure conditions as complete expectations. The 63
-explicit case-level 0.8 thresholds remain part of the textual acceptance
-policy; the three documentation rubrics use a complete-criterion PASS verdict.
-Historical numeric scores are not directly comparable with the new verdicts.
+Each case defines its own PASS conditions: a whole-rubric assessment or a set
+of requirements that must all pass. Exact rule IDs are required only where
+the case explicitly asks for them.
 
 See [`docs/testing.md`](docs/testing.md) for runtime choices, focused runs,
 static validation, current check wiring, and result interpretation, and [`docs/schemas.md`](docs/schemas.md)

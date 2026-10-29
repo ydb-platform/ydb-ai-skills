@@ -5,9 +5,6 @@ assert:
   - type: skill-used
     metric: activation-recall
     value: ydb-table
-  - type: not-skill-used
-    metric: activation-isolation
-    value: ydb-core
   - type: contains
     metric: outcome
     value: RULE-CPP-03

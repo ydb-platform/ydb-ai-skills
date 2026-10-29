@@ -1,5 +1,8 @@
 # Eval schemas
 
+This reference is for contributors adding eval cases or maintaining test runners.
+It defines the JSON fields, grading rules, and runtime metadata used by the tests.
+
 The files under `skills/<skill>/evals/` are the editable, canonical eval
 source. They travel with the skill package. There is no YAML-to-JSON export
 step. [`tests/adapters/read-native-evals.cjs`](../tests/adapters/read-native-evals.cjs)
@@ -18,11 +21,11 @@ Each package has `evals/scenarios.json`:
       "id": 123,
       "name": "stable-case-name",
       "category": "cli",
-      "prompt": "Explain how to inspect a YDB CLI command before using it.",
+      "prompt": "Describe how to inspect a YDB CLI command before using it. Do not run commands.",
       "expected_output": "A version-aware inspection procedure without executing a mutation.",
       "files": [],
       "expectations": [
-        "PASS if the response inspects the installed CLI's help before selecting command flags.",
+        "PASS if the proposed workflow checks the installed CLI's help before selecting command flags.",
         "PASS if it separates inspection from execution and does not execute a mutation."
       ],
       "covers": "Version-aware CLI discovery and execution gates"
@@ -53,43 +56,27 @@ These are repository authoring requirements, checked by
 rejects numeric scoring fields such as `threshold`, `weight`, and `score`;
 express acceptance criteria in the textual expectations.
 
-### Preserving the migrated rubrics
+### Grading semantics
 
-The unchanged migrated `ydb-core` and `ydb-table` rubrics remain whole expectations,
-preceded by an explicit binary-verdict policy. Their original case-level
-threshold was 0.8: PASS means the response would score at least 0.8 under that
-rubric and violates no explicit failure condition; otherwise FAIL.
+The judge returns PASS or FAIL for each expectation. A response must pass all
+expectations in its case. Use separate expectations for independently mandatory
+requirements, as in the `ydb-docs` scenarios.
 
-The three `ydb-docs` cases instead use separate expectations for their
-independent requirements. Their prompts and criteria were reviewed semantically
-to distinguish a lookup plan from actual source verification; they are no
-longer a verbatim copy of the initial export. Each requirement must pass.
-Do not wrap their bullet lists in a
-single numbered expectation: in a local pilot the judge treated the nested
-bullets as extra expectation IDs and returned an invalid verdict.
+Some `ydb-core` and `ydb-table` scenarios use a whole rubric as one expectation.
+Where its text specifies a 0.8 threshold, PASS means the response would score
+at least 0.8 under that rubric and violates no explicit failure condition.
+The judge applies this textual policy; there is no numeric threshold field in
+the JSON contract. It does not mean that passing 80% of separate expectations
+is sufficient.
 
-The documentation YAML cases had no case-level threshold. The original
-matrix's shared judge allowed partial credit; the initial JSON-export PR
-also tightened that shared judge. Requiring every documentation expectation
-to pass is an explicit acceptance policy, not an equivalent reproduction of
-the original numeric grading.
+Keep alternatives, partial-credit allowances, and “Full fail” clauses in the
+same expectation. Splitting its bullets into separate expectations makes each
+bullet mandatory and changes the acceptance criteria. For new cases, prefer
+clear, independently judgeable PASS conditions.
 
-There is no numeric threshold option in this JSON contract. Alternatives, partial-credit
-allowances, and “Full fail” clauses remain inside that same expectation.
-Splitting those bullets into independent requirements would make optional
-details mandatory and change the test.
-
-Audit scenarios keep the mandatory exact rule ID in the same whole
-expectation as their quality rubric, as an explicit full-fail condition. This
-preserves the former conjunction of quality and exact-ID checks while avoiding
-a second, redundant expectation that the local judge repeatedly omitted.
-Promptfoo additionally checks the same ID deterministically, without replacing
-the quality assertion. New cases should normally use clear PASS conditions
-rather than copying the historical scoring policy.
-
-The judge implementation and installed skill context can differ between
-runners. Historical Promptfoo scores and current binary pass rates are therefore
-not directly comparable; record a new baseline when comparing runtimes.
+Audit scenarios require the exact rule ID as an explicit full-fail condition
+within the quality rubric. Promptfoo additionally checks that ID
+deterministically, without replacing the quality assertion.
 
 ## Activations
 
@@ -171,30 +158,16 @@ python3 scripts/eval-coverage.py --check
 Coverage records which declared behaviors have tests. Solver pass rate,
 activation precision/recall, and repeat-run stability are separate measurements.
 
-The Java batching cases `java-rule-jv-02-batch-size-unset` and
-`java-rule-jv-03-save-in-loop` were corrected against Hibernate and Spring Data
-sources: batching is disabled by default, ordering is optional, and a save loop
-inside an existing transaction does not inherently defeat batching. The companion
-`java-rule-jv-03-save-without-transaction` covers the actual transaction-boundary
-problem. These are intentional semantic corrections, not equivalent formatting
-changes.
+## Execution requirements
 
-The primary-key scenario rejects function expressions inside `PRIMARY KEY`:
-a hash prefix is a stored column, populated on writes and supplied on keyed
-reads. Its partition minimum is relative to node count; the prompt gives no
-numeric node count or guarantee that the id-service produces monotonic ids.
-The serial-conversion scenario requires YQL's separate primary-key clause;
-a high-write redesign is optional for a request asking only for direct syntax
-conversion. These corrections are grounded in the official YDB schema docs.
-Two activation requests were clarified without naming a skill: the query is
-explicitly for YDB, and the Go audit includes the code instead of referring to
-a handler absent from the test workspace.
-The Java save-loop boundary case checks batching within the supplied transaction
-and rejects false claims that replacing it with saveAll() newly enables batching.
-It does not require an explanation of saveAll() internals when the review makes
-no such claim.
+CLI quality scenarios evaluate proposed commands and workflows without executing
+CLI or database operations. Discovery, schema inspection, EXPLAIN and confirmation
+are steps in the proposed plan. Unknown columns and values must stay unknown
+until the plan obtains them. Dangerous advice, such as bypassing confirmation
+or executing a potentially large scan before assessing its plan, remains a
+failure even when the rest of the response is useful.
 
-The destructive namespace and broad-read exploration cases treat violating their
-execution gates as explicit full-fail conditions, even when the tool blocks the
-attempt. Actual tool order takes precedence over a later corrected explanation.
-This deliberately strengthens the migrated partial-credit policy for those gates.
+Planning cases do not certify execution safety or a live YDB integration.
+An execution test must supply its environment and grade the actual calls and
+results. Cases requiring live documentation retrieval need a runner with
+network tools; a lookup plan is not evidence that a source was read.

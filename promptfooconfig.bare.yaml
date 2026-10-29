@@ -213,5 +213,6 @@ defaultTest:
 
       Reply with one JSON object: {"pass": true|false, "score": 1|0, "reason": "..."}
 
-# Same tests as the main matrix.
+# Same response-only tests as the main matrix; actual source retrieval is
+# excluded because this HTTP completion profile has no retrieval tools.
 tests: file://tests/adapters/read-native-evals.cjs

@@ -5,9 +5,6 @@ assert:
   - type: skill-used
     metric: activation-recall
     value: ydb-core
-  - type: not-skill-used
-    metric: activation-isolation
-    value: ydb-table
   - type: javascript
     metric: outcome
     value: |

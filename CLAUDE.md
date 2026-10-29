@@ -63,7 +63,7 @@ For routine additions — one new rule, one new reference file, a wording tweak 
 ## Useful pointers
 
 - Canonical eval prompts and quality criteria live in `skills/<skill>/evals/scenarios.json`; activation cases live in the companion `activations.json`. Edit them directly. Do not recreate per-scenario YAML or generated copies. Promptfoo uses `tests/adapters/read-native-evals.cjs` to load the JSON in memory.
-- Keep runtime-only deterministic checks and metric metadata in `tests/runtime/scenario-checks.json`, without duplicating prompts or rubrics. Preserve migrated rubric alternatives, partial credit, and explicit failure conditions together; changing their grading policy is a semantic test change.
+- Keep runtime-only deterministic checks and metric metadata in `tests/runtime/scenario-checks.json`, without duplicating prompts or rubrics. Preserve rubric alternatives, partial credit, and explicit failure conditions together; changing their grading policy is a semantic test change.
 - Runtime evals run through `scripts/run-promptfoo.py`, which creates temporary solver and judge workspaces outside the repository, with skill resources copied without `evals/` or test answers. Do not point the solver at the repository root, which contains its grading material.
 - Full content conventions and prefix registry: [`docs/authoring.md`](docs/authoring.md).
 - Templates for new files: [`docs/templates/`](docs/templates/).

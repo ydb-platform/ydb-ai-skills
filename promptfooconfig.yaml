@@ -293,4 +293,6 @@ defaultTest:
       Reply with one JSON object: {"pass": true|false, "score": 1|0, "reason": "..."}
 
 # Native JSON is the single scenario source; the adapter writes no copies.
+# This HTTP completion profile excludes the real source-retrieval case.
+# The adapter prints the excluded case; use npm run eval:codex:online for it.
 tests: file://tests/adapters/read-native-evals.cjs

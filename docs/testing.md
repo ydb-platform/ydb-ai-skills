@@ -11,11 +11,12 @@ semantics.
 
 | Run | Solver context | What it checks |
 | --- | --- | --- |
-| Preloaded matrix, `promptfooconfig.yaml` | Skill instructions and resources embedded in the prompt | Response quality when the relevant material is already available |
-| Bare comparison, `promptfooconfig.bare.yaml` | No preloaded skill material | A separate baseline for the same response scenarios |
+| Preloaded matrix, `promptfooconfig.yaml` | Skill instructions and resources embedded in the prompt | Response quality on 66 text/planning scenarios; no tool execution |
+| Bare comparison, `promptfooconfig.bare.yaml` | No preloaded skill material | A separate baseline for those same 66 scenarios |
 | Selector matrix, `promptfooconfig.routing.yaml` | Skill descriptions only | Which single primary skill the model selects |
 | Claude runtime, `promptfooconfig.agent.yaml` | Installed packages in an isolated temporary workspace | Actual Skill-tool selection and runtime-specific outcome checks |
-| Codex runtime, `promptfooconfig.codex.yaml` | Installed packages in an isolated temporary workspace | Agent behavior with the local Codex app-server profile |
+| Offline Codex, `promptfooconfig.codex.yaml` | Installed packages in an isolated temporary workspace | 66 text/planning scenarios, with local skill reads and no network |
+| Online Codex, `promptfooconfig.codex-online.yaml` | Installed packages with network retrieval enabled | The one live documentation-verification scenario |
 
 The preloaded matrix is a useful upper-bound experiment, not a substitute for
 runtime selection. The selector's single answer and the set of skills an agent
@@ -39,21 +40,17 @@ this extra assertion must not replace the quality rubric. `tests/runtime/routing
 activation cases and their primary targets for the selector experiment.
 Runtime fixtures in `tests/agent/` remain separate tests of agent behavior.
 
-Unchanged migrated core/table quality rubrics retain their original text as one
-expectation each, including their original 0.8 acceptance policy. Alternatives,
-partial credit, and explicit failure conditions such as “Full fail” remain
-together; splitting them would change the test.
+Most core/table quality rubrics keep alternatives, partial credit and explicit
+failure conditions together in one expectation. These rubrics require an overall
+score of at least 0.8 and no explicit failure condition, expressed as a binary
+PASS or FAIL. Preserve the stated alternatives and partial-credit allowances;
+do not turn every bullet into a separate mandatory criterion. An exact rule ID
+is mandatory when the case explicitly requires it.
 
 The three `ydb-docs` scenarios keep independent requirements in separate
-expectations, all of which must pass. Their YAML cases had no case-level
-threshold, and the original shared judge allowed partial credit. This explicit
-all-requirements policy is not numerically equivalent to that old grader.
-New scenarios should use clear PASS criteria. The JSON contract has no numeric
-threshold field.
-
-The new binary verdicts are not a calibration of the old numeric grader.
-Re-establish a baseline before comparing pass rates with historical matrix
-reports, even when the underlying rubric text is unchanged.
+expectations, all of which must pass. New scenarios should use clear PASS
+criteria. The JSON contract has no numeric threshold field; any partial-credit
+policy belongs in the expectation text.
 
 ## Review meaning before changing a failed case
 
@@ -70,11 +67,19 @@ requests and forbids it for unrelated products/tasks. General YDB tasks can use
 docs as an optional companion and are evaluated for their primary target in the
 separate selector matrix, not as forbidden docs activations.
 
+The CLI quality suite checks proposed workflows and commands. It does not run
+against a database or require an installed CLI. A correct plan includes discovery
+through version/help, schema inspection where necessary, EXPLAIN before relevant
+execution and confirmation for destructive changes. It must not invent the
+schema or data. These cases do not certify the order of actual database calls.
+Actual execution needs a separately prepared environment and grading of tool
+calls and results.
+
 When prompts, criteria, or the evaluated case set change, record that revision
 and run a new baseline. Do not count a case removed for a semantic reason as a
 newly passing case or compare the new percentage directly with the old one.
 
-## Keeping pilot runs small
+## Focused runs
 
 Start with static validation and adapter tests; these do not use a model.
 For a changed skill, run one relevant activation case before a response-quality
@@ -88,12 +93,6 @@ Then run only the changed scenarios and a small selection of cross-skill
 regressions. Reserve a full suite on one fixed agent/model for a release or CI
 budget; do not start with the complete model matrix on a personal quota.
 Without that full run, report which cases remain unverified.
-
-The historical `matrix-baseline.md` covers 39 cases, with skill text already
-in the model's context. It predates the documentation cases and records some
-failures. It is not evidence that all 66 current cases passed in an installed
-agent runtime. The earlier preloaded profile remains available for measuring
-content quality separately from activation.
 
 ## Deterministic checks first
 
@@ -128,7 +127,7 @@ tests, not whether a model passes them.
   both the validator and `python3` are available; a failure aborts installation.
 - `npm run test:tools` and `npm run test:adapters` explicitly run the Python and
   JavaScript test suites for repository tooling. Validation does not run them.
-- `npm run eval:codex` and `npm run eval:claude` explicitly start model-backed
+- `npm run eval:codex`, `npm run eval:codex:online` and `npm run eval:claude` explicitly start model-backed
   runs. They do not run the static validators or tooling tests first.
 
 This repository currently has no GitHub Actions workflow or build-system
@@ -164,6 +163,12 @@ npx promptfoo@latest eval -c promptfooconfig.yaml
 npx promptfoo@latest view
 ```
 
+Both HTTP matrices and offline Codex explicitly exclude
+`ydb-docs:verify-source-chain`, which needs live retrieval tools. The loader
+prints the excluded case; a 66-case result is not coverage of all 67 scenarios.
+The opt-in online profile below runs the remaining case from the same canonical
+JSON, without a duplicate test definition.
+
 These are API-backed runs and can consume both solver and grader credits. Read
 the selected config's provider and grading configuration before a large run.
 The description-only routing matrix uses deterministic assertions rather than
@@ -197,7 +202,7 @@ npm run test:tools
 npm run test:adapters
 ```
 
-The Codex config runs canonical response-quality scenarios with separate Codex
+The offline Codex config runs 66 canonical response-quality scenarios with separate Codex
 app-server solver and judge sessions using the same authentication route. With the
 local CLI configured for a personal login and no API-key override, it uses
 that account; it does not silently fall back to an OpenRouter or another API
@@ -206,12 +211,8 @@ model follows the local profile/config; record it when comparing results.
 
 The profile starts the local Codex CLI's app-server with a read-only sandbox
 and `on-request` approvals. Requests for additional command/file permissions
-are declined. This route supports managed installations that forbid `never`:
-in our local pilot, SDK/exec fell back to an incompatible policy and could not
-read the skill, even with an explicit `on-request` setting. App-server applied
-the requested policy and successfully read the installed package. Each solver
-or judge turn has a three-minute timeout. Configured runtime policies remain
-in force.
+are declined. Each solver or judge turn has a three-minute timeout. Configured
+runtime policies remain in force.
 
 ```bash
 # One scenario first; arguments after -- are forwarded to Promptfoo.
@@ -221,14 +222,29 @@ npm run eval:codex -- --filter-first-n 1
 npm run eval:codex -- --filter-pattern '^ydb-core:onboarding ·' \
   --no-share --output /tmp/ydb-onboarding.json
 
+# Opt-in network retrieval for the one live documentation scenario.
+npm run eval:codex:online
+
 # Separate Claude Code activation/outcome fixtures, using its local SDK login.
 npm run eval:claude -- --filter-first-n 1
 ```
 
+The online profile enables network access and live web search for its solver;
+the judge remains offline. Existing account and runtime access policies still
+apply. An honest retrieval failure is a valid outcome where the rubric permits
+it, but does not establish successful source-reading coverage.
+
 The Codex judge checks the complete canonical expectations. Passing requires
 the required expectations to pass. Different judge implementations can produce
 different verdicts for the same prompt. Inspect the judge's reasons when a
-response falls near the historical rubric's acceptance boundary.
+response falls near the rubric's acceptance boundary.
+
+Codex quality assertions receive the final answer together with the solver's
+recorded actions and results. Exact-text assertions still examine only the final
+answer, so text seen in a tool result cannot satisfy a required rule-ID mention.
+Missing action metadata is an evaluation error, not evidence that no commands
+were run. Tool evidence helps the judge assess retrieval claims; the CLI planning
+suite still evaluates advice rather than a live execution experiment.
 
 Quality PASS alone does not prove a skill was loaded. In a saved Promptfoo
 JSON report, inspect `results.results[0].response.raw` (a JSON-encoded Codex
@@ -253,10 +269,14 @@ coverage, activation, and response quality in the report. Inspect at least a
 sample of passing explanations as well as failures: a generous judge can hide
 a regression.
 
-Ad-hoc results need not be committed. Keep a deliberate baseline snapshot only
-when it helps a comparison, and label it with the evaluation setup. The old
-[`matrix-baseline.md`](../matrix-baseline.md) is historical evidence, not a
-numerically comparable baseline for the current binary verdicts.
+Ad-hoc results need not be committed. Keep a baseline snapshot only when it helps
+a comparison, and label it with the evaluation setup.
+
+[`matrix-baseline.md`](../matrix-baseline.md) uses a different case set and grading
+setup; its percentages are not directly comparable with the current suite.
+`scripts/grader-agreement.py` accepts only legacy single-rubric exports and
+rejects the current canonical format. It cannot validate judge agreement for
+this suite.
 
 ## See also
 
@@ -264,6 +284,3 @@ numerically comparable baseline for the current binary verdicts.
 - [Eval schemas](schemas.md)
 - [Promptfoo documentation](https://www.promptfoo.dev/docs/intro)
 - [Preloaded matrix configuration](../promptfooconfig.yaml)
-
-See [the eval schema notes](schemas.md) for the intentional Java batching
-corrections and the transaction-boundary regression pair.

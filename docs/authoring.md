@@ -1,6 +1,10 @@
 # Authoring skills for this repo
 
-This file documents the conventions unique to `ydb-platform/ydb-ai-skills`. General-purpose skill authoring guidance lives upstream at [`anthropics/skills/skills/skill-creator/SKILL.md`](https://github.com/anthropics/skills/blob/main/skills/skill-creator/SKILL.md) — read that first, then apply the rules below on top.
+This guide is for contributors writing or updating skills in
+`ydb-platform/ydb-ai-skills`, including coding agents working on the repository.
+It describes content layout, authoring conventions, and eval requirements.
+General-purpose skill authoring guidance lives upstream at
+[`anthropics/skills/skills/skill-creator/SKILL.md`](https://github.com/anthropics/skills/blob/main/skills/skill-creator/SKILL.md).
 
 ## Taxonomy
 
@@ -87,7 +91,7 @@ contains language-specific SDK or driver patterns.
 **Source**: <upstream file URL(s) backing the claim>
 ```
 
-`Fix` may be prose-only when the prose itself names every corrective API the auditor needs (e.g. `query.WithIdempotent()`, `table.TxControl(table.BeginTx(...))`). Reach for a snippet when the fix turns on a non-obvious composition of calls or a config-file shape that prose can't capture (the Java rules' Hibernate `application.properties` block, JPA annotations, Spring meta-annotations). The Go rules ship prose-only after laptop A/B confirmed that adding code blocks did not improve audit quality on smaller models — verify the same on any new surface before going prose-only.
+`Fix` may be prose-only when the prose itself names every corrective API the auditor needs (e.g. `query.WithIdempotent()`, `table.TxControl(table.BeginTx(...))`). Reach for a snippet when the fix turns on a non-obvious composition of calls or a config-file shape that prose can't capture (the Java rules' Hibernate `application.properties` block, JPA annotations, Spring meta-annotations).
 
 Rules must be self-contained — a surface skill installed without `ydb-core` must still produce correct audit output for its own rules. Do not cross-reference `ydb-core` from `rules/`.
 
@@ -131,7 +135,7 @@ More precise definitions evolve alongside real rules. Don't invent cutoffs up fr
 Required fields: `name`, `description`. Public packages keep frontmatter minimal.
 
 - `name` — kebab-case matching the directory.
-- `description` — a selector-facing scope statement. State the closed positive scope first (for example, `Use only for ...`) and include grounded trigger phrases for the intended requests. Avoid listing detailed negative keywords: semantic selectors can match those words and overtrigger. Measure both recall and false activation with activation evals. See [`skill-creator`, "Write the SKILL.md"](https://github.com/anthropics/skills/blob/main/skills/skill-creator/SKILL.md#write-the-skillmd).
+- `description` — a selector-facing scope statement. State the supported questions and tasks first, with concrete examples covered by the skill. Avoid listing detailed negative keywords: semantic selectors can match those words and overtrigger. Measure both recall and false activation with activation evals. See [`skill-creator`, "Write the SKILL.md"](https://github.com/anthropics/skills/blob/main/skills/skill-creator/SKILL.md#write-the-skillmd).
 
 Do not add unrelated metadata or a package version to frontmatter. Add optional
 fields only when a supported consumer needs them. Deployment-specific installer
@@ -148,17 +152,20 @@ Copy from `docs/templates/SKILL.md.tmpl`. The expected sections:
 4. **Gotchas** — 4–6 real traps. Upstream: *"the most valuable content in any skill is the Gotchas section."*
 5. **Content rules** — prose with *why*, no all-caps `NEVER`/`ALWAYS`. Cover: no fabrication, cite rule IDs when auditing, prefer stating uncertainty over guessing.
 
-Do not include a `## Test Fixtures` section or any other pointer to deleted directories.
+Keep test prompts and grading criteria in `evals/`; do not expose them as
+instructions in the skill body. File links must point to existing resources.
 
 ## Descriptions — what to put in the trigger string
 
-Grounded triggers only. When writing `description:`, list concrete SDK symbol names (imports, classes, methods), YQL keywords, CLI flags that actually exist in the upstream source. Do not invent plausible-looking trigger phrases from training-data memory; verify against:
+Describe the user requests the skill supports. When including technical triggers
+such as SDK symbols, YQL keywords, or CLI flags, verify that they exist against:
 
 - The YDB SDK repositories for the language in question (`ydb-go-sdk`, `ydb-python-sdk`, `ydb-java-sdk`, `ydb-cpp-sdk`, `Ydb.Sdk`).
 - The YDB CLI's `--help` output.
 - Upstream docs at https://ydb.tech/docs.
 
-A trigger phrase without a corresponding grep hit in upstream code is a bug.
+Natural-language task descriptions must match the shipped content; technical
+names must match upstream APIs or documentation.
 
 ## Evals
 
@@ -189,19 +196,18 @@ python3 scripts/validate-skills.py
 python3 scripts/eval-coverage.py --check
 ```
 
-Unchanged migrated core/table rubrics retain their original wording in
-one expectation each, including alternatives, partial-credit allowances, and
-explicit failure conditions. Mandatory exact rule IDs are full-fail conditions
-in the same expectation, with an additional deterministic Promptfoo check. Their
-original 0.8 threshold remains in that expectation's policy. Do not split these rubrics into independently mandatory
-requirements as a formatting edit: that changes what counts as a pass.
+Use one expectation per independently mandatory requirement. When a rubric
+allows alternatives or partial credit, keep those conditions together in one
+expectation and state the acceptance rule explicitly. Splitting its bullets
+into separate expectations makes every bullet mandatory and changes what
+counts as a pass.
 
-The three documentation scenarios have independent requirements and keep each
-one in a separate expectation. All must pass. This avoids nested bullet lists
-being mistaken for additional expectation IDs by the judge. See
-[the grading semantics](schemas.md#preserving-the-migrated-rubrics) for the
-acceptance-policy change from the original numeric matrix. Current binary
-verdicts are not directly comparable with its historical scores.
+Some core/table scenarios specify a 0.8 acceptance threshold in their rubric
+text, with explicit failure conditions taking precedence. Audit scenarios also
+require the exact rule ID; Promptfoo checks that ID deterministically in
+addition to the quality criterion. Documentation scenarios use separate
+mandatory expectations. See [grading semantics](schemas.md#grading-semantics)
+for how these requirements are evaluated.
 
 For activation cases, `true` means the target skill must activate and `false`
 means it must not. If another skill may legitimately load as a companion,
@@ -216,16 +222,23 @@ different contract.
 
 See [`docs/testing.md`](testing.md) for how to run evals.
 
+State whether a case asks for a plan or for actual execution. The CLI quality
+cases ask for plans and commands, without requiring an installed CLI, a database
+or credentials. An execution case must provide its inputs and a compatible
+runner; a final answer alone cannot prove the order of tool calls. A case that
+requires live documentation retrieval must not be counted as covered by a
+runner without network tools.
+
 ## Review checklist (use before PR)
 
 1. `name:` is kebab-case, matches the directory.
-2. `description:` states a closed positive scope and uses specific triggers grounded in SDK/CLI/docs.
+2. `description:` states the supported questions and tasks; technical triggers match SDK/CLI/docs.
 3. No `version:` or other non-spec frontmatter fields.
 4. Body ≤150 lines (surface skills) / ≤500 lines (`ydb-core`).
 5. No cross-references from `rules/` to any other skill.
 6. Relative links in every resource stay inside its skill package; companion skills are named by slug.
 7. All `RULE-<PREFIX>-<NN>` IDs use a prefix listed in the registry above.
-8. Any trigger phrase or API name in `description:` can be found by grep in the upstream SDK source.
+8. Task descriptions match the shipped content; API names and other technical triggers are verified against upstream sources.
 9. Canonical scenario/activation JSON and coverage are current; no duplicated response prompts or rubrics are added under `tests/`.
 
 ## See also
@@ -233,6 +246,3 @@ See [`docs/testing.md`](testing.md) for how to run evals.
 - [`docs/schemas.md`](schemas.md) — canonical scenario and activation JSON contracts.
 - [`docs/testing.md`](testing.md) — how to run the promptfoo compatibility matrix.
 - [Upstream `skill-creator` SKILL.md](https://github.com/anthropics/skills/blob/main/skills/skill-creator/SKILL.md) — general skill-authoring principles.
-
-See [the eval schema notes](schemas.md) for the intentional Java batching
-corrections and the transaction-boundary regression pair.
