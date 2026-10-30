@@ -2,6 +2,8 @@
 
 Use `ydb sql` for query execution. Pair this reference with the separate `ydb-core` skill's CLI workflow when that skill is installed, and load `references/query-parameters.md` whenever values enter the query.
 
+The [official command reference](https://ydb.tech/docs/en/reference/ydb-cli/commands?version=main) marks `table query execute`, `table query explain`, `yql`, and `scripting yql` as deprecated query entry points. Use `ydb sql` and `ydb sql --explain` in new commands, including commands launched from scripts or subprocess wrappers. When migrating an old command, check the current `sql` help for its query, parameter, transaction and output options rather than copying legacy flags. If a verified compatibility constraint prevents migration, explain it and recommend an upgrade where possible instead of silently selecting a legacy command. Other operations under `ydb table` are separate commands; their presence does not justify using a deprecated query entry point.
+
 ## Workflow
 
 1. Before composing or running any `ydb sql` command, run all three discovery commands: `ydb version`, `ydb --help`, and `ydb sql --help`. `ydb version` alone is not sufficient. Use `ydb sql -hh` before relying on options omitted from short help.

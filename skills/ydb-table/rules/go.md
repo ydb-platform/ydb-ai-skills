@@ -153,6 +153,8 @@ Same interactive / non-interactive split as RULE-GO-09, applied to the commit si
 
 **Fix**: fuse the commit into the last query's RPC.
 
+Prefer Query Service when it supports the required functionality. For existing Table Service code, recommend migration to Query Service where equivalent functionality is available, preserving the transaction's atomicity, typed parameters, caller context and replay safety. The Table Service correction below applies when retaining the existing implementation for compatibility; it is not the default API recommendation for new query code.
+
 - Query Service: pass `query.WithCommit()` as an `ExecuteOption` to the last `tx.Exec(...)` / `tx.Query(...)` of the closure.
 - Table Service (multi-statement interactive transaction): pass `options.WithCommit()` (from `github.com/ydb-platform/ydb-go-sdk/v3/table/options`) as an `ExecuteDataQueryOption` to the last `tx.Execute(ctx, sql, params, options.WithCommit())` — the commit flag rides on that RPC and the transaction terminates without a separate `tx.CommitTx`. For a single-statement Table Service transaction, fold both begin and commit into one `s.Execute(ctx, table.TxControl(table.BeginTx(...), table.CommitTx()), sql, params)`.
 

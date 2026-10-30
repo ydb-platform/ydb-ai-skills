@@ -55,6 +55,14 @@ The body of `SKILL.md` carries stable section anchors for navigation within the 
 
 Progressive disclosure is intentionally off for `ydb-core` itself: the SKILL.md body must remain in context whenever the skill triggers (body budget: ≤500 lines). The optional `references/` and `rules/` subdirs are loaded on demand the same way they are in surface skills, and they exist for driver/transport patterns whose surface is `ydb.Open(...)` rather than any one application API — balancing, session lifecycle, retry. Application-layer rules (query execution, transactions, schema) stay in the relevant surface skill (`ydb-table`, etc.). Every skill package must validate independently; refer to companion skills by slug instead of linking outside the package.
 
+The packages overlap for SDK code reviews: `ydb-table` includes language-specific
+audit rules for supplied snippets, including Go driver/balancer initialization.
+A review of such a snippet may therefore use `ydb-table` alongside `ydb-core`.
+Standalone connection setup and general client-policy questions remain in
+`ydb-core`; they do not require a table audit. Descriptions must reflect the
+rules actually shipped in each package rather than imply exclusive ownership
+of a topic that both packages cover.
+
 ### Surface skills — split by authoring vs audit
 
 ```

@@ -127,6 +127,15 @@
       ]
     },
     {
+      "id": "table.cli.modern-query-entrypoint",
+      "skill": "ydb-table",
+      "weight": 2,
+      "cases": [
+        "ydb-table:cli-explain-before-execute",
+        "ydb-table:cli-typed-parameters"
+      ]
+    },
+    {
       "id": "table.cli.parameters",
       "skill": "ydb-table",
       "weight": 2,
