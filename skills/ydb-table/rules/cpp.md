@@ -115,15 +115,15 @@ One primary rule per question. **Mis-routing fails:** `INSERT INTO` + `.Idempote
 
 ### RULE-CPP-07: Non-parametrized YQL
 
-**Severity**: Critical | **Opener**: `RULE-CPP-07` — `std::format`/string concat into YQL risks injection and defeats plan cache; bind via `TParamsBuilder`.
+**Severity**: Critical | **Opener**: `RULE-CPP-07` — bind runtime values via `TParamsBuilder` to keep query text stable and data separate from YQL.
 
 **What to look for**: `std::format`, concat, literals instead of `$param`.
 
-**Problem**: injection; per-string recompilation.
+**Problem**: interpolating arbitrary text can introduce YQL syntax and SQL injection. Formatting an already typed integer as a decimal does not itself allow injection, but varying literals still produce distinct query texts instead of reusing one parameterized query. Assess injection risk from the actual input type; do not claim a numeric value can inject text or use that distinction to skip parameterization.
 
-**Fix**: `TParamsBuilder().AddParam("$id").Uint64(v).Build()` + `ExecuteQuery("... WHERE id = $id", ..., params)`.
+**Fix**: build typed parameters with `auto params = NYdb::TParamsBuilder().AddParam("$id").Uint64(v).Build().Build();` and pass them to `ExecuteQuery("... WHERE id = $id", ..., params)`. The first `Build()` finishes the parameter value; the second finishes the parameter set.
 
-**Source**: <https://ydb.tech/docs/en/reference/ydb-sdk/parameterized_queries>.
+**Source**: <https://ydb.tech/docs/en/reference/ydb-sdk/parameterized_queries>; [C++ parameter builders](https://github.com/ydb-platform/ydb-cpp-sdk/blob/3cf2e488a19fd8327b11a0ae43249b08bab261ea/include/ydb-cpp-sdk/client/params/params.h#L63-L90).
 
 ### RULE-CPP-08: Explicit begin/commit for one statement
 
@@ -193,6 +193,6 @@ One primary rule per question. **Mis-routing fails:** `INSERT INTO` + `.Idempote
 
 **Problem**: individual list coordinates must be encoded, transmitted, parsed, and converted on the server for each call.
 
-**Fix**: follow the current recommended approach in the [YDB vector-search recipe](https://ydb.tech/docs/en/recipes/ydb-sdk/vector-search?version=main) (C++ tab) to serialize the vector on the client. Bind it as YQL `String` and use it directly for storage or `Knn` distance functions. Keep the YQL converter for vectors constructed in YQL; other vector types require their own formats.
+**Fix**: recommend client-side serialization and include a usable link to the [YDB vector-search recipe](https://ydb.tech/docs/en/recipes/ydb-sdk/vector-search?version=main), pointing the user to its C++ tab for the current SDK implementation. Bind the serialized bytes as YQL `String` and use the parameter directly for storage or `Knn` distance functions. This is a performance recommendation for vectors already available in the application, not a claim that `List<Float>` plus conversion is invalid YQL. The converter remains appropriate for vectors constructed within YQL; other vector types require their own formats.
 
 **Source**: <https://ydb.tech/docs/en/recipes/ydb-sdk/vector-search?version=main> (C++ recommended approach); <https://ydb.tech/docs/en/yql/reference/udf/list/knn#functions-convert>.
