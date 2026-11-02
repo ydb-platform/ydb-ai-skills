@@ -8,7 +8,7 @@ Principles: `references/balancing.md`, `references/session-lifecycle.md`. YQL ex
 db, err := ydb.Open(ctx, os.Getenv("YDB_CONNECTION_STRING"))
 ```
 
-No `ydb.WithBalancer(...)` ⇒ `balancers.Default()` = `balancers.RandomChoice()`. Source: `ydb-go-sdk/balancers/balancers.go`.
+No `ydb.WithBalancer(...)` ⇒ `balancers.Default()` = `balancers.RandomChoice()`. Source: <https://github.com/ydb-platform/ydb-go-sdk/blob/987aa9c180ff6622e4249ec714b926d93d46230a/balancers/balancers.go>.
 
 Explicit equivalent (when other options accompany it):
 
@@ -18,8 +18,13 @@ db, err := ydb.Open(ctx, connStr, ydb.WithBalancer(balancers.RandomChoice()))
 
 ## Prefer-DC variants
 
-`balancers.PreferLocalDC(...)` — marked `// Deprecated: use PreferNearestDC instead`. Both have the same semantics.
-`balancers.PreferNearestDC(...)`, `balancers.PreferLocalDCWithFallback(...)` — same family.
+`balancers.PreferNearestDC(...)` uses only endpoints in the location selected as nearest by discovery. It does not provide cross-location fallback.
+
+`balancers.PreferNearestDCWithFallBack(...)` prioritizes that location and uses other locations when all nearer endpoints are unavailable.
+
+`balancers.PreferLocalDC(...)` is a deprecated alias of `PreferNearestDC`. The deprecated fallback alias is `PreferLocalDCWithFallBack`, with that exact spelling. Renaming a deprecated alias preserves its balancing semantics.
+
+Source: <https://github.com/ydb-platform/ydb-go-sdk/blob/987aa9c180ff6622e4249ec714b926d93d46230a/balancers/balancers.go>.
 
 ## Run every operation through `Do` / `DoTx`
 

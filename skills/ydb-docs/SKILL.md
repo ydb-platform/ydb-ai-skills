@@ -1,6 +1,6 @@
 ---
 name: ydb-docs
-description: "Find and verify official documentation for the YDB database (СУБД YDB) on ydb.tech. Use for YDB documentation lookup, source links, citations, fact checking, and lookup plans without network access. Can support another YDB skill when documentation is needed. Supports Russian or English and requested product versions. This is specific to the YDB database, not a general YQL documentation tool; YT/Hahn is outside its scope."
+description: "Find and verify official documentation for the YDB database (СУБД YDB) on ydb.tech. Load only when the requested documentation concerns YDB itself or a YDB-specific part of a mixed question. Covers YDB source links, citations, fact checking, and lookup plans without network access. Can support another YDB skill when documentation is needed. Supports Russian or English and requested YDB product versions."
 ---
 
 # YDB Documentation

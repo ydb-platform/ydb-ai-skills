@@ -1,26 +1,26 @@
 # Client-side balancing
 
-SDK picks which cluster node receives each gRPC request. Docs: <https://ydb.tech/docs/en/recipes/ydb-sdk/balancing>.
+The SDK selects endpoints according to its configured balancing policy. For session-based operations, the node is chosen when a session is created; queries within that session remain attached to that node. Borrowing sessions through the SDK pool lets the SDK manage their lifecycle instead of pinning all application work to one stored session.
 
-Topology details and balancer, pool, and session API names differ by SDK. Ask for the target language and verify its current SDK documentation before naming an API; do not translate Go names into another SDK by analogy.
+Docs: <https://ydb.tech/docs/en/recipes/ydb-sdk/balancing>.
 
-## Default: random spread
+## Defaults
 
-Pick an endpoint at random per request. Spreads load across every discovered node. Go SDK names: `embed/go.md`.
+The default policy and its eligible endpoints depend on the SDK and version. Ask for the target SDK and verify its current documentation before recommending a policy or naming an API; do not translate symbols from another SDK by analogy. Random endpoint selection does not rebalance individual queries within an existing session.
 
-## Prefer-DC family
+## Locality policies
 
-Concentrates traffic on one DC's nodes (current DC, nearest DC, or a named DC). Go SDK API names: `embed/go.md`.
+A locality policy can restrict eligible endpoints to a selected location. Whether this is useful depends on application placement, workload, available capacity, discovery metadata, and maintenance or failure requirements.
 
-Failure modes:
+Risks to check:
 
-- DC-skewed load when application replicas cluster in one DC.
-- Drill / rolling-restart stickiness: traffic sticks to the few remaining nodes in the chosen DC.
-- Cross-DC datashard hops: client→node locality doesn't imply node→tablet locality; under load the tablet moves out anyway.
+- Many application replicas preferring one location can concentrate load there while capacity elsewhere is unused by those clients.
+- Maintenance can leave too little eligible capacity.
+- Client-to-session-node proximity does not establish locality of the data accessed by the query.
+- A locality restriction does not necessarily include cross-location fallback; check the actual policy.
 
-Pays off only with followers (read replicas) + `StaleRO` reads. Without that, no latency upside.
+Locality is neither universally required nor universally unsuitable for production. Measure latency and capacity with representative traffic; network RTT alone does not establish the result.
 
 ## Operational
 
-- ≥ 2 YDB nodes per AZ. Single-node-per-zone + prefer-DC = outage on rolling restart.
-- If prefer-DC is used, drive it from config (env/dynamic), not a hardcoded driver option — production must be able to roll back without redeploy.
+Ensure enough healthy eligible capacity remains during planned maintenance and the failures the application must tolerate. Configure an explicit fallback policy when cross-location fallback is required. Keep the policy configurable so it can be changed without rewriting application logic.

@@ -41,8 +41,8 @@
       "expected_output": "A conclusion grounded in a relevant official page actually retrieved and cited, or an honest report that verification was blocked by retrieval failure or insufficient evidence.",
       "files": [],
       "expectations": [
-        "Locate relevant official YDB documentation using https://ydb.tech/llms.txt, an official documentation index, or a known relevant official page. Do not use an index entry alone as evidence of transaction behavior.",
-        "Use the available retrieval tools to attempt to read a relevant official transaction page. Claim successful verification only after reading evidence that supports it; if retrieval fails, explicitly report the failure.",
+        "Start an actual documentation lookup through https://ydb.tech/llms.txt, an official documentation index, or a known relevant official page. Locate a relevant transaction page when the sources are reachable. A tool-demonstrated access failure that prevents discovery is a valid blocked outcome; do not invent a page URL. An index entry alone is not evidence of transaction behavior.",
+        "Make real retrieval attempts with the available tools, rather than merely describing a plan. If an entry point is unavailable, try an appropriate fallback. When tool results demonstrate a shared retrieval failure, such as DNS or connectivity failure affecting the official entry point and fallback, explicitly report that verification was blocked; a further request to a guessed transaction URL is not required. If a relevant page is reachable, read it before claiming successful verification.",
         "Support any claimed transaction semantics with a citation to the specific official page actually read and a matching explanation of its evidence. Do not invent a citation or cite llms.txt as behavioral evidence. If verification was blocked, do not fabricate a verified conclusion.",
         "Keep the conclusion within what the retrieved evidence establishes. If retrieval fails or the evidence does not establish the claim, say it remains unverified. No uncertainty disclaimer is required for a claim that was actually verified."
       ],
