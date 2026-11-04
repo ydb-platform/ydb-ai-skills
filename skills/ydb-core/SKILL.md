@@ -69,11 +69,13 @@ Q = queries, T = topics, C = coordination.
 
 ## cli
 
-Treat the installed CLI as a versioned interface whose syntax must be discovered at runtime. CLI discovery is an ordered gate: complete it before composing or running a database command. `ydb version` does not replace `ydb --help`.
+Treat the installed CLI as a versioned interface whose syntax must be discovered at runtime. For a live CLI session, complete discovery before composing the final database command or executing it. `ydb version` does not replace `ydb --help`.
 
-1. Run both `ydb version` and `ydb --help` before composing commands for a session.
-2. Run `ydb <subcommand> --help` before first use of that command tree; use `-hh` when the regular help says more options are hidden.
-3. Keep global connection options before the first subcommand. Preserve the endpoint, database, profile, certificate, and credential options supplied by the user; do not invent or silently replace them.
+For advice-only requests or when the user forbids CLI execution, describe these discovery checks as preparation steps instead of running them. Use documented syntax and the supplied connection values in proposed commands, identify version-dependent details that still need checking, and do not claim that help was inspected or an operation performed.
+
+1. For live use, run both `ydb version` and `ydb --help` before composing commands for a session.
+2. Inspect help for the full command whose options you need, such as `ydb scheme rmdir --help` before preparing a removal. Parent help such as `ydb scheme --help` discovers subcommands but does not establish their flags. Use `-hh` when the regular help says more options are hidden.
+3. Keep global connection options before the first subcommand. A named profile uses `-p <name>` or `--profile <name>` ([profile usage](https://ydb.tech/docs/en/reference/ydb-cli/profile/use)). Preserve the endpoint, database, profile, certificate, and credential values supplied by the user; do not invent or silently replace them, including with placeholders when the value is already known.
 4. Prefer a non-interactive subcommand. Running `ydb` without a subcommand opens interactive mode; do that only when the user explicitly requests an interactive session.
 5. Inspect namespace objects with `ydb scheme ls` and `ydb scheme describe`. Start at the narrowest known path; do not recursively enumerate the database root by default.
 6. Route SQL construction, validation, and execution to `ydb-table`. Route an uncovered command tree to its upstream `--help` and documentation instead of extrapolating.
