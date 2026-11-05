@@ -6,12 +6,14 @@ The [official command reference](https://ydb.tech/docs/en/reference/ydb-cli/comm
 
 ## Workflow
 
-1. Before composing or running any `ydb sql` command, run all three discovery commands: `ydb version`, `ydb --help`, and `ydb sql --help`. `ydb version` alone is not sufficient. Use `ydb sql -hh` before relying on options omitted from short help.
+For advice-only requests, including command reviews without execution, describe the steps below instead of running them. Do the same when the user explicitly forbids CLI execution. Keep discovery, validation, and confirmation gates in the proposed sequence, and distinguish documented command behavior from checks actually performed. Do not invoke `ydb` or claim that a plan was retrieved in an advice-only response.
+
+1. For live use, run all three discovery commands before composing the final database command or executing it: `ydb version`, `ydb --help`, and `ydb sql --help`. `ydb version` alone is not sufficient. Use `ydb sql -hh` before relying on options omitted from short help.
 2. Inspect every referenced table whose schema is not already known with `ydb scheme describe <path>`. Do not guess column names, types, or primary-key order.
 3. For a filter whose actual values are unknown, do not guess. Constrain discovery by a known primary-key range, suitable index, or another input restriction learned from the schema. If no usable restriction is available, ask for a key/range or consider a global discovery query. Use `--explain` before any potentially large discovery query; if its plan can scan a large table, explain the cost and obtain approval before execution. If the necessary plan cannot be obtained, stop and report the limitation; do not execute the query to find out whether it is safe.
 4. Keep values outside SQL text. Declare CLI parameters in the query and bind them with `--param`, `--input-file`, or an input stream.
 5. Validate unfamiliar built-ins, joins, windows, casts, or multi-statement scripts with `ydb sql --explain` before execution. Iterate on validation errors without executing the query.
-6. Execute only after validation succeeds and the user asked to run the query. Show the exact query and connection target before DDL or DML and obtain explicit confirmation.
+6. Execute only after validation succeeds and the user asked to run the query. For DDL or DML, first show the exact query, connection target, and effect, then stop. Execute only after the user explicitly confirms that displayed operation in a subsequent turn; an initial request to modify data is not that confirmation. Apply this gate to mutating queries run with `--explain-analyze` as well as normal execution.
 7. Use `LIMIT` to bound returned rows, not as a claim that scan volume or server work is bounded. Bound input through keys or indexes, or inspect the plan and disclose a possible full scan. Use a machine-readable `--format` only when the result will be parsed; use an export workflow rather than printing a large result into the agent context.
 
 ## Command shapes
