@@ -66,26 +66,23 @@ JavaDoc: "Deletes the entities identified by the given ids using a single query.
 
 **Source**: Spring Data JPA — `JpaRepository#deleteAllByIdInBatch(Iterable<ID>)`. <https://docs.spring.io/spring-data/jpa/docs/current/api/org/springframework/data/jpa/repository/JpaRepository.html>.
 
-### RULE-JV-05: JPA `@Version` (optimistic locking) over YDB
+### RULE-JV-05: Removing JPA `@Version` without checking transaction boundaries
 
 **Severity**: High
 
-**What to look for**: `@Version` annotations on JPA entity fields.
+**What to look for**: proposals to remove `@Version` because YDB is serializable, especially when `merge()` or request payloads can carry state read in an earlier transaction. An entity declaration or frequent UPDATE traffic alone does not establish a defect.
 
-**Problem**: YDB Query Service runs `SerializableRW` by default — conflicting transactions are detected by the server and surface as a retryable `ABORTED`. `@Version` adds `WHERE … AND version = ?` to every `UPDATE`. The predicate is on a non-key column and adds work to every UPDATE; on YDB it provides no additional safety because server-side serializability under SerializableRW already prevents lost updates.
+**Problem**: YDB's `SerializableRW` isolation protects reads and writes within a database transaction; it does not detect that application-supplied state was derived from an earlier, completed transaction. JPA version checking can reject a stale detached entity at merge, flush, or commit. Removing it can allow a later transaction to overwrite an intervening update even when the database transactions execute serially.
 
-**Fix**: remove `@Version` from the entity. Let conflicts surface from the server and handle them via the retry classification in RULE-JV-06.
+**Fix**: preserve `@Version` while inspecting the actual isolation level, read/modify/write boundaries, detached entities, and any client-visible expected-version contract.
 
-```java
-@Entity
-public class Token {
-    @Id private Long id;
-    private String payload;
-    // no @Version field
-}
-```
+- Consider removal only when every database-dependent decision uses fresh reads inside the same `SerializableRW` transaction and the application needs no version check spanning transactions. Otherwise retain version checking or an equivalent atomic expected-version check.
+- For a retryable YDB transaction abort such as `ABORTED`, retry the whole transaction, including reads and recomputation, with bounded backoff. After a Hibernate failure, roll back and start a new transaction with a fresh persistence context; do not retry only the failed UPDATE or flush in the failed context. Keep external effects safe from duplication and classify failures with an uncertain commit outcome separately.
+- A stale-version conflict needs rejection or reconciliation according to application semantics. Do not bypass the check or repeatedly merge the same stale state. A fresh read and recomputation is an alternative only when that preserves the intended business operation.
 
-**Source**: YDB transaction modes — <https://ydb.tech/docs/en/concepts/transactions>. JPA `@Version` semantics — <https://jakarta.ee/specifications/persistence/3.1/jakarta-persistence-spec-3.1.html#a2059>.
+Inspect generated SQL and measure the workload before claiming a performance benefit from removal; the annotation alone does not establish a full scan or a material bottleneck.
+
+**Source**: [YDB transaction modes](https://ydb.tech/docs/en/concepts/transactions#serializable); [YDB status codes — ABORTED and UNDETERMINED](https://ydb.tech/docs/en/reference/ydb-sdk/ydb-status-codes); [Jakarta Persistence 3.1, §3.2.7.1 and §3.4.2](https://jakarta.ee/specifications/persistence/3.1/jakarta-persistence-spec-3.1.html); [Hibernate ORM 6.6, optimistic locking and §6.16 exception handling](https://docs.hibernate.org/orm/6.6/userguide/html_single/#locking-optimistic).
 
 ### RULE-JV-06: Ignoring retryable JDBC exceptions
 

@@ -60,9 +60,13 @@ The Query Service supports four modes (<https://ydb.tech/docs/en/concepts/transa
 - **`StaleRO`** — read-only, reads from any replica; may return stale data.
 - **`OnlineRO`** — read-only, reads from the leader.
 
-### Implication: application-level optimistic locking is redundant
+### Transaction boundaries and expected-version checks
 
-The Postgres / Read-Committed pattern of carrying a `version` column and emitting `UPDATE … WHERE … AND version = ?` to catch lost updates is unnecessary under `SerializableRW`: the server already detects the conflict and surfaces it as a retryable failure. The extra predicate adds work on every UPDATE and provides no additional safety — the correct response to a conflict is to retry the transaction, which the SDK retry helpers already do for `ABORTED`.
+`SerializableRW` detects conflicts for reads and writes within one database transaction. It does not detect that application-supplied state came from an earlier, completed transaction. Preserve a version predicate or equivalent atomic expected-version check for such cross-transaction state. Consider removing it only when database-dependent decisions use fresh reads within the same `SerializableRW` transaction and there is no cross-transaction expected-version contract to preserve.
+
+For a retryable transaction abort, retry the whole operation in a new transaction, with fresh reads and recomputation. A stale-version conflict instead needs rejection or reconciliation according to application semantics; do not bypass the check or replay the same stale values to force the write through. Recomputing from fresh state is appropriate only when it preserves the intended business operation.
+
+Sources: [YDB Serializable transactions](https://ydb.tech/docs/en/concepts/transactions#serializable), [Jakarta Persistence 3.1, §3.2.7.1 and §3.4.2](https://jakarta.ee/specifications/persistence/3.1/jakarta-persistence-spec-3.1.html).
 
 ### Read-only loads
 

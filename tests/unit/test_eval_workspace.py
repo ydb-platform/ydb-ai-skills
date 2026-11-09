@@ -1,7 +1,10 @@
 import importlib.util
+import contextlib
+import io
 import pathlib
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location("run_promptfoo", ROOT / "scripts/run-promptfoo.py")
@@ -35,6 +38,18 @@ class WorkspaceTests(unittest.TestCase):
             (skill / "answers").symlink_to(ROOT / "tests")
             with self.assertRaisesRegex(ValueError, "symlinks"):
                 RUNNER.prepare_workspace(root / "source", root / "workspace")
+
+    def test_focused_run_cannot_overwrite_previous_artifacts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = pathlib.Path(tmp) / "results.json"
+            result.write_text('"previous measurement"')
+            argv = ["run-promptfoo.py", "--config", str(ROOT / "promptfooconfig.codex.yaml"),
+                    "--artifacts-dir", tmp, "--preflight-only"]
+            stderr = io.StringIO()
+            with patch("sys.argv", argv), contextlib.redirect_stderr(stderr):
+                self.assertEqual(RUNNER.main(), 1)
+            self.assertIn("must be empty", stderr.getvalue())
+            self.assertEqual(result.read_text(), '"previous measurement"')
 
 
 if __name__ == "__main__":

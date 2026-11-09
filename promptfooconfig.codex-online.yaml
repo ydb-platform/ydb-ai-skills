@@ -13,17 +13,28 @@ providers:
   - id: openai:codex-app-server
     label: Codex · installed YDB skills
     config:
+      codex_path_override: '{{ env.YDB_EVAL_CODEX_WRAPPER }}'
+      model: '{{ env.YDB_EVAL_MODEL }}'
+      model_reasoning_effort: '{{ env.YDB_EVAL_REASONING_EFFORT }}'
       working_dir: '{{ env.YDB_EVAL_WORKSPACE }}'
       skip_git_repo_check: true
       sandbox_mode: read-only
       approval_policy: on-request
       network_access_enabled: true
       cli_config:
-        web_search: live
+        # App-server web-search items omit page bodies. HTTP command output is
+        # retained as evidence, so successful retrieval can actually be graded.
+        web_search: disabled
+        model_reasoning_effort: '{{ env.YDB_EVAL_REASONING_EFFORT }}'
+        features.apps: false
       developer_instructions: >-
-        For source verification, retain the fetched page text in command/tool
-        output so the evaluator can inspect the evidence. A search listing or
-        URL alone is not evidence of page contents.
+        Use only the current workspace and its installed skills for local task
+        material. Do not read host skills, other checkouts, home configuration,
+        logs, credentials, or evaluation/grading files. Do not search parent directories.
+        For source verification, fetch sources through HTTP commands and retain
+        the fetched page text in command output so the evaluator can inspect it.
+        Prefer official Markdown or plain-text versions when available to avoid
+        HTML boilerplate. A search listing or URL alone is not evidence of page contents.
       turn_timeout_ms: 180000
       include_raw_events: true
       server_request_policy:
@@ -38,6 +49,9 @@ defaultTest:
     provider:
       id: openai:codex-app-server
       config:
+        codex_path_override: '{{ env.YDB_EVAL_CODEX_WRAPPER }}'
+        model: '{{ env.YDB_EVAL_MODEL }}'
+        model_reasoning_effort: '{{ env.YDB_EVAL_REASONING_EFFORT }}'
         working_dir: '{{ env.YDB_EVAL_JUDGE_WORKSPACE }}'
         skip_git_repo_check: true
         sandbox_mode: read-only
@@ -45,6 +59,8 @@ defaultTest:
         network_access_enabled: false
         cli_config:
           web_search: disabled
+          model_reasoning_effort: '{{ env.YDB_EVAL_REASONING_EFFORT }}'
+          features.apps: false
         turn_timeout_ms: 180000
         include_raw_events: true
         server_request_policy:

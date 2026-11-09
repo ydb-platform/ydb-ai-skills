@@ -206,13 +206,33 @@ The offline Codex config runs 66 canonical response-quality scenarios with separ
 app-server solver and judge sessions using the same authentication route. With the
 local CLI configured for a personal login and no API-key override, it uses
 that account; it does not silently fall back to an OpenRouter or another API
-judge. Local runs can consume the account's usage allowance. The selected
-model follows the local profile/config; record it when comparing results.
+judge. Local runs can consume the account's usage allowance. The runner explicitly selects `gpt-6.1-sol` with `medium` reasoning for both
+roles by default. Override these together with `--model` and
+`--reasoning-effort`; the active chat's model and personal Codex model defaults
+do not select the eval model. Promptfoo is pinned to the tested version in the
+runner rather than resolving `latest` on every run.
 
 The profile starts the local Codex CLI's app-server with a read-only sandbox
 and `on-request` approvals. Requests for additional command/file permissions
 are declined. Each solver or judge turn has a three-minute timeout. Configured
 runtime policies remain in force.
+
+Before model calls, the runner discovers inherited MCP servers and external
+skills, then disables them for both roles. It disables Apps, plugins, hooks,
+memories, bundled skills and project instruction content as well. The same
+overrides apply to CLI startup and each app-server thread, so the provider
+cannot silently restore the user's tools when creating a thread. Personal
+configuration and authentication files are not rewritten. Codex still loads
+global user instructions from its user-level `AGENTS.md`; the preflight records
+their sources and hashes. Review those instructions for eval-specific material
+before treating a run as independent.
+
+Solver instructions restrict local reads and searches to the temporary
+workspace. The read-only sandbox is not by itself an OS boundary against
+reading other local repositories; inspect the recorded actions as well. A
+quality PASS alone does not certify isolation. Use `--preflight-only` to check
+the effective runtime configuration and tool/skill inventory without starting
+a model turn.
 
 ```bash
 # One scenario first; arguments after -- are forwarded to Promptfoo.
@@ -222,6 +242,16 @@ npm run eval:codex -- --filter-first-n 1
 npm run eval:codex -- --filter-pattern '^ydb-core:onboarding ·' \
   --no-share --output /tmp/ydb-onboarding.json
 
+# An explicit model and a focused case; no complete suite rerun.
+python3 scripts/run-promptfoo.py --config promptfooconfig.codex.yaml \
+  --model gpt-6.1-sol --reasoning-effort medium \
+  --artifacts-dir /tmp/ydb-jpa-eval \
+  -- --filter-pattern '^ydb-table:java-rule-jv-05-jpa-version ·' --no-cache
+
+# Check effective configuration without a model call.
+python3 scripts/run-promptfoo.py --config promptfooconfig.codex.yaml \
+  --preflight-only --artifacts-dir /tmp/ydb-codex-preflight
+
 # Opt-in network retrieval for the one live documentation scenario.
 npm run eval:codex:online
 
@@ -229,8 +259,11 @@ npm run eval:codex:online
 npm run eval:claude -- --filter-first-n 1
 ```
 
-The online profile enables network access and live web search for its solver;
-the judge remains offline. Existing account and runtime access policies still
+The online profile enables HTTP retrieval for its solver, while built-in web
+search stays disabled. Fetch page text, preferably a site's Markdown view, in
+command output so the judge can inspect the actual source contents. A search
+result or an open-page event without the page body cannot substantiate a claim.
+The judge remains offline. Existing account and runtime access policies still
 apply. An honest retrieval failure is a valid outcome where the rubric permits
 it, but does not establish successful source-reading coverage.
 
@@ -243,8 +276,20 @@ Codex quality assertions receive the final answer together with the solver's
 recorded actions and results. Exact-text assertions still examine only the final
 answer, so text seen in a tool result cannot satisfy a required rule-ID mention.
 Missing action metadata is an evaluation error, not evidence that no commands
-were run. Tool evidence helps the judge assess retrieval claims; the CLI planning
-suite still evaluates advice rather than a live execution experiment.
+were run. Large command outputs are bounded for judge transport, with an
+explicit omission marker, original size, hash and retained ranges. The final
+answer is unchanged and the complete evidence is saved separately. Omitted
+text and its hash do not prove source claims or that an action did not occur.
+If even the bounded evidence is too large, grading fails explicitly. Tool
+evidence helps the judge assess retrieval claims; the CLI planning suite still
+evaluates advice rather than a live execution experiment.
+
+Use a new `--artifacts-dir` for each run to retain the configuration preflight,
+isolation manifest, full evidence and Promptfoo results outside the disposable
+workspaces. Without
+a custom Promptfoo `--output`, the runner writes `results.json` there. Preserve
+the original failed/error result when fixing the runtime or changing a rubric;
+a focused rerun is a new measurement, not an overwrite of the earlier verdict.
 
 Quality PASS alone does not prove a skill was loaded. In a saved Promptfoo
 JSON report, inspect `results.results[0].response.raw` (a JSON-encoded Codex

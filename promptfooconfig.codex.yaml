@@ -13,6 +13,9 @@ providers:
   - id: openai:codex-app-server
     label: Codex · installed YDB skills
     config:
+      codex_path_override: '{{ env.YDB_EVAL_CODEX_WRAPPER }}'
+      model: '{{ env.YDB_EVAL_MODEL }}'
+      model_reasoning_effort: '{{ env.YDB_EVAL_REASONING_EFFORT }}'
       working_dir: '{{ env.YDB_EVAL_WORKSPACE }}'
       skip_git_repo_check: true
       sandbox_mode: read-only
@@ -20,6 +23,12 @@ providers:
       network_access_enabled: false
       cli_config:
         web_search: disabled
+        model_reasoning_effort: '{{ env.YDB_EVAL_REASONING_EFFORT }}'
+        features.apps: false
+      developer_instructions: >-
+        Use only the current workspace and its installed skills for local task
+        material. Do not read host skills, other checkouts, home configuration,
+        logs, credentials, or evaluation/grading files. Do not search parent directories.
       turn_timeout_ms: 180000
       include_raw_events: true
       server_request_policy:
@@ -34,6 +43,9 @@ defaultTest:
     provider:
       id: openai:codex-app-server
       config:
+        codex_path_override: '{{ env.YDB_EVAL_CODEX_WRAPPER }}'
+        model: '{{ env.YDB_EVAL_MODEL }}'
+        model_reasoning_effort: '{{ env.YDB_EVAL_REASONING_EFFORT }}'
         working_dir: '{{ env.YDB_EVAL_JUDGE_WORKSPACE }}'
         skip_git_repo_check: true
         sandbox_mode: read-only
@@ -41,6 +53,8 @@ defaultTest:
         network_access_enabled: false
         cli_config:
           web_search: disabled
+          model_reasoning_effort: '{{ env.YDB_EVAL_REASONING_EFFORT }}'
+          features.apps: false
         turn_timeout_ms: 180000
         include_raw_events: true
         server_request_policy:
