@@ -67,10 +67,28 @@ requests and forbids it for unrelated products/tasks. General YDB tasks can use
 docs as an optional companion and are evaluated for their primary target in the
 separate selector matrix, not as forbidden docs activations.
 
-The general deadline-policy request is checked by the `ydb-core` activation
-suite and by the primary selector. It is omitted from `ydb-table` negative
-activations: reading table's related deadline guidance as additional context
-is acceptable. Audits of actual SDK query code still require `ydb-table`.
+The general deadline-policy request belongs to `ydb-core` and is checked by
+its activation suite and the primary selector. Table's deadline/cancellation
+rules apply to data-access work and SDK audits; related reference material
+does not expand the skill to every standalone client-policy question.
+A request spanning client policy and actual query work may use both skills.
+
+General introductions/comparisons and connection-only requests require
+`ydb-core` and must not activate `ydb-table`. Their original negative table
+cases are retained. The absence of core does not broaden table's scope.
+A mixed task that includes actual query/schema work or an SDK code/configuration
+audit may use table together with core; the presence of a possibly useful
+reference alone does not make a pure introduction or setup request a table task.
+
+Local Docker setup requires `ydb-core` and must not activate `ydb-table`.
+YT-only YQL requests must select `none` and must not activate any YDB skill.
+The activation suites retain the original YT case with the explicit
+"this is not about YDB" clarification. Additional natural YT variants remain
+diagnostic experiments outside the mandatory suite. Determine applicability
+from the description before opening the skill: a shared query language is not enough.
+Reading the body merely to rule out an unrelated skill is still an activation
+under the native contract. A passing primary-selector check does not replace
+these runtime checks.
 
 The CLI quality suite checks proposed workflows and commands. It does not run
 against a database or require an installed CLI. A correct plan includes discovery

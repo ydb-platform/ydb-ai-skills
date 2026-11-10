@@ -1,6 +1,6 @@
 # YDB AI Skills
 
-AI coding agent skills for [YDB](https://ydb.tech) — for writing YQL, designing schemas, and reviewing Java application code against YDB. Skills auto-trigger based on context.
+AI coding agent skills for [YDB](https://ydb.tech) — for connecting applications, writing YQL, designing schemas, reviewing application SDK code, and finding official documentation. Skills auto-trigger based on context.
 
 Skill bodies are intentionally concise. Supporting references and rules are grounded in YDB SDK source and official documentation.
 
@@ -8,9 +8,16 @@ Skill bodies are intentionally concise. Supporting references and rules are grou
 
 | Skill                | Scope                                                                                                                                                 |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **ydb-core**         | Entry point / router. YDB overview, auth and connection, schema basics, CLI discovery and scheme inspection. Baseline skill — auto-installed.     |
-| **ydb-table**        | Writing YQL and executing it (SDK-embedded or with `ydb sql`). Optimization, schema design for query patterns, SQL-to-YQL conversion, audit.        |
-| **ydb-docs** | Finds official documentation through `llms.txt`, with language and product-version selection. |
+| **ydb-core**         | YDB overview and comparisons, local setup, connection/auth, SDK selection, CLI namespace operations, driver balancing, sessions and shared client policy. Baseline skill — auto-installed.     |
+| **ydb-table**        | Application data access: SQL/YQL, query execution via SDK or `ydb sql`, schema design, transactions, optimization, SQL-dialect conversion and audits of data-access code/configuration.        |
+| **ydb-docs** | Finds and verifies official YDB documentation through `llms.txt`, with language/version selection and source citations; can support core/table tasks. |
+
+Choose by the part of YDB involved, not by whether the request contains code.
+Core also reviews driver/session usage; table reviews application data access,
+including its supported SDK/ORM configuration rules. A request spanning both
+can use both skills. Explicit documentation lookup is docs-primary; docs can
+also support another skill. These skills help YDB users and application
+developers. Questions unrelated to YDB are outside their scope.
 
 ## Installation
 
@@ -152,7 +159,7 @@ They consume the selected account's model allowance. The preloaded multi-model
 API matrix remains an explicit alternative with its own API credentials and
 grading configuration.
 
-There are 67 quality scenarios and 44 activation cases. The offline Codex and
+There are 67 quality scenarios and 43 activation cases. The offline Codex and
 HTTP matrix profiles run 66 quality scenarios and explicitly exclude the one
 requiring live source retrieval; the opt-in online Codex profile runs that case.
 CLI scenarios check proposed workflows and commands, without a database or CLI

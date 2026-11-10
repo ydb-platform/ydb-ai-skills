@@ -119,10 +119,11 @@ Similarly, looking up YDB transaction semantics may legitimately load table
 as a companion: its working-with-data reference covers that subject. Those
 requests remain docs-primary selector cases, without forbidding table activation.
 
-Namespace inspection remains core-primary and requires core activation. Loading
-table as a companion is allowed: its CLI reference also covers inspecting table
-schemas. A single-winner routing assertion must not become a blanket ban on
-that companion load.
+Namespace inspection remains core-primary and requires core activation.
+Standalone listing or describing objects belongs to core. If inspection is
+part of query execution or schema-design work, table can also apply to that
+part of the task. Related reference material alone does not make a standalone
+inspection request a table task; a mixed request may legitimately use both.
 
 Single-skill activation checks and competition among all installed skills
 are different experiments. Record what was installed. A correct final answer
