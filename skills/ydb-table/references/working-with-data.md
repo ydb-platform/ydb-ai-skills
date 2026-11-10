@@ -23,7 +23,11 @@ Sources: [primary-key design](https://ydb.tech/docs/en/dev/primary-key/row-orien
 
 ## Serial columns and SQL conversion
 
-YDB v26.1 documents automatically generated integer `Serial` types. The direct conversion of a PostgreSQL `id SERIAL PRIMARY KEY` column uses a separate YQL primary-key clause:
+For a target YDB version that supports `Serial` columns, these integer types provide automatically generated values. Verify support against that version's documentation. If the target version is unknown, present the example as conditional on support rather than inferring a server version from a reference page.
+
+In migration advice, distinguish the syntax equivalent from the physical-key recommendation: a serial leading key sends new writes to the last range partition. Give this caveat alongside the direct conversion, noting that it matters for write-heavy workloads; a full key redesign needs the workload and access patterns.
+
+The direct conversion of a PostgreSQL `id SERIAL PRIMARY KEY` column uses a separate YQL primary-key clause:
 
 ```yql
 CREATE TABLE users (
@@ -35,9 +39,9 @@ CREATE TABLE users (
 
 Omitting `id` on insert requests a generated value. Only primary-key columns may have a serial type; its sequence is private to the column. Do not translate this into an inline `id Serial PRIMARY KEY`, `AUTO_INCREMENT`, or a user-created `CREATE SEQUENCE`. Check the target YDB version before promising availability.
 
-This is a direct syntax conversion, not necessarily a good physical design for heavy writes: a serial leading key can create the hot partition described above. When distribution matters, consider a client-generated random identifier or a stored hash prefix with an externally generated id. Do not assume the server-generated serial id is available to compute that prefix before insertion.
+When distribution matters, consider a client-generated random identifier or a stored hash prefix with an externally generated id. Do not assume the server-generated serial id is available to compute that prefix before insertion.
 
-Source: [Serial types, v26.1](https://ydb.tech/docs/en/yql/reference/types/serial?version=v26.1).
+Verified reference for this example: [Serial types, v26.1](https://ydb.tech/docs/en/yql/reference/types/serial?version=v26.1). Consult the documentation for the target server version when applying it.
 
 ## Terminology
 
