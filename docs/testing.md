@@ -67,6 +67,11 @@ requests and forbids it for unrelated products/tasks. General YDB tasks can use
 docs as an optional companion and are evaluated for their primary target in the
 separate selector matrix, not as forbidden docs activations.
 
+The general deadline-policy request is checked by the `ydb-core` activation
+suite and by the primary selector. It is omitted from `ydb-table` negative
+activations: reading table's related deadline guidance as additional context
+is acceptable. Audits of actual SDK query code still require `ydb-table`.
+
 The CLI quality suite checks proposed workflows and commands. It does not run
 against a database or require an installed CLI. A correct plan includes discovery
 through version/help, schema inspection where necessary, EXPLAIN before relevant

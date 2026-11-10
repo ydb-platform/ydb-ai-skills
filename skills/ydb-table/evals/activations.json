@@ -75,12 +75,6 @@
       "note": "Routing · SDK deadline/cancellation audit → ydb-table This request requires ydb-table activation."
     },
     {
-      "id": 528648311,
-      "prompt": "What is the general YDB best practice for propagating an upstream request\ndeadline and cancellation through session acquisition, retries, and RPCs?\nI want one end-to-end budget instead of resetting the timeout per attempt.\nThere is no query or application code to review; this is a cross-cutting client policy.",
-      "should_activate": false,
-      "note": "Routing · general YDB deadline propagation → ydb-core This request should not activate ydb-table."
-    },
-    {
       "id": 503872993,
       "prompt": "Find the YQL documentation for querying YT tables on Hahn; this is not about YDB.",
       "should_activate": false,
