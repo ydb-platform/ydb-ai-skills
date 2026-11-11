@@ -41,7 +41,7 @@ Router to specialist skills:
 
 | Skill | When the question is about |
 |---|---|
-| `ydb-table` | writing SQL, schema design for query patterns, execution (SDK or CLI), optimization, `EXPLAIN`, secondary indexes, parameterization, SQL-to-YQL conversion |
+| `ydb-table` | writing SQL, schema design for query patterns, execution (SDK or CLI), optimization, `EXPLAIN`, secondary indexes, parameterization, SQL-to-YQL conversion; reviewing existing YDB SDK/ORM code or configuration, including driver initialization, retries and balancing |
 | `ydb-topics` | producing/consuming YDB topics, the Kafka-compat endpoint, changefeed configuration on the producer side |
 | `ydb-coordination` | distributed locks, semaphores, leader election |
 
@@ -116,7 +116,9 @@ Auth env vars (canonical reference: https://ydb.tech/docs/en/reference/ydb-sdk/a
 
 Client-side balancer defaults, session lifecycle, `shutdownHint` / `BAD_SESSION` behaviour under rolling restart, and end-to-end deadline / cancellation budgets: [balancing](references/balancing.md) and [session lifecycle](references/session-lifecycle.md).
 
-For Go driver and session-lifecycle work, read [Go patterns](embed/go.md) when writing code and [Go audit rules](rules/go.md) when reviewing existing code. Report each matched audit finding as **rule ID — problem — why it matters — fix**, using the actual ID from the loaded rule. The ID lets the user trace the finding to its rationale.
+For Go driver and session-lifecycle work, read [Go patterns](embed/go.md) when writing code and [core's Go lifecycle audit rules](rules/go.md) when reviewing existing code. For an SDK/ORM code or configuration review, also open `ydb-table/SKILL.md` and its own matching language audit file, such as `ydb-table/rules/go.md`. Resolve each path from its owning skill's directory. Core's `rules/go.md` contains lifecycle checks; table's same-named file contains additional SDK/query audit rules. Reading one does not cover the other. If table is unavailable, report that part of the audit as unavailable rather than concluding that no table rule applies.
+
+Report each matched audit finding as **rule ID — problem — why it matters — fix**, using the actual ID from the loaded rule. The ID lets the user trace the finding to its rationale. General client-policy advice without an existing-code review still uses core's references; it does not require table's audit rules.
 
 ## local-deployment
 

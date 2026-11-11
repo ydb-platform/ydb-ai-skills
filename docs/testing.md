@@ -28,6 +28,13 @@ Sharing the case files does not make these environments identical. Compare
 results only with the model, judge, context, case set, and runtime settings
 recorded.
 
+The public installer normally installs `ydb-core` alongside `ydb-table`.
+Native checks of that installation must include both packages from the same
+source revision, while keeping `ydb-table` as the activation target. Reading
+only core must not count as table activation. Testing table alone is a separate
+isolation experiment corresponding to installation with `--no-core`; record it
+as such rather than treating it as the default installation.
+
 ## Canonical cases and the Promptfoo adapter
 
 Edit canonical JSON directly. [`tests/adapters/read-native-evals.cjs`](../tests/adapters/read-native-evals.cjs)

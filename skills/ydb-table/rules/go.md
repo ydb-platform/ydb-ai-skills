@@ -124,7 +124,7 @@ YDB supports two transaction styles. *Interactive* — the developer writes `beg
 **What to look for**:
 
 - *Interactive*: `s.BeginTransaction(ctx, ...)` or `s.Begin(ctx, ...)` returning a `tx` handle, followed by `tx.Exec(...)` / `tx.Query(...)` (Query Service) or `tx.Execute(...)` (Table Service).
-- *Non-interactive*: `db.Query().DoTx(...)` (or `db.Table().DoTx(...)`) on a driver opened without `ydb.WithLazyTx(true)`.
+- *Non-interactive Query Service*: `db.Query().DoTx(...)` on a driver opened without `ydb.WithLazyTx(true)` and without a per-call `query.WithLazyTx(true)` override. These options configure Query Service; do not apply them to `db.Table().DoTx(...)`.
 
 **Problem**: the explicit begin is a standalone RPC that does no work — it just opens the transaction. Fusing it into the first query's RPC removes one round-trip per transaction. On a high-frequency OLTP path that's a measurable share of total latency and load.
 
@@ -133,7 +133,9 @@ YDB supports two transaction styles. *Interactive* — the developer writes `beg
 - *Interactive*: drop the standalone `s.BeginTransaction(...)` and let the begin ride on the first query.
   - Table Service: the first call is `tx, result, err := s.Execute(ctx, table.TxControl(table.BeginTx(table.WithSerializableReadWrite())), firstQuery, params)` — `txControl` is the positional second argument; the returned `tx` is then used for subsequent `tx.Execute(...)` calls within the transaction (single-shot autocommit also exists: add `table.CommitTx()` to the same `TxControl` if the transaction has just one statement).
   - Query Service: `s.Query(ctx, firstQuery, query.WithTxControl(tx.NewControl(tx.BeginTx(tx.WithSerializableReadWrite()))), query.WithParameters(...))`.
-- *Non-interactive*: open the driver with `ydb.WithLazyTx(true)` (or pass `query.WithLazyTx(true)` as a per-call `DoTxOption`). `DoTx` then defers begin to the first query inside the closure.
+- *Non-interactive Query Service*: open the driver with `ydb.WithLazyTx(true)` (or pass `query.WithLazyTx(true)` as a per-call `DoTxOption`). The SDK still manages begin, commit and rollback; lazy begin changes when begin is sent, not transaction ownership or atomicity. Keep an already present `query.WithCommit()` on the last statement: it addresses the commit side independently.
+
+Explain the RPC cost of the proposed change. For one successful attempt with `N` statement RPCs and commit already fused into the last statement, a separate begin costs `N+1` transaction RPCs; lazy begin reduces this to `N`. A two-statement transaction therefore uses two instead of three. This saves one begin RPC per transaction, not necessarily the same fraction of end-to-end latency. Session acquisition, discovery, retries and any additional RPCs are outside this count; measure the actual hot path.
 
 **Source**: `Session.Execute(ctx, *TransactionControl, sql, *params.Params, ...)` returns `(Transaction, Result, error)` — <https://github.com/ydb-platform/ydb-go-sdk/blob/master/table/table.go>. Canonical multi-statement form: <https://github.com/ydb-platform/ydb-go-sdk/blob/master/table/example_test.go> (`Example_lazyTransaction`). `ydb.WithLazyTx` driver option: <https://github.com/ydb-platform/ydb-go-sdk/blob/master/options.go>; per-call `query.WithLazyTx`: <https://github.com/ydb-platform/ydb-go-sdk/blob/master/query/client.go>.
 

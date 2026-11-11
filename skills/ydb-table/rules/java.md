@@ -2,6 +2,15 @@
 
 Audit rules for application code talking to YDB via the Java stack. Each rule is self-contained: the surface skill must produce correct audit output on its own. Positive patterns are in `embed/java.md`, loaded directly from `SKILL.md`.
 
+Use this structure for each rule-based item in the final review:
+
+**<actual RULE-JV-NN> — <finding or preserved guardrail>**
+- **Evidence:** what the supplied code/configuration establishes and what still needs verification.
+- **Impact:** why the rule matters in this context.
+- **Recommendation:** a concrete fix, or the conditions for safely changing an existing guardrail.
+
+Replace the placeholder with the exact ID from the rule you apply. Keeping an existing guardrail or requesting missing context is not a confirmed defect; say so. Include the ID in the final review itself, and do not list unrelated rules merely to include an ID.
+
 ### RULE-JV-01: `findById` in a loop instead of `findAllById`
 
 **Severity**: Medium
