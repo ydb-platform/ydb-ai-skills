@@ -1,0 +1,89 @@
+# Grounded in JDBC 2.4.1, not in internal skill rule IDs:
+# https://github.com/ydb-platform/ydb-jdbc-driver/blob/fbcb005248b9ea7a4e57a4eb07495d45483052d6/jdbc/src/test/java/tech/ydb/jdbc/context/TxErrorsTest.java
+# https://github.com/ydb-platform/ydb-jdbc-driver/blob/fbcb005248b9ea7a4e57a4eb07495d45483052d6/jdbc/src/test/java/tech/ydb/jdbc/context/GrpcTestInterceptor.java
+# This is an outcome/knowledge-gap test. Do not relax it to match current skill coverage.
+# Like the repository's other llm-rubric cases, it grades source text; it does not run Java.
+description: Java regression · transaction state reset after UNAVAILABLE and BAD_SESSION
+
+vars:
+  user_prompt: |
+    Write a Java 21 JUnit 5 regression test for YDB JDBC 2.4.1 against a
+    standalone YDB already running in Docker. Read the JDBC URL from
+    System.getenv("YDB_JDBC_URL"); do not start Docker inside Java.
+
+    Disable autoCommit. Execute a successful query to open a transaction
+    and remember its non-null ID. Make the next query fail deterministically
+    with gRPC UNAVAILABLE. Assert that the corresponding JDBC exception
+    reaches the caller and that the driver's current transaction ID is null
+    immediately after the failure. A subsequent successful query on the SAME
+    Connection must open a transaction with a different, non-null ID.
+    After rollback, there must be no active transaction.
+
+    Repeat for BAD_SESSION. Cover both Query Service and Table Service:
+    exactly four JUnit invocations (two failure kinds times two services).
+    Do not reconnect, rollback, commit, or change autoCommit between the
+    injected failure and the assertion that the old transaction was cleared.
+    Do not mock JDBC methods, throw an exception from a test callback instead
+    of exercising the driver, or use sleep/random network failures.
+
+    A ready-made public test helper is available on the test classpath:
+      tech.ydb.jdbc.context.GrpcTestInterceptor
+    It implements Consumer<io.grpc.ManagedChannelBuilder<?>> and
+    io.grpc.ClientInterceptor. Its public static methods are:
+      reset() -- clears pending injected errors; call before each scenario.
+      nextGrpcCall(io.grpc.Status status) -- fails the next gRPC call.
+      nextExecuteQuery(tech.ydb.core.StatusCode... codes) -- replaces the
+        status of the next query; supports both Query and Table Service.
+    Use io.grpc.Status.UNAVAILABLE and tech.ydb.core.StatusCode.BAD_SESSION.
+    Configure the helper on the JDBC connection yourself. Do not reimplement it.
+
+    Dependencies: tech.ydb.jdbc:ydb-jdbc-driver:2.4.1 and
+    org.junit.jupiter:junit-jupiter:5.11.4, including parameterized tests.
+    Return only complete source for public class RegressionTest in package
+    bench, with imports and any helper methods inside the class. No reflection,
+    assumptions, disabled tests, file/process access, or System.setProperty.
+    JDBC unwrap is allowed. You may use SELECT 1 for the successful queries.
+
+assert:
+  - type: llm-rubric
+    value: |
+      Evaluate the submitted test source against the actual JDBC 2.4.1 API
+      and the user contract. All requirements below are mandatory. Return
+      FAIL if any is absent or incorrect. Do not require skill rule IDs,
+      citations, exact method names for the test methods, or exact error text.
+
+      1. Provides a complete, plausibly compilable Java/JUnit test class with
+         exactly four invocations covering UNAVAILABLE/BAD_SESSION crossed
+         with Query Service/Table Service. A boolean/enum in a method name
+         or branching between identical SQL strings is not service selection:
+         connection configuration must set useQueryService=true and false.
+      2. Actually installs GrpcTestInterceptor on the JDBC connection, e.g.
+         via the channelInitializer connection property and the helper's
+         fully qualified class name. Constructing an unused interceptor or
+         only calling its static injection methods is insufficient. Resets
+         its pending errors before each scenario.
+      3. Uses one Connection per scenario with autoCommit=false. A successful
+         query starts the transaction BEFORE error injection. Records and
+         checks the initial transaction ID is non-null.
+      4. Uses the real transaction-ID API: unwrap(tech.ydb.jdbc.YdbConnection.class)
+         followed by getYdbTxId(), or a verified equivalent in JDBC 2.4.1.
+         YdbConnection.getTransactionId() does NOT exist and is a hard failure.
+      5. Injects the requested error through the supplied gRPC helper after
+         opening the first transaction, then asserts SQLTransientConnectionException
+         for UNAVAILABLE and SQLRecoverableException for BAD_SESSION. A broad
+         SQLException-only assertion does not establish the required mapping.
+         Exceptions must come from executing the next actual JDBC query.
+      6. Immediately after that failure, before another query or explicit
+         transaction cleanup, asserts that the current transaction ID is null.
+         Merely checking a different ID after a new query misses this regression.
+      7. Executes another successful query on the SAME Connection, checks its
+         new transaction ID is non-null AND differs from the initial ID, then
+         rolls back and checks the current transaction ID is null again.
+      8. Does not mask the defect by reconnecting, doing an intermediate
+         rollback/commit, or changing autoCommit. No fake JDBC implementation,
+         synthetic callback SQLException, sleeps, swallowed failures, reflection,
+         skipped/disabled cases, or assertions that merely check constants.
+
+      Accept equivalent JUnit parameterizations and equivalent JDBC connection
+      configuration. Do not penalize omission of a Docker setup script because
+      the task explicitly supplies an already-running standalone YDB.
