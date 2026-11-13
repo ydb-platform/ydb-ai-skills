@@ -30,10 +30,11 @@ skills/
     SKILL.md
     references/                 language-agnostic YDB-level guidance
       working-with-data.md      reads, writes, and transaction modes
-    embed/                      per-language positive SDK / driver patterns
-      <lang>.md
-    rules/                      RULE-<PREFIX>-<NN> anti-patterns
-      <lang>.md
+      embed/                    per-language positive SDK / driver patterns
+        <lang>.md
+    rules/
+      embed/                    RULE-<PREFIX>-<NN> language anti-patterns
+        <lang>.md
   ydb-topics/, ydb-coordination/  same shape as ydb-table
 docs/
   authoring.md                  full content conventions, prefix registry
@@ -42,9 +43,9 @@ docs/
 
 ## Conventions you must respect
 
-- **Content buckets do not mix.** `references/` holds language-agnostic positive guidance, `embed/` holds language-specific positive patterns, and `rules/` holds audit anti-patterns with `RULE-<PREFIX>-<NN>`, severity, signals, problem, and fix. Positive guidance has no rule IDs or severity labels.
-- **`rules/` files are self-contained.** No cross-skill links from `rules/`. The user may install one surface skill without the others; rules must still produce correct audit output. `references/` and `embed/` may link to files inside the same skill package. Do not use relative links that escape the package; refer to a companion skill by slug or link official external documentation.
-- **YDB-level files stay language-agnostic.** Top-level `references/*.md` (e.g. `working-with-data.md`) and any cross-cutting references must not mention JDBC / Hibernate / Spring / Java / Python / Go / .NET / C++ tokens. Per-language guidance goes in `embed/<lang>.md` and `rules/<lang>.md`. Verify with `grep -iE 'jdbc|hibernate|spring|java|jpa|python|golang|\.net|dotnet|csharp'` before committing.
+- **Content buckets do not mix.** `references/` holds language-agnostic positive guidance, `references/embed/` holds language-specific positive patterns, and `rules/` holds audit anti-patterns with `RULE-<PREFIX>-<NN>`, severity, signals, problem, and fix. Positive guidance has no rule IDs or severity labels.
+- **`rules/` files are self-contained.** No cross-skill links from `rules/`. The user may install one surface skill without the others; rules must still produce correct audit output. `references/` and `references/embed/` may link to files inside the same skill package. Do not use relative links that escape the package; refer to a companion skill by slug or link official external documentation.
+- **YDB-level files stay language-agnostic.** Top-level `references/*.md` (e.g. `working-with-data.md`) and any cross-cutting references must not mention JDBC / Hibernate / Spring / Java / Python / Go / .NET / C++ tokens. Per-language guidance goes in `references/embed/<lang>.md` and `rules/embed/<lang>.md`. Verify with `grep -iE 'jdbc|hibernate|spring|java|jpa|python|golang|\.net|dotnet|csharp'` before committing.
 - **Prefix registry.** New rule prefixes must be registered in the table in `docs/authoring.md` on first use. Never reuse an ID or renumber after merge. Currently allocated: `JV` (Java SDK / JDBC / Hibernate / Spring Data), `GO` (Go SDK application APIs), `CGO` (Go core driver), `CPP` (C++ SDK), and `PY` (Python SDK).
 - **Skill `description:` matches shipped content, not aspirations.** The selector triggers on what's in `description:`. If you list `ydb-go-sdk` in the triggers but the skill has no grounded Go content, the skill will fire on Go code and have nothing useful to load — worse than not firing. Update the description when content lands, not before.
 

@@ -30,7 +30,7 @@ ThrowOnError(client.RetryQuerySync(
     NYdb::NRetry::TRetryOperationSettings().Idempotent(true)));
 ```
 
-Bind values with **`TParamsBuilder`** — never concatenate into YQL. Build results **inside** the lambda; assign outers only on success (see `rules/cpp.md` RULE-CPP-02).
+Bind values with **`TParamsBuilder`** — never concatenate into YQL. Build results **inside** the lambda; assign outers only on success (see `rules/embed/cpp.md` RULE-CPP-02).
 
 ## Transactions
 

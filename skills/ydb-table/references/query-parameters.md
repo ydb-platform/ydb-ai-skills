@@ -47,6 +47,13 @@ Sources: <https://ydb.tech/docs/en/yql/reference/syntax/declare>, <https://githu
 
 For `ydb sql --param`, `--input-file`, and parameter values read from `stdin`, declare every parameter the CLI should accept even when the server is YDB 25.1.2.7 or newer. The CLI uses the declarations to match and convert its JSON, CSV, TSV, or raw input. An undeclared `--param` fails with `Query does not contain parameter`; undeclared keys in JSON input are ignored.
 
+Do not replace `DECLARE` with an invented CLI type flag such as `--param-type`. The type belongs in the query text and the value still comes from `--param` or another documented input source:
+
+```bash
+ydb sql -s 'DECLARE $id AS Uint64; SELECT value FROM items WHERE id = $id' \
+  --param '$id=42'
+```
+
 Values passed to the CLI are JSON values, not YQL literals. The declared type controls conversion:
 
 | Declared YDB type | JSON representation | Example |

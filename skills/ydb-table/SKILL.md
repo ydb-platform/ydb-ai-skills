@@ -13,7 +13,7 @@ SQL/YQL query and schema work applies regardless of the application's host langu
 
 1. **Classify the task.** Write a new query or schema, execute SQL with YDB CLI, audit existing code, convert from another SQL dialect, or read an `EXPLAIN`.
 2. **Load sources** per the table below before drafting YQL or reviewing code. A request to check existing SDK code or configuration within the supported scope is an audit. Read the matching language rules before evaluating it, even when the question is short or the API looks familiar. For other SDKs, distinguish SQL/YQL findings from SDK-specific claims; do not look for a language rule file that is not listed below. Resolve these links from this skill's directory: an audit needs `ydb-table/rules/<language>.md`. The same-named file in `ydb-core` provides additional client-policy checks and does not replace table's audit rules.
-3. **Do the work.** Report each matched audit finding as **rule ID — problem — why it matters — fix**. Use the actual `RULE-JV-NN`, `RULE-GO-NN`, `RULE-CPP-NN`, or `RULE-PY-NN` from the loaded rule; the ID lets the user trace the finding to its rationale. Check the rule's preconditions against the supplied code before assigning a finding or severity. Keep optional style improvements separate from defects and required fixes; when surrounding configuration or code is missing, state what needs verification rather than treating it as absent. Before sending an audit, check that every rule-based finding names its ID in the answer and gives a concrete correction; do not cite a rule whose preconditions are not established. C++ findings use the format in [C++ rules](rules/cpp.md).
+3. **Do the work.** Report each matched audit finding as **rule ID — problem — why it matters — fix**. Use the actual `RULE-JV-NN`, `RULE-GO-NN`, `RULE-CPP-NN`, or `RULE-PY-NN` from the loaded rule; the ID lets the user trace the finding to its rationale. Check the rule's preconditions against the supplied code before assigning a finding or severity. Keep optional style improvements separate from defects and required fixes; when surrounding configuration or code is missing, state what needs verification rather than treating it as absent. Before sending an audit, check that every rule-based finding names its ID in the answer and gives a concrete correction; do not cite a rule whose preconditions are not established. C++ findings use the format in [C++ rules](rules/embed/cpp.md).
 
 ## Load sources
 
@@ -22,14 +22,14 @@ SQL/YQL query and schema work applies regardless of the application's host langu
 | Executing or explaining SQL with YDB CLI            | [references/cli.md](references/cli.md); activate `ydb-core` separately for connection context                                       |
 | Parameter binding, CLI value encoding, `DECLARE` syntax and compatibility | [references/query-parameters.md](references/query-parameters.md)                                             |
 | Reads, writes, transaction modes, batch vs bulk     | [references/working-with-data.md](references/working-with-data.md)                                                         |
-| Writing Java application code against YDB           | [embed/java.md](embed/java.md)                                                                |
-| Auditing Java application code against YDB          | [ydb-table/rules/java.md](rules/java.md)                                                                     |
-| Writing Go application code against YDB             | [embed/go.md](embed/go.md)                                                                  |
-| Auditing Go application code against YDB            | [ydb-table/rules/go.md](rules/go.md)                                                                       |
-| Writing C++ application code against YDB            | [embed/cpp.md](embed/cpp.md)                                                                 |
-| Auditing C++ application code against YDB           | [ydb-table/rules/cpp.md](rules/cpp.md)                                                                      |
-| Writing Python FloatVector parameters                | [embed/python.md](embed/python.md)                                                              |
-| Auditing Python FloatVector parameters               | [ydb-table/rules/python.md](rules/python.md)                                                                   |
+| Writing Java application code against YDB           | [references/embed/java.md](references/embed/java.md)                                                                |
+| Auditing Java application code against YDB          | [ydb-table/rules/embed/java.md](rules/embed/java.md)                                                                     |
+| Writing Go application code against YDB             | [references/embed/go.md](references/embed/go.md)                                                                  |
+| Auditing Go application code against YDB            | [ydb-table/rules/embed/go.md](rules/embed/go.md)                                                                       |
+| Writing C++ application code against YDB            | [references/embed/cpp.md](references/embed/cpp.md)                                                                 |
+| Auditing C++ application code against YDB           | [ydb-table/rules/embed/cpp.md](rules/embed/cpp.md)                                                                      |
+| Writing Python FloatVector parameters                | [references/embed/python.md](references/embed/python.md)                                                              |
+| Auditing Python FloatVector parameters               | [ydb-table/rules/embed/python.md](rules/embed/python.md)                                                                   |
 | Schema design — primary key shape, partitioning     | [references/working-with-data.md](references/working-with-data.md); activate `ydb-core` for schema fundamentals                                                      |
 | Converting serial/auto-increment keys to YDB         | [references/working-with-data.md](references/working-with-data.md#serial-columns-and-sql-conversion) |
 | YQL syntax, built-in functions, pragmas             | <https://ydb.tech/docs/en/yql/reference/> — do not reproduce the spec from memory         |

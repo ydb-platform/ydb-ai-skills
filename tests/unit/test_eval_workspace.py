@@ -28,6 +28,13 @@ class WorkspaceTests(unittest.TestCase):
                 alias = destination / ".claude/skills" / name
                 self.assertTrue((alias / "SKILL.md").is_file())
                 self.assertTrue(alias.resolve().is_relative_to(destination.resolve()))
+            # Preserve the author's nested SDK resources in installed packages.
+            for name in ("ydb-core", "ydb-table"):
+                for relative in ("references/embed/go.md", "rules/embed/go.md"):
+                    self.assertEqual(
+                        (installed / name / relative).read_bytes(),
+                        (ROOT / "skills" / name / relative).read_bytes(),
+                    )
 
     def test_symlink_cannot_expose_files_outside_the_skill(self):
         with tempfile.TemporaryDirectory() as tmp:

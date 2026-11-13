@@ -9,19 +9,46 @@ Find and read official YDB documentation starting at https://ydb.tech/llms.txt.
 
 ## Workflow
 
-For a lookup plan or a no-network request, describe the retrieval steps without
-fetching pages. Give a usable starting URL so the user can follow the plan later:
-normally `https://ydb.tech/llms.txt`, or a known official language/version index.
-Explain how to select the requested language and product version, then which
-linked pages would need to be read. Distinguish a proposed lookup from sources
-actually retrieved; do not present an unread page as verified evidence.
-A network restriction still permits reading local skill instructions and files.
-Do not make network requests when the user prohibits them.
+1. **Choose the mode before using tools.** For a lookup plan or a no-network
+   request, provide only the steps that would be performed later. Do not fetch
+   pages. A local skill/file read is allowed. In this mode, explicitly say that
+   the plan has not been executed and product behavior remains unverified.
+   Otherwise, retrieve and read the sources as described below.
+2. **Choose language and branch before constructing a URL.** Honor the
+   requested language. Map a product line `X.Y` to branch `vX.Y`, including
+   the `v` prefix; preserve an explicitly supplied branch identifier. Default
+   an unspecified language to English and an unspecified version to `main`.
+3. **Start at the root index:** `https://ydb.tech/llms.txt`. It discovers the
+   documentation indexes. Select the branch on the language-specific index,
+   rather than adding a version selector to the root URL.
+4. **Follow the first available route, in order:**
 
-1. Identify the documentation topic, the user's language, and any requested YDB version.
-2. Use https://ydb.tech/llms.txt to discover the documentation indexes and version-selection instructions, or use a known official index for the requested language and version directly. Fetch it with an available web or HTTP tool. Use `main` when no version is requested.
-3. Search the index for the topic, then read the relevant linked pages. Prefer the Markdown URLs supplied by the index, preserve the version query parameter, and fetch only the pages needed.
-4. Answer from the pages actually read, cite them, and make version-dependent limitations explicit. If the sources do not establish a claim, say so.
+   | Availability | Next step |
+   | --- | --- |
+   | Root index is available | Follow its selected language/branch index, then the topic pages. |
+   | Root index is unavailable | Try `https://ydb.tech/docs/{lang}/llms.txt?version={branch}` directly before falling back to navigation. |
+   | Root and documentation indexes are unavailable | Use official documentation navigation or site-restricted search, preserving language and branch. |
+
+5. **Read the relevant linked pages before answering product questions.**
+   Locating an index or a promising page title is not enough. In plan mode,
+   describe this as a future prerequisite, not as a completed verification.
+   Do not guess page contents or a missing page URL from the topic name.
+6. **Report the evidence boundary.** In retrieval mode, cite only sources
+   actually read and state any access or version limitation. In plan mode,
+   provide the usable starting URL and route, and finish by distinguishing the
+   unexecuted plan from retrieved evidence. Do not answer the substantive
+   product question from memory.
+
+## Plan-only response
+
+Keep the plan concise, but include these four items explicitly:
+
+- **Start:** a usable official index URL, selected language, and selected branch.
+- **Fallback:** if the root index fails, try the selected direct documentation
+  index; if that index also fails, use official navigation or site search.
+- **Before answering:** read the relevant pages linked by the index before
+  making product claims. Merely finding their URLs does not establish content.
+- **Status:** this is an unexecuted plan; no pages have been retrieved or verified.
 
 ## Gotchas
 
@@ -34,10 +61,7 @@ Do not make network requests when the user prohibits them.
 
 This skill only locates and reads documentation; it does not require database access or credentials. Do not infer syntax or behavior from another database when the YDB sources do not cover the question.
 
-Choose the documentation branch before constructing a direct index URL. For a
-requested product line `X.Y`, use `vX.Y`; keep an explicitly supplied branch
-identifier unchanged. Use `main` only when no product version was requested.
-The direct indexes, also usable if the root index is unavailable, are:
+The direct indexes, using the branch chosen in workflow step 2, are:
 
 - English: `https://ydb.tech/docs/en/llms.txt?version={branch}`
 - Russian: `https://ydb.tech/docs/ru/llms.txt?version={branch}`

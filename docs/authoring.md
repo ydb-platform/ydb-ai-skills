@@ -33,8 +33,9 @@ Content lives in the surface skill whose API it is called on. When a method or c
 skills/ydb-core/
   SKILL.md
   references/    # OPTIONAL — language-agnostic driver/transport patterns
-  embed/         # OPTIONAL — language-specific positive patterns
-  rules/         # OPTIONAL — driver/transport anti-patterns
+    embed/       # OPTIONAL — language-specific positive patterns
+  rules/
+    embed/       # OPTIONAL — language-specific driver/transport anti-patterns
   evals/
     scenarios.json
     activations.json
@@ -69,8 +70,9 @@ of a topic that both packages cover.
 skills/ydb-<surface>/
   SKILL.md
   references/    # language-agnostic positive patterns
-  embed/         # language-specific positive SDK / driver patterns
-  rules/         # what to catch (RULE-<PREFIX>-NN anti-patterns)
+    embed/       # language-specific positive SDK / driver patterns
+  rules/
+    embed/       # language-specific RULE-<PREFIX>-NN anti-patterns
   evals/
     scenarios.json
     activations.json
@@ -78,9 +80,9 @@ skills/ydb-<surface>/
 
 Workflow inside `SKILL.md` loads **one** tree or the other based on task type (author vs audit), saving tokens when only one mode is needed. Body budget: ≤150 lines.
 
-### `references/` and `embed/` content
+### `references/` and `references/embed/` content
 
-`references/` contains language-agnostic YDB guidance. `embed/<lang>.md`
+`references/` contains language-agnostic YDB guidance. `references/embed/<lang>.md`
 contains language-specific SDK or driver patterns.
 
 - Short doc excerpt (what the feature is, with a link to upstream YDB docs).
@@ -106,7 +108,7 @@ Rules must be self-contained — a surface skill installed without `ydb-core` mu
 ### References and package boundaries
 
 Relative Markdown links must stay inside the current skill package. A
-`references/` or `embed/` file may link to another file in the same package.
+`references/` or `references/embed/` file may link to another file in the same package.
 To direct the runtime to another installed skill, name its slug in prose; for
 product facts, prefer an official external documentation URL. The repository
 validator rejects resource links that escape the package. Link important
@@ -123,11 +125,11 @@ Rule IDs have the shape `RULE-<PREFIX>-<NN>`. Prefixes are **not pre-allocated**
 
 | Prefix | Scope | First used in |
 |--------|-------|---------------|
-| JV | Java SDK / JDBC / Hibernate / Spring Data anti-patterns | skills/ydb-table/rules/java.md |
-| GO | Go SDK (`ydb-go-sdk/v3`) — driver, sessions, query/table services, retry, transactions | skills/ydb-table/rules/go.md |
-| CGO | Go SDK core driver, balancing, and session-lifecycle anti-patterns | skills/ydb-core/rules/go.md |
-| CPP | C++ SDK (`ydb-cpp-sdk`) — query/table clients, retry, transactions, parameterization | skills/ydb-table/rules/cpp.md |
-| PY | Python SDK (`ydb`) — query parameters and vector encoding | skills/ydb-table/rules/python.md |
+| JV | Java SDK / JDBC / Hibernate / Spring Data anti-patterns | skills/ydb-table/rules/embed/java.md |
+| GO | Go SDK (`ydb-go-sdk/v3`) — driver, sessions, query/table services, retry, transactions | skills/ydb-table/rules/embed/go.md |
+| CGO | Go SDK core driver, balancing, and session-lifecycle anti-patterns | skills/ydb-core/rules/embed/go.md |
+| CPP | C++ SDK (`ydb-cpp-sdk`) — query/table clients, retry, transactions, parameterization | skills/ydb-table/rules/embed/cpp.md |
+| PY | Python SDK (`ydb`) — query parameters and vector encoding | skills/ydb-table/rules/embed/python.md |
 
 ### Severity labels
 
