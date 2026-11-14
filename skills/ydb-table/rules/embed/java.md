@@ -101,7 +101,7 @@ Inspect generated SQL and measure the workload before claiming a performance ben
 
 **Problem**: the `ydb-jdbc-driver` surfaces failures through the standard `java.sql` exception hierarchy, and the two categories the JDBC contract exposes want different handling:
 
-- `SQLRecoverableException` — fully retryable. Safe to retry for any operation. Not retrying loses work that would have succeeded on retry.
+- `SQLRecoverableException` — the YDB JDBC driver reports a retryable failure; retry within the budget without an idempotency gate for the database operation. For example, `ABORTED` (including `Transaction locks invalidated`) means the transaction was aborted: restart the entire transaction. Check external side effects separately before replaying application code.
 - `SQLTransientException` — the server may have already committed before the failure surfaced. Retrying a non-idempotent statement (`INSERT`, decrement, transfer) risks double effect. Safe to retry only for idempotent operations: `UPSERT`, idempotency-key-protected writes, reads.
 
 These are the two types JDBC consumers should branch on. Driver-internal subclasses exist but should not be referenced from application code — they are not part of the published contract and can change.
@@ -112,7 +112,7 @@ Determine operation idempotency from key generation, statement semantics, and si
 
 **Fix**:
 
-Plain JDBC — classify the exception and treat transients as idempotency-gated:
+For a single autocommit statement in plain JDBC, classify the exception and treat transients as idempotency-gated:
 
 ```java
 static final int MAX_RETRIES = 15;
@@ -145,7 +145,7 @@ public void insertBatch(List<Token> batch) {
 }
 ```
 
-**Source**: `java.sql.SQLRecoverableException`, `SQLTransientException` — <https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/SQLException.html>. Example meta-annotation pattern: <https://github.com/ydb-platform/ydb-java-examples/tree/master/jdbc/ydb-token-app>.
+**Source**: `java.sql.SQLRecoverableException`, `SQLTransientException` — <https://docs.oracle.com/en/java/javase/21/docs/api/java.sql/java/sql/SQLException.html>. YDB transaction retry scope: [YDB status codes: ABORTED](https://ydb.tech/docs/en/reference/ydb-sdk/ydb-status-codes#400040-aborted). Example meta-annotation pattern: <https://github.com/ydb-platform/ydb-java-examples/tree/master/jdbc/ydb-token-app>.
 
 ### RULE-JV-07: Session retry context detached from caller cancellation or query deadline
 
