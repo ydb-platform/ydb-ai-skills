@@ -1,6 +1,47 @@
 # Working with data in YDB tables
 
-How application code reads and writes YDB tables: which transaction mode applies, how to write many rows at once, and which API to pick when. Pairs with `../ydb-core/SKILL.md#schema-basics` for the schema choices that interact with these decisions.
+How application code reads and writes YDB tables: key design, SQL conversion, transaction modes, batch writes, and API selection. The `ydb-core` companion covers general database and connection guidance.
+
+## Primary keys for row-oriented tables
+
+Rows are partitioned by primary-key ranges. A monotonically increasing leading key sends new writes to the last partition; adding more partitions alone does not distribute that stream. An externally assigned identifier is not necessarily monotonic: ask about its distribution and the access patterns before choosing a key. Use a non-monotonic leading key, such as a suitably distributed identifier or a stored hash column:
+
+```yql
+CREATE TABLE events (
+    event_hash Uint64,
+    event_id Uint64,
+    payload String,
+    PRIMARY KEY (event_hash, event_id)
+);
+```
+
+Populate `event_hash` consistently on every write, for example with `Digest::NumericHash(event_id)` in the write query. Compute the same value for keyed reads and filter by both `event_hash` and `event_id`; a read by `event_id` alone does not constrain the leading key. `PRIMARY KEY` lists declared column names, not expressions such as `Digest::NumericHash(event_id)`.
+
+For write-heavy workloads, consider `AUTO_PARTITIONING_BY_LOAD = ENABLED`, an `AUTO_PARTITIONING_MIN_PARTITIONS_COUNT` appropriate to available nodes and expected load, and an `AUTO_PARTITIONING_MAX_PARTITIONS_COUNT` that fits capacity. Ask for node count before choosing a numeric minimum; if it is unknown, omit that number from executable DDL or explicitly label it as an illustrative assumption. These options do not repair a monotonic key prefix.
+
+Sources: [primary-key design](https://ydb.tech/docs/en/dev/primary-key/row-oriented), [CREATE TABLE](https://ydb.tech/docs/en/yql/reference/syntax/create_table), [row-table partitioning](https://ydb.tech/docs/en/concepts/datamodel/table#partitioning).
+
+## Serial columns and SQL conversion
+
+For a target YDB version that supports `Serial` columns, these integer types provide automatically generated values. Verify support against that version's documentation. If the target version is unknown, present the example as conditional on support rather than inferring a server version from a reference page.
+
+In migration advice, distinguish the syntax equivalent from the physical-key recommendation: a serial leading key sends new writes to the last range partition. Give this caveat alongside the direct conversion, noting that it matters for write-heavy workloads; a full key redesign needs the workload and access patterns.
+
+The direct conversion of a PostgreSQL `id SERIAL PRIMARY KEY` column uses a separate YQL primary-key clause:
+
+```yql
+CREATE TABLE users (
+    id Serial,
+    name Utf8,
+    PRIMARY KEY (id)
+);
+```
+
+Omitting `id` on insert requests a generated value. Only primary-key columns may have a serial type; its sequence is private to the column. Do not translate this into an inline `id Serial PRIMARY KEY`, `AUTO_INCREMENT`, or a user-created `CREATE SEQUENCE`. Check the target YDB version before promising availability.
+
+When distribution matters, consider a client-generated random identifier or a stored hash prefix with an externally generated id. Do not assume the server-generated serial id is available to compute that prefix before insertion.
+
+Verified reference for this example: [Serial types, v26.1](https://ydb.tech/docs/en/yql/reference/types/serial?version=v26.1). Consult the documentation for the target server version when applying it.
 
 ## Terminology
 
@@ -23,9 +64,13 @@ The Query Service supports four modes (<https://ydb.tech/docs/en/concepts/transa
 - **`StaleRO`** — read-only, reads from any replica; may return stale data.
 - **`OnlineRO`** — read-only, reads from the leader.
 
-### Implication: application-level optimistic locking is redundant
+### Transaction boundaries and expected-version checks
 
-The Postgres / Read-Committed pattern of carrying a `version` column and emitting `UPDATE … WHERE … AND version = ?` to catch lost updates is unnecessary under `SerializableRW`: the server already detects the conflict and surfaces it as a retryable failure. The extra predicate adds work on every UPDATE and provides no additional safety — the correct response to a conflict is to retry the transaction, which the SDK retry helpers already do for `ABORTED`.
+`SerializableRW` detects conflicts for reads and writes within one database transaction. It does not detect that application-supplied state came from an earlier, completed transaction. Preserve a version predicate or equivalent atomic expected-version check for such cross-transaction state. Consider removing it only when database-dependent decisions use fresh reads within the same `SerializableRW` transaction and there is no cross-transaction expected-version contract to preserve.
+
+For a retryable transaction abort, retry the whole operation in a new transaction, with fresh reads and recomputation. A stale-version conflict instead needs rejection or reconciliation according to application semantics; do not bypass the check or replay the same stale values to force the write through. Recomputing from fresh state is appropriate only when it preserves the intended business operation.
+
+Sources: [YDB Serializable transactions](https://ydb.tech/docs/en/concepts/transactions#serializable), [Jakarta Persistence 3.1, §3.2.7.1 and §3.4.2](https://jakarta.ee/specifications/persistence/3.1/jakarta-persistence-spec-3.1.html).
 
 ### Read-only loads
 
@@ -92,4 +137,4 @@ Source: <https://ydb.tech/docs/en/dev/paging>.
 
 ## Related
 
-- [`../../ydb-core/SKILL.md#schema-basics`](../../ydb-core/SKILL.md#schema-basics) — primary-key shape and partitioning determine batch-ingest efficiency and transaction-conflict locality.
+- The separate `ydb-core` skill covers foundational database guidance, connection setup, and SDK selection.

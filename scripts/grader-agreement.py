@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Pre-validate a grader swap by re-grading existing eval outputs.
+"""Re-grade historical pre-migration matrix exports only.
+
+This utility preserves the historical partial-credit grading prompt. It rejects
+current canonical-case exports and unfamiliar grading policies before making
+model calls; it is not a grader-comparison tool for the new eval format.
 
 For each (provider, test) cell in a promptfoo eval export, sends the
 exact same rubricPrompt + user_prompt + model_output + rubric to a
@@ -42,8 +46,7 @@ import urllib.error
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-# Mirrors promptfooconfig.yaml `defaultTest.options.rubricPrompt`.
-# Kept in sync manually — if the yaml template changes, update here.
+# Historical prompt frozen for the original pre-migration matrix exports.
 RUBRIC_PROMPT_TEMPLATE = """\
 Grade whether an AI assistant's response substantively addressed a
 user's YDB question and satisfied the rubric criteria.
@@ -161,6 +164,29 @@ def parse_grader_reply(content: str) -> dict:
     }
 
 
+def validate_historical_export(eval_data: dict) -> None:
+    expected = RUBRIC_PROMPT_TEMPLATE.format(
+        user_prompt="{{ user_prompt }}", output="{{ output }}", rubric="{{ rubric }}",
+    )
+    options = ((eval_data.get("config") or {}).get("defaultTest") or {}).get("options") or {}
+    actual = options.get("rubricPrompt")
+    if not isinstance(actual, str) or actual.split() != expected.split():
+        raise ValueError(
+            "Historical-only grader comparison: this export has a different or missing "
+            "rubricPrompt. Current canonical eval exports are not supported."
+        )
+    for result in (eval_data.get("results") or {}).get("results") or []:
+        case = result.get("testCase") or {}
+        rubrics = [a for a in case.get("assert", []) if a.get("type") == "llm-rubric"]
+        if case.get("metadata", {}).get("caseId") is not None or len(rubrics) > 1 or any(
+            "threshold" in assertion or "transform" in assertion for assertion in rubrics
+        ):
+            raise ValueError(
+                "Historical-only grader comparison: canonical, multiple-criterion, "
+                "thresholded, or transformed assertions are not supported."
+            )
+
+
 def cell_records(eval_data: dict) -> list[dict]:
     """Pull regradable cells from an eval export.
 
@@ -168,6 +194,7 @@ def cell_records(eval_data: dict) -> list[dict]:
     errors or `not-contains` failures). For each remaining cell, returns
     enough to reconstruct the grader call.
     """
+    validate_historical_export(eval_data)
     out = []
     rs = (eval_data.get("results") or {}).get("results") or []
     for r in rs:
@@ -230,7 +257,11 @@ def main() -> int:
     for eid in args.eval:
         print(f"loading {eid}...", file=sys.stderr)
         data = export_eval(eid)
-        for c in cell_records(data):
+        try:
+            records = cell_records(data)
+        except ValueError as error:
+            sys.exit(f"{eid}: {error}")
+        for c in records:
             cells_by_key[(c["provider"], c["test"])] = c
     cells = list(cells_by_key.values())
     if args.limit:

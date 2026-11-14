@@ -15,6 +15,7 @@ frontmatter and the routing config.
 """
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -40,6 +41,15 @@ def parse_description(text: str) -> str:
             in_desc = True
             rest = line[len("description:"):].strip()
             if rest:
+                if rest.startswith('"'):
+                    try:
+                        rest = json.loads(rest)
+                    except json.JSONDecodeError as error:
+                        raise ValueError(f"invalid quoted description: {error}") from error
+                elif rest.startswith("'") and rest.endswith("'"):
+                    rest = rest[1:-1].replace("''", "'")
+                elif rest in {">", ">-", ">+", "|", "|-", "|+"}:
+                    rest = ""
                 desc.append(rest)
             continue
         if in_desc:

@@ -1,16 +1,23 @@
 # YDB AI Skills
 
-AI coding agent skills for [YDB](https://ydb.tech) — for writing YQL, designing schemas, and reviewing Java application code against YDB. Skills auto-trigger based on context.
+AI coding agent skills for [YDB](https://ydb.tech) — for connecting applications, writing YQL, designing schemas, reviewing application SDK code, and finding official documentation. Skills auto-trigger based on context.
 
-> **Status:** framework and scaffolding. Skill bodies are intentionally thin — content is migrated surface-by-surface, grounded in live YDB SDK source and upstream docs.
+Skill bodies are intentionally concise. Supporting references and rules are grounded in YDB SDK source and official documentation.
 
 ## What's Inside
 
 | Skill                | Scope                                                                                                                                                 |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **ydb-core**         | Entry point / router. YDB overview, auth and connection, schema basics, CLI discovery and scheme inspection. Baseline skill — auto-installed.     |
-| **ydb-table**        | Writing YQL and executing it (SDK-embedded or with `ydb sql`). Optimization, schema design for query patterns, SQL-to-YQL conversion, audit.        |
-| **ydb-docs** | Finds official documentation through `llms.txt`, with language and product-version selection. |
+| **ydb-core**         | YDB overview and comparisons, local setup, connection/auth, SDK selection, CLI namespace operations, driver balancing, sessions and shared client policy. Baseline skill — auto-installed.     |
+| **ydb-table**        | Application data access: SQL/YQL, query execution via SDK or `ydb sql`, schema design, transactions, optimization, SQL-dialect conversion and audits of data-access code/configuration.        |
+| **ydb-docs** | Finds and verifies official YDB documentation through `llms.txt`, with language/version selection and source citations; can support core/table tasks. |
+
+Choose by the part of YDB involved, not by whether the request contains code.
+Core also reviews driver/session usage; table reviews application data access,
+including its supported SDK/ORM configuration rules. A request spanning both
+can use both skills. Explicit documentation lookup is docs-primary; docs can
+also support another skill. These skills help YDB users and application
+developers. Questions unrelated to YDB are outside their scope.
 
 ## Installation
 
@@ -98,12 +105,16 @@ For agents that don't auto-trigger skills, reference the skill name explicitly i
 
 ```
 skills/                          Surface-aligned skills (universal format)
-  ydb-core/SKILL.md              Single-file router — overview, auth, schema basics, CLI discovery
-  ydb-table/                     SKILL.md + references/ + rules/
-  ydb-docs/SKILL.md               Standalone documentation lookup via llms.txt
-promptfooconfig.yaml             Compatibility matrix config — provider list, test discovery
-prompts/coding-agent.yaml        Shared system prompt for all tests
-tests/                           Test cases per skill (YAML, one per file)
+  ydb-core/                      SKILL.md + references/ + rules/ + canonical eval JSON
+  ydb-docs/                      SKILL.md + canonical eval JSON
+  ydb-table/                     SKILL.md + references/ + rules/ + canonical eval JSON
+promptfooconfig.yaml             Preloaded API compatibility matrix
+promptfooconfig.codex.yaml       Local Codex solver and judge over canonical scenarios
+promptfooconfig.agent.yaml       Claude Code runtime selection and outcome fixtures
+tests/
+  adapters/                     Read canonical evals into Promptfoo in memory
+  runtime/                      Deterministic checks and routing metadata
+  agent/                        Separate agent-runtime fixtures
 agents/grader.md                 Reference grader prompt (from anthropics/skills)
 docs/
   authoring.md                   How to write a skill — structure, conventions, review checklist
@@ -114,20 +125,54 @@ install.sh                       Universal installer
 
 ## Testing
 
-A compatibility matrix built with [promptfoo](https://www.promptfoo.dev). Each `(provider, model)` pair runs every test; the grader scores each result via `llm-rubric`. Identifies the minimum model per vendor family that still works.
+Edit response-quality cases in `skills/<skill>/evals/scenarios.json` and
+activation cases in the companion `activations.json`. These are the single
+editable source for their prompts and criteria. The files travel with the
+skill; the Promptfoo adapter reads them in memory without generating another
+suite.
 
-Quick run:
+Start with checks that make no model calls:
 
 ```bash
-export OPENROUTER_API_BASE_URL="..."
-export OPENROUTER_API_KEY="..."
-npx promptfoo@latest eval
-npx promptfoo@latest view
+npm install
+npm run validate
+npm run test:tools
+npm run test:adapters
 ```
 
-All providers route through one OpenAI-compatible endpoint. Default model set skews toward enterprise-deployed open-source (Qwen, DeepSeek, Mistral, Llama, GLM, Kimi) with one baseline per major cloud vendor (Anthropic, Google, OpenAI, xAI).
+Run one quality case with the local Codex app-server and its existing login. The judge
+uses the same Codex authentication route; no OpenRouter judge is added:
 
-Details — adding tests, adding models, reading the matrix, known gaps — in [`docs/testing.md`](docs/testing.md).
+```bash
+npm run eval:codex -- --filter-first-n 1
+
+# Optional: actual official-documentation retrieval, with network access
+npm run eval:codex:online
+
+# Separate real-Claude runtime fixtures: activation and outcome checks
+npm run eval:claude -- --filter-first-n 1
+```
+
+These commands create temporary solver and judge workspaces outside the repo,
+copy the skill resources without evals or test answers, and clean up afterward.
+They consume the selected account's model allowance. The preloaded multi-model
+API matrix remains an explicit alternative with its own API credentials and
+grading configuration.
+
+There are 67 quality scenarios and 43 activation cases. The offline Codex and
+HTTP matrix profiles run 66 quality scenarios and explicitly exclude the one
+requiring live source retrieval; the opt-in online Codex profile runs that case.
+CLI scenarios check proposed workflows and commands, without a database or CLI
+execution. These runs do not certify a live YDB integration.
+
+Compare results only with the model, judge, and runtime settings recorded.
+Each case defines its own PASS conditions: a whole-rubric assessment or a set
+of requirements that must all pass. Exact rule IDs are required only where
+the case explicitly asks for them.
+
+See [`docs/testing.md`](docs/testing.md) for runtime choices, focused runs,
+static validation, current check wiring, and result interpretation, and [`docs/schemas.md`](docs/schemas.md)
+for the JSON contract.
 
 ## Contributing
 

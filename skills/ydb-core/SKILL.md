@@ -1,6 +1,6 @@
 ---
 name: ydb-core
-description: Entry point and router for YDB-related work. Orients an LLM about YDB — what it is, what surfaces it exposes, where to read upstream docs, which specialist skill to load for surface-specific questions. Covers SDK packages, connection strings and auth, local Docker, schema fundamentals, YDB CLI command discovery and scheme inspection, common integrations (ORMs, migration tools, Terraform), client-side balancing, and session lifecycle / resilience under rolling restart. Use when the user asks a general YDB question, mentions YDB without naming a specific surface (queries, topics, coordination), needs setup help, wants to inspect a database with YDB CLI, asks about balancing policies, end-to-end deadline propagation, caller cancellation, shared retry budgets, `BAD_SESSION` / `shutdownHint` / rolling restart, or when another YDB skill needs foundational context. Also triggers on `grpcs://` / `grpc://`, `ydb --help`, `ydb version`, `ydb config profile`, `ydb config info`, `ydb discovery`, `ydb scheme`, `balancers.RandomChoice`, `balancers.PreferNearestDC`, `ydb.WithBalancer`, `session-balancer`, and "getting started with YDB" prompts.
+description: "Read this skill before answering YDB introductions and comparisons with other databases, setup, SDK/integration selection, CLI namespace operations or general client-policy questions, including advice-only requests. Covers local Docker; local/hosted connection strings, TLS, authentication, service-account credentials and environment variables; CLI discovery and safe `ydb scheme` operations; client-side balancing, session lifecycle under rolling restart, and end-to-end deadline, cancellation and retry budgets. Covers Go driver/session lifecycle reviews. For Go, C++ and Java/JDBC/ORM code/configuration reviews, also read ydb-table and its matching rules; Python audit coverage there is FloatVector parameters only. Use ydb-table for SQL/query execution and query-oriented schema design. Use specialist skills for topics or coordination, and ydb-docs for standalone documentation lookup. Questions unrelated to YDB are outside scope."
 ---
 
 # YDB Core
@@ -41,7 +41,7 @@ Router to specialist skills:
 
 | Skill | When the question is about |
 |---|---|
-| `ydb-table` | writing SQL, schema design for query patterns, execution (SDK or CLI), optimization, `EXPLAIN`, secondary indexes, parameterization, SQL-to-YQL conversion |
+| `ydb-table` | writing SQL, schema design for query patterns, execution (SDK or CLI), optimization, `EXPLAIN`, secondary indexes, parameterization, SQL-to-YQL conversion; reviewing existing Go, C++ or Java/JDBC/ORM code or configuration, including driver initialization, retries and balancing; reviewing Python FloatVector parameter handling |
 | `ydb-topics` | producing/consuming YDB topics, the Kafka-compat endpoint, changefeed configuration on the producer side |
 | `ydb-coordination` | distributed locks, semaphores, leader election |
 
@@ -69,11 +69,13 @@ Q = queries, T = topics, C = coordination.
 
 ## cli
 
-Treat the installed CLI as a versioned interface whose syntax must be discovered at runtime:
+Treat the installed CLI as a versioned interface whose syntax must be discovered at runtime. For a live CLI session, complete discovery before composing the final database command or executing it. `ydb version` does not replace `ydb --help`.
 
-1. Run `ydb version` and `ydb --help` before composing commands for a session.
-2. Run `ydb <subcommand> --help` before first use of that command tree; use `-hh` when the regular help says more options are hidden.
-3. Keep global connection options before the first subcommand. Preserve the endpoint, database, profile, certificate, and credential options supplied by the user; do not invent or silently replace them.
+For advice-only requests or when the user forbids CLI execution, describe these discovery checks as preparation steps instead of running them. Use documented syntax and the supplied connection values in proposed commands, identify version-dependent details that still need checking, and do not claim that help was inspected or an operation performed.
+
+1. For live use, run both `ydb version` and `ydb --help` before composing commands for a session.
+2. Inspect help for the full command whose options you need, such as `ydb scheme rmdir --help` before preparing a removal. Parent help such as `ydb scheme --help` discovers subcommands but does not establish their flags. Use `-hh` when the regular help says more options are hidden.
+3. Keep global connection options before the first subcommand. A named profile uses `-p <name>` or `--profile <name>` ([profile usage](https://ydb.tech/docs/en/reference/ydb-cli/profile/use)). Preserve the endpoint, database, profile, certificate, and credential values supplied by the user; do not invent or silently replace them, including with placeholders when the value is already known.
 4. Prefer a non-interactive subcommand. Running `ydb` without a subcommand opens interactive mode; do that only when the user explicitly requests an interactive session.
 5. Inspect namespace objects with `ydb scheme ls` and `ydb scheme describe`. Start at the narrowest known path; do not recursively enumerate the database root by default.
 6. Route SQL construction, validation, and execution to `ydb-table`. Route an uncovered command tree to its upstream `--help` and documentation instead of extrapolating.
@@ -112,7 +114,11 @@ Auth env vars (canonical reference: https://ydb.tech/docs/en/reference/ydb-sdk/a
 
 ## balancing
 
-Client-side balancer defaults, session lifecycle, `shutdownHint` / `BAD_SESSION` behaviour under rolling restart, and end-to-end deadline / cancellation budgets: `references/balancing.md`, `references/session-lifecycle.md`.
+Client-side balancer defaults, session lifecycle, `shutdownHint` / `BAD_SESSION` behaviour under rolling restart, and end-to-end deadline / cancellation budgets: [balancing](references/balancing.md) and [session lifecycle](references/session-lifecycle.md).
+
+For Go driver and session-lifecycle work, read [Go patterns](references/embed/go.md) when writing code and [core's Go lifecycle audit rules](rules/embed/go.md) when reviewing existing code. For a Go, C++ or Java/JDBC/ORM code/configuration review, or a Python FloatVector parameter review, also open `ydb-table/SKILL.md` and its own matching language audit file, such as `ydb-table/rules/embed/go.md`. Other language-specific SDK audits require official SDK documentation; table has no maintained rules for them. Resolve each path from its owning skill's directory. Core's `rules/embed/go.md` contains lifecycle checks; table's same-named file contains additional SDK/query audit rules. Reading one does not cover the other. If table is unavailable, report that part of the audit as unavailable rather than concluding that no table rule applies.
+
+Report each matched audit finding as **rule ID — problem — why it matters — fix**, using the actual ID from the loaded rule. The ID lets the user trace the finding to its rationale. General client-policy advice without an existing-code review still uses core's references; it does not require table's audit rules.
 
 ## local-deployment
 
@@ -150,8 +156,8 @@ Yandex Cloud Managed YDB uses the same engine and same open-source SDKs; only en
 
 Dominant LLM failure modes when generating YDB schemas:
 
-- **Monotonic first-column PK → hot partition.** Common trigger: porting PostgreSQL `SERIAL` / `AUTO_INCREMENT` or a plain timestamp. First PK column determines partition; writes to a monotonic key concentrate on one tablet = one CPU. Use a hash prefix: `PRIMARY KEY (Digest::NumericHash(id), id)` for `id Uint64`. Signature: `Digest::NumericHash(Uint64{Flags:AutoMap}) -> Uint64` (https://ydb.tech/docs/en/yql/reference/udf/list/digest).
-- **YDB has no `SERIAL` / `AUTO_INCREMENT` / `CREATE SEQUENCE`.** Don't emit those keywords in YQL — they'll fail. Use client-generated UUIDs or a hash-prefix + id-service design.
+- **Monotonic first-column PK → hot partition.** Common trigger: porting PostgreSQL `SERIAL` / `AUTO_INCREMENT` or a plain timestamp. Writes with a monotonically increasing key prefix concentrate on the last partition. Store the hash in a separate column, for example `id_hash Uint64`, and use `PRIMARY KEY (id_hash, id)`. Compute the same `id_hash = Digest::NumericHash(id)` on writes and keyed reads; `PRIMARY KEY` lists column names, not function calls. See [primary-key design](https://ydb.tech/docs/en/dev/primary-key/row-oriented) and [Digest functions](https://ydb.tech/docs/en/yql/reference/udf/list/digest).
+- **Check auto-increment support against the target YDB version.** Consult the [Serial documentation](https://ydb.tech/docs/en/yql/reference/types/serial) for that version before recommending serial columns or claiming they are unsupported. If the target version is unknown, make availability conditional rather than inferring a server version from a reference page. A monotonic generated key can still create hot partitions; do not copy PostgreSQL/MySQL sequence syntax without checking YQL support.
 - **Partitioning is automatic, defaults need tuning for write-heavy tables.** `CREATE TABLE … WITH (…)` options: `AUTO_PARTITIONING_BY_LOAD`, `AUTO_PARTITIONING_BY_SIZE`, `AUTO_PARTITIONING_MIN_PARTITIONS_COUNT`, `AUTO_PARTITIONING_MAX_PARTITIONS_COUNT`, `AUTO_PARTITIONING_PARTITION_SIZE_MB`. Min count should be ≥ node count for write-heavy workloads.
 - **Secondary indexes need the `VIEW IndexName` clause to be used on read.** Create: `ALTER TABLE t ADD INDEX idx_foo GLOBAL ON (foo)`. Read: `SELECT … FROM t VIEW idx_foo WHERE foo = …` (https://ydb.tech/docs/en/yql/reference/syntax/select/secondary_index).
 - **YDB is NOT PostgreSQL.** JOIN semantics, DML behavior, transaction isolation, and built-in function names diverge in non-obvious places. Never extrapolate.
@@ -161,3 +167,5 @@ Authoritative: https://ydb.tech/docs/en/yql/reference/syntax/create_table and ht
 ## Content rules
 
 Route to a specialist skill (`ydb-table` / `ydb-topics` / `ydb-coordination`) when the question is clearly surface-specific. State uncertainty when this file doesn't cover the question — link the relevant doc page instead of improvising.
+
+For introductory and setup answers, include a relevant official documentation link so the user can continue with the configuration or learning steps. Distinguish a link for further reading from a page you actually retrieved and checked.

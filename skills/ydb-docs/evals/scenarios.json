@@ -1,0 +1,52 @@
+{
+  "skill_name": "ydb-docs",
+  "description": "Canonical response-quality scenarios. Edit prompts and complete rubric expectations in this file; both native Skill Eval and the Promptfoo adapter read it.",
+  "evals": [
+    {
+      "id": 1037952160,
+      "name": "default-main-fallback",
+      "category": "default",
+      "prompt": "Without accessing the network, outline how you would find the current\nEnglish YDB documentation for client authentication. No product version\nwas requested. Include the normal entry point, which documentation branch\nto use, and how to proceed if the root index or documentation indexes\nwere unavailable.\n",
+      "expected_output": "An actionable English/main documentation lookup plan with fallback steps, without claiming that any pages were retrieved.",
+      "files": [],
+      "expectations": [
+        "Identify https://ydb.tech/llms.txt as the normal entry point for discovering the documentation indexes.",
+        "Select English and the main documentation branch because no product version was requested.",
+        "Describe using https://ydb.tech/docs/en/llms.txt?version=main if the root index is unavailable, then official documentation navigation or site-restricted search if indexes are unavailable. These are planned fallback steps; no actual outage or retrieval is required. Assess the conditional sequence: root unavailable -> direct English/main index; documentation indexes unavailable -> official navigation/search. Mentioning the direct index elsewhere in the plan does not imply it replaced the normal root entry point.",
+        "Explain that relevant authentication pages would need to be read before relying on them as evidence. Make no network requests and do not claim that pages were retrieved or authentication behavior verified in this scenario. URLs and unexecuted future retrieval steps are allowed in this lookup plan; they are not evidence that a network request occurred."
+      ],
+      "covers": "Documentation · Default branch and retrieval fallback"
+    },
+    {
+      "id": 2133047914,
+      "name": "lookup-offline",
+      "category": "lookup",
+      "prompt": "Without accessing the network, explain how you would find the official\nRussian YDB 26.1 documentation for transactions. Do not answer the\ntransaction question from memory.\n",
+      "expected_output": "An actionable offline lookup plan with a concrete official starting URL, Russian documentation, and the requested YDB 26.1 branch; transaction behavior remains unverified.",
+      "files": [],
+      "expectations": [
+        "Provide a concrete official starting URL: https://ydb.tech/llms.txt or the Russian documentation index https://ydb.tech/docs/ru/llms.txt?version=v26.1. A generic reference to the official docs without a usable URL is insufficient.",
+        "Select Russian documentation and the requested YDB 26.1 product branch rather than main. If constructing a version query parameter, use version=v26.1; describing the branch as YDB 26.1 in prose is also valid. The root index https://ydb.tech/llms.txt and language indexes https://ydb.tech/docs/{lang}/llms.txt?version={branch} are known official lookup entry points for this scenario. Evaluate the selected language and branch here; do not reject these stated entry points based on a prior assumption that llms.txt is unsupported, or require live URL verification in a plan-only task.",
+        "Explain that the plan follows the index links to open and read the relevant transaction pages before relying on their content for an answer; stopping at the index is insufficient. Describing opening or inspecting the linked page and its relevant content satisfies this reading step. No verbatim pledge about a future answer is required. A disclaimer alone without a page-reading step is insufficient.",
+        "Make no network requests. Reading local files or loading locally installed skill instructions is allowed. This scenario asks for a future lookup plan without executing it. Providing official URLs, naming an index, or describing later retrieval is allowed and is not a network request. Do not require a local documentation mirror. If an action trace exists, assess actual tool calls separately from the proposed plan.",
+        "Do not claim that transaction behavior was verified or give an unsupported answer about it from memory."
+      ],
+      "covers": "Documentation · Offline lookup plan preserves language and version"
+    },
+    {
+      "id": 1679514035,
+      "name": "verify-source-chain",
+      "category": "verify",
+      "prompt": "Verify from the official YDB documentation whether SerializableRW\ntransaction semantics are documented. Find and read the relevant page,\nthen report what it establishes and cite the evidence. Do not treat an\nindex entry as proof. If the sources cannot be retrieved or do not establish\nthe claim, report that you could not verify it.\n",
+      "expected_output": "A conclusion grounded in a relevant official page actually retrieved and cited, or an honest report that verification was blocked by retrieval failure or insufficient evidence.",
+      "files": [],
+      "expectations": [
+        "Start an actual documentation lookup through https://ydb.tech/llms.txt, an official documentation index, or a known relevant official page. Locate a relevant transaction page when the sources are reachable. A tool-demonstrated access failure that prevents discovery is a valid blocked outcome; do not invent a page URL. An index entry alone is not evidence of transaction behavior.",
+        "Make real retrieval attempts with the available tools, rather than merely describing a plan. If an entry point is unavailable, try an appropriate fallback. When tool results demonstrate a shared retrieval failure, such as DNS or connectivity failure affecting the official entry point and fallback, explicitly report that verification was blocked; a further request to a guessed transaction URL is not required. If a relevant page is reachable, read it before claiming successful verification.",
+        "Support any claimed transaction semantics with a citation to the specific official page actually read and a matching explanation of its evidence. Do not invent a citation or cite llms.txt as behavioral evidence. If verification was blocked, do not fabricate a verified conclusion.",
+        "Keep the conclusion within what the retrieved evidence establishes. If retrieval fails or the evidence does not establish the claim, say it remains unverified. No uncertainty disclaimer is required for a claim that was actually verified."
+      ],
+      "covers": "Documentation · Verify claims against a relevant page, not the index"
+    }
+  ]
+}

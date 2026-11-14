@@ -1,6 +1,15 @@
 # Java SDK / JDBC / Hibernate / Spring Data — anti-patterns
 
-Audit rules for application code talking to YDB via the Java stack. Each rule is self-contained: the surface skill must produce correct audit output on its own. For positive patterns, see [`../../references/embed/java.md`](../../references/embed/java.md).
+Audit rules for application code talking to YDB via the Java stack. Each rule is self-contained: the surface skill must produce correct audit output on its own. Positive patterns are in `references/embed/java.md`, loaded directly from `SKILL.md`.
+
+Use this structure for each rule-based item in the final review:
+
+**<actual RULE-JV-NN> — <finding or preserved guardrail>**
+- **Evidence:** what the supplied code/configuration establishes and what still needs verification.
+- **Impact:** why the rule matters in this context.
+- **Recommendation:** a concrete fix, or the conditions for safely changing an existing guardrail.
+
+Replace the placeholder with the exact ID from the rule you apply. Keeping an existing guardrail or requesting missing context is not a confirmed defect; say so. Include the ID in the final review itself, and do not list unrelated rules merely to include an ID.
 
 ### RULE-JV-01: `findById` in a loop instead of `findAllById`
 
@@ -22,43 +31,31 @@ List<Token> tokens = repository.findAllById(ids);
 
 **Severity**: High
 
-**What to look for**: `application.properties` / `application.yml` files without `spring.jpa.properties.hibernate.jdbc.batch_size`, or Hibernate `persistence.xml` / `hibernate.cfg.xml` without `hibernate.jdbc.batch_size`. Also missing `hibernate.order_inserts` / `hibernate.order_updates`.
+**What to look for**: bulk writes without a positive `hibernate.jdbc.batch_size` (Spring Boot: `spring.jpa.properties.hibernate.jdbc.batch_size`).
 
-**Problem**: Hibernate's default JDBC batch size is 1 — every `INSERT` / `UPDATE` / `DELETE` is a separate JDBC statement, a separate network round trip from the application, and a separate query plan on the server. On YDB this hurts in two places at once: the network/RPC layer carries one frame per statement, and the server-side query layer resolves the tablet map and rebuilds the plan per statement. Rows are sharded across tablets across nodes, so there's no single locality the server can use to amortize.
+**Problem**: JDBC batching is disabled by default. A positive batch size enables grouping; `hibernate.order_inserts` and `hibernate.order_updates` can improve grouping but are not prerequisites.
 
-JDBC batching folds N statements into one prepared-statement batch sent in one round trip. Plan resolution amortizes over the batch; only the per-tablet writes still scale with N, and the server dispatches them to the owning tablets in parallel. Batches form only when **both** `batch_size` and the ordering flags are set — without `order_inserts` / `order_updates`, the session can't group like statements together and the batch_size setting silently does nothing.
-
-**Fix**:
+**Fix**: configure and measure a suitable batch size, for example:
 
 ```properties
 spring.jpa.properties.hibernate.jdbc.batch_size=1000
-spring.jpa.properties.hibernate.order_inserts=true
-spring.jpa.properties.hibernate.order_updates=true
 ```
 
-The upstream `ydb-token-app` example (`ydb-java-examples/jdbc/ydb-token-app/src/main/resources/application.properties`) uses `batch_size=1000`.
+Consider the ordering options and benchmark their effect. Check identifier generation: Hibernate disables insert batching for identity-generated identifiers.
 
-**Source**: Hibernate user guide — JDBC batching configuration. <https://docs.hibernate.org/orm/6.6/userguide/html_single/#batch>. YDB JDBC driver examples: <https://github.com/ydb-platform/ydb-jdbc-driver>.
+**Source**: <https://docs.hibernate.org/orm/6.6/userguide/html_single/#batch>.
 
-### RULE-JV-03: Spring `save()` in a loop
+### RULE-JV-03: Per-entity saves without a shared transaction
 
 **Severity**: High
 
-**What to look for**: `repository.save(` (or `entityManager.persist(`) inside `for` / `while` / `forEach` / `stream` blocks.
+**What to look for**: repeated repository `save()` calls without a surrounding transaction, or flushing after every entity. A loop inside one transaction with batching configured is not enough to establish this finding.
 
-**Problem**: per-entity `save()` (or `entityManager.persist()`) defeats JDBC batching even when `hibernate.jdbc.batch_size` is set — the session flushes per call, so each save becomes its own JDBC statement, its own round trip to YDB, and its own server-side query plan. On YDB the cost compounds with RULE-JV-02: the per-statement plan/route overhead can't be amortized, and the writes can't be dispatched to their owning tablets in parallel because they arrive one at a time. `saveAll(batch)` queues all entities for one session flush, so Hibernate emits one batched JDBC statement and the server fans out writes to the owning tablets internally.
+**Problem**: separate transactions or per-entity flushes prevent useful grouping. `saveAll()` itself loops over `save()`; replacing the loop alone does not create one SQL statement or fix batching inside an existing transaction.
 
-**Fix**:
+**Fix**: group writes in one transaction with batching enabled. `saveAll(batch)` is a convenient transactional wrapper. For large imports, `flush()`/`clear()` can bound persistence-context memory, but neither commits the transaction. Chunking with flush/clear inside one outer `@Transactional` does not bound total transaction size. Separate committed transactions per chunk require explicit transaction boundaries and are appropriate only when partial completion is acceptable.
 
-```java
-List<Token> batch = new ArrayList<>();
-for (long id = firstId; id < lastId; id++) {
-    batch.add(new Token("user_" + id));
-}
-repository.saveAll(batch);
-```
-
-**Source**: Spring Data JPA — `CrudRepository#saveAll(Iterable<S>)`. <https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/CrudRepository.html>.
+**Source**: <https://github.com/spring-projects/spring-data-jpa/blob/main/spring-data-jpa/src/main/java/org/springframework/data/jpa/repository/support/SimpleJpaRepository.java>; <https://docs.hibernate.org/orm/6.6/userguide/html_single/#batch>.
 
 ### RULE-JV-04: Spring `delete()` / `deleteAllById()` for bulk paths
 
@@ -78,32 +75,29 @@ JavaDoc: "Deletes the entities identified by the given ids using a single query.
 
 **Source**: Spring Data JPA — `JpaRepository#deleteAllByIdInBatch(Iterable<ID>)`. <https://docs.spring.io/spring-data/jpa/docs/current/api/org/springframework/data/jpa/repository/JpaRepository.html>.
 
-### RULE-JV-05: JPA `@Version` (optimistic locking) over YDB
+### RULE-JV-05: Removing JPA `@Version` without checking transaction boundaries
 
 **Severity**: High
 
-**What to look for**: `@Version` annotations on JPA entity fields.
+**What to look for**: proposals to remove `@Version` because YDB is serializable, especially when `merge()` or request payloads can carry state read in an earlier transaction. An entity declaration or frequent UPDATE traffic alone does not establish a defect.
 
-**Problem**: YDB Query Service runs `SerializableRW` by default — conflicting transactions are detected by the server and surface as a retryable `ABORTED`. `@Version` adds `WHERE … AND version = ?` to every `UPDATE`. The predicate is on a non-key column and adds work to every UPDATE; on YDB it provides no additional safety because server-side serializability under SerializableRW already prevents lost updates.
+**Problem**: YDB's `SerializableRW` isolation protects reads and writes within a database transaction; it does not detect that application-supplied state was derived from an earlier, completed transaction. JPA version checking can reject a stale detached entity at merge, flush, or commit. Removing it can allow a later transaction to overwrite an intervening update even when the database transactions execute serially.
 
-**Fix**: remove `@Version` from the entity. Let conflicts surface from the server and handle them via the retry classification in RULE-JV-06.
+**Fix**: preserve `@Version` while inspecting the actual isolation level, read/modify/write boundaries, detached entities, and any client-visible expected-version contract.
 
-```java
-@Entity
-public class Token {
-    @Id private Long id;
-    private String payload;
-    // no @Version field
-}
-```
+- Consider removal only when every database-dependent decision uses fresh reads inside the same `SerializableRW` transaction and the application needs no version check spanning transactions. Otherwise retain version checking or an equivalent atomic expected-version check.
+- For a retryable YDB transaction abort such as `ABORTED`, retry the whole transaction, including reads and recomputation, with bounded backoff. After a Hibernate failure, roll back and start a new transaction with a fresh persistence context; do not retry only the failed UPDATE or flush in the failed context. Keep external effects safe from duplication and classify failures with an uncertain commit outcome separately.
+- A stale-version conflict needs rejection or reconciliation according to application semantics. Do not bypass the check or repeatedly merge the same stale state. A fresh read and recomputation is an alternative only when that preserves the intended business operation.
 
-**Source**: YDB transaction modes — <https://ydb.tech/docs/en/concepts/transactions>. JPA `@Version` semantics — <https://jakarta.ee/specifications/persistence/3.1/jakarta-persistence-spec-3.1.html#a2059>.
+Inspect generated SQL and measure the workload before claiming a performance benefit from removal; the annotation alone does not establish a full scan or a material bottleneck.
+
+**Source**: [YDB transaction modes](https://ydb.tech/docs/en/concepts/transactions#serializable); [YDB status codes — ABORTED and UNDETERMINED](https://ydb.tech/docs/en/reference/ydb-sdk/ydb-status-codes); [Jakarta Persistence 3.1, §3.2.7.1 and §3.4.2](https://jakarta.ee/specifications/persistence/3.1/jakarta-persistence-spec-3.1.html); [Hibernate ORM 6.6, optimistic locking and §6.16 exception handling](https://docs.hibernate.org/orm/6.6/userguide/html_single/#locking-optimistic).
 
 ### RULE-JV-06: Ignoring retryable JDBC exceptions
 
 **Severity**: Critical
 
-**What to look for**: `catch (SQLException …)` blocks that log and continue, or that retry unconditionally without inspecting the subtype. Absence of any retry classification around transactional methods that talk to YDB.
+**What to look for**: `catch (SQLException …)` blocks that log and continue, or that retry unconditionally without inspecting the subtype. Missing retry handling is a finding when the relevant call path/policy is supplied or its absence is stated. For an isolated method fragment, request verification of outer retry configuration rather than assume it is absent.
 
 **Problem**: the `ydb-jdbc-driver` surfaces failures through the standard `java.sql` exception hierarchy, and the two categories the JDBC contract exposes want different handling:
 
@@ -113,6 +107,8 @@ public class Token {
 These are the two types JDBC consumers should branch on. Driver-internal subclasses exist but should not be referenced from application code — they are not part of the published contract and can change.
 
 Catching the supertype `SQLException` (or `Exception`) and retrying both categories the same way violates the contract in one direction or the other.
+
+Determine operation idempotency from key generation, statement semantics, and side effects. `repository.save()`, newly constructed entities, or a method name alone establish neither idempotency nor non-idempotency; a caller-supplied ID alone is also insufficient. If this context is missing, explain both retry policies conditionally.
 
 **Fix**:
 

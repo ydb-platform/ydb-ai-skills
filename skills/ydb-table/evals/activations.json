@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "skill_name": "ydb-table",
+  "cases": [
+    {
+      "id": 1943444,
+      "prompt": "I've never used YDB before. Can you give me a 3-minute intro —\nwhat it is, what problems it solves, and how it differs from\nPostgreSQL?",
+      "should_activate": false,
+      "note": "Routing · Onboarding question → ydb-core This request should not activate ydb-table."
+    },
+    {
+      "id": 405013215,
+      "prompt": "I need to connect to a hosted YDB cluster from a Go service.\nWhat connection string format does YDB use and which env vars\ndo I set for service-account auth?",
+      "should_activate": false,
+      "note": "Routing · Setup / connection question → ydb-core This request should not activate ydb-table."
+    },
+    {
+      "id": 709902074,
+      "prompt": "Write a YQL query for YDB to paginate a `users` table by\n`created_at` (Timestamp) and `id` (Uint64), 50 rows per page.",
+      "should_activate": true,
+      "note": "Routing · YQL writing → ydb-table This request requires ydb-table activation."
+    },
+    {
+      "id": 577997682,
+      "prompt": "Design a primary key for an IoT events table in YDB. Devices\nemit telemetry every second; we'll have ~50M rows/day and\nquery mostly by device_id + recent time range.",
+      "should_activate": true,
+      "note": "Routing · Schema / primary-key design → ydb-table This request requires ydb-table activation."
+    },
+    {
+      "id": 694709353,
+      "prompt": "Review this Spring Data JPA code that writes events to YDB.\nIs there anything wrong with the bulk-write pattern?\n\n```java\n@Transactional\npublic void saveAll(List<Event> events) {\n    for (Event e : events) {\n        repository.save(e);\n    }\n}\n```",
+      "should_activate": true,
+      "note": "Routing · Java/Spring/Hibernate audit → ydb-table This request requires ydb-table activation."
+    },
+    {
+      "id": 1565543388,
+      "prompt": "I'm porting this PostgreSQL table to YDB. The `id SERIAL PRIMARY KEY`\ncolumn is the main issue — what's the YDB equivalent and how do\nI keep IDs unique?\n\n```sql\nCREATE TABLE orders (\n    id SERIAL PRIMARY KEY,\n    customer_id BIGINT NOT NULL,\n    created_at TIMESTAMP NOT NULL DEFAULT NOW()\n);\n```",
+      "should_activate": true,
+      "note": "Routing · PostgreSQL → YDB conversion → ydb-table This request requires ydb-table activation."
+    },
+    {
+      "id": 1157819430,
+      "prompt": "How do I write a PostgreSQL trigger that fires on UPDATE and\nlogs the changed row to a separate audit table?",
+      "should_activate": false,
+      "note": "Routing · Unrelated PostgreSQL question → none This request should not activate ydb-table."
+    },
+    {
+      "id": 1381113715,
+      "prompt": "Review this Go SDK code that runs an OLTP transfer through YDB.\nAnything wrong with the retry / transaction shape?\n\n```go\nerr := db.Query().DoTx(ctx, func(ctx context.Context, tx query.TxActor) error {\n    _, err := tx.Exec(ctx,\n        \"UPDATE accounts SET balance = balance - $amt WHERE id = $from\",\n        query.WithParameters(ydb.ParamsBuilder().\n            Param(\"$from\").Uint64(fromID).\n            Param(\"$amt\").Int64(amount).Build()),\n    )\n    if err != nil { return err }\n    return tx.CommitTx(ctx)\n}, query.WithIdempotent())\n```",
+      "should_activate": true,
+      "note": "Routing · Go ydb-go-sdk/v3 audit → ydb-table This request requires ydb-table activation."
+    },
+    {
+      "id": 1373048237,
+      "prompt": "Please audit this C++ code that uses `ydb-cpp-sdk` and\n`RetryQuerySync`. Are there YDB anti-patterns?\n\n```cpp\nclient.RetryQuerySync([](NYdb::NQuery::TSession session) {\n    return session.ExecuteQuery(\"SELECT 1\",\n        NYdb::NQuery::TTxControl::BeginTx(\n            NYdb::NQuery::TTxSettings::OnlineRO()).CommitTx()\n    ).GetValueSync();\n});\n```",
+      "should_activate": true,
+      "note": "Routing · C++ RetryQuerySync audit routes to ydb-table This request requires ydb-table activation."
+    },
+    {
+      "id": 110492441,
+      "prompt": "In YDB's YQL, should I write `DECLARE $id AS \"Uint64\";`, or can I omit\nthe declaration when the SDK sends a typed parameter?",
+      "should_activate": true,
+      "note": "Routing · DECLARE syntax → ydb-table This request requires ydb-table activation."
+    },
+    {
+      "id": 108320976,
+      "prompt": "Build a parameterized `ydb sql` command that selects one item by its\nUint64 primary key, validate it with `--explain`, and then run it.",
+      "should_activate": true,
+      "note": "Routing · ydb sql query execution → ydb-table This request requires ydb-table activation."
+    },
+    {
+      "id": 2044872961,
+      "prompt": "Audit this YDB Go SDK handler. Does the caller's cancellation and\nrequest deadline reach session acquisition, retries, and the query RPC?\nThe complete function to review is below.\n\n```go\nfunc loadUser(requestCtx context.Context, db *ydb.Driver, id uint64) error {\n    return db.Query().Do(context.Background(), func(attemptCtx context.Context, s query.Session) error {\n        res, err := s.Query(attemptCtx,\n            `SELECT name FROM users WHERE id = $id`,\n            query.WithParameters(ydb.ParamsBuilder().Param(\"$id\").Uint64(id).Build()),\n        )\n        if err != nil { return err }\n        return res.Close(attemptCtx)\n    }, query.WithIdempotent())\n}\n```",
+      "should_activate": true,
+      "note": "Routing · SDK deadline/cancellation audit → ydb-table This request requires ydb-table activation."
+    },
+    {
+      "id": 503872993,
+      "prompt": "Find the YQL documentation for querying YT tables on Hahn; this is not about YDB.",
+      "should_activate": false,
+      "note": "Routing · 17-yql-yt-none This request should not activate ydb-table."
+    },
+    {
+      "id": 1290417410,
+      "prompt": "I want a local single-node YDB on my laptop and a connection string\nfor a Python smoke test. Which Docker image and ports should I use?",
+      "should_activate": false,
+      "note": "Routing · Local YDB Docker setup → ydb-core This request should not activate ydb-table."
+    },
+    {
+      "id": 947204090,
+      "prompt": "In PostgreSQL, how can I speed up LIMIT/OFFSET pagination for an\nadmin page without changing databases?",
+      "should_activate": false,
+      "note": "Routing · PostgreSQL-only pagination → none This request should not activate ydb-table."
+    },
+    {
+      "id": 1713661359,
+      "prompt": "Review this Go HTTP client retry loop. It retries 503 responses with\nexponential backoff and does not use any database SDK.",
+      "should_activate": false,
+      "note": "Routing · Generic Go HTTP retries → none This request should not activate ydb-table."
+    },
+    {
+      "id": 2052011815,
+      "prompt": "How do I bind a Kubernetes ServiceAccount to a Role so a pod can list\nConfigMaps in its namespace? This is unrelated to any database.",
+      "should_activate": false,
+      "note": "Routing · Kubernetes service account → none This request should not activate ydb-table."
+    },
+    {
+      "id": 1825452386,
+      "prompt": "Design a ClickHouse PARTITION BY and ORDER BY expression for an events\ntable queried by tenant and month. We do not use YDB here.",
+      "should_activate": false,
+      "note": "Routing · ClickHouse partition design → none This request should not activate ydb-table."
+    },
+    {
+      "id": 1167974717,
+      "prompt": "Use the official YDB llms.txt index to find the current client\nauthentication documentation in English.",
+      "should_activate": false,
+      "note": "Routing · Direct YDB documentation index lookup → ydb-docs This request should not activate ydb-table."
+    },
+    {
+      "id": 1729618281,
+      "prompt": "Locate the English YDB 25.3 reference for configuring service-account\nauthentication and preserve the requested documentation version.",
+      "should_activate": false,
+      "note": "Routing · Versioned English YDB reference → ydb-docs This request should not activate ydb-table."
+    }
+  ]
+}

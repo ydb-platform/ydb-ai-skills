@@ -92,19 +92,28 @@ Audit rules for application code talking to YDB through the Go SDK. Each rule is
 
 **Fix**: bind values through `ydb.ParamsBuilder().Param("$name").<Type>(value).Build()` and pass them via `query.WithParameters(...)` (or `table.NewQueryParameters(...)` for Table Service).
 
-**Source**: `ydb-platform/ydb-go-sdk` — `ParamsBuilder` in <https://github.com/ydb-platform/ydb-go-sdk/blob/master/params_builder.go>; `query.WithParameters` in <https://github.com/ydb-platform/ydb-go-sdk/blob/master/query/execute_options.go>. YQL parameters reference: <https://ydb.tech/docs/en/yql/reference/syntax/declare>.
+Show the actual bindings when proposing a corrected query, and preserve its predicates. For a `Text` parameter used as `name LIKE $namePrefix`, keep the trailing wildcard in the bound value:
 
-### RULE-GO-08: `PreferLocalDC` / `PreferNearestDC` balancer in production
+```go
+query.WithParameters(ydb.ParamsBuilder().
+    Param("$namePrefix").Text(namePrefix + "%").Build())
+```
+
+Bind every other caller value too, including numeric filters. Choose the YQL parameter type from the schema and the Go value from the builder's method signature: for example, `.Int32` takes `int32`, not Go `int`. Check range before a narrowing conversion; do not guess the column type. Appending `%` to a bound string does not interpolate SQL text. If the intended prefix is literal rather than a LIKE pattern, handle wildcard characters in the input separately.
+
+**Source**: `ydb-platform/ydb-go-sdk` — `ParamsBuilder` in <https://github.com/ydb-platform/ydb-go-sdk/blob/master/params_builder.go>; typed methods in <https://github.com/ydb-platform/ydb-go-sdk/blob/987aa9c180ff6622e4249ec714b926d93d46230a/internal/params/parameters.go>; `query.WithParameters` in <https://github.com/ydb-platform/ydb-go-sdk/blob/master/query/execute_options.go>. YQL parameters reference: <https://ydb.tech/docs/en/yql/reference/syntax/declare>.
+
+### RULE-GO-08: Locality-restricted balancing without a capacity and failover plan
 
 **Severity**: High
 
-**What to look for**: `ydb.WithBalancer(balancers.PreferLocalDC(...))` or `ydb.WithBalancer(balancers.PreferNearestDC(...))` (the rename — `PreferLocalDC` is marked `// Deprecated`, but `PreferNearestDC` has the same effect) in driver construction.
+**What to look for**: `ydb.WithBalancer(balancers.PreferLocalDC(...))` or `ydb.WithBalancer(balancers.PreferNearestDC(...))` in driver construction. Check application placement, discovery's location metadata, capacity in the selected location, and behavior during maintenance or location failure. The option alone is not proof of a defect; when these facts are missing, state the risk and what must be verified.
 
-**Problem**: prefer-DC balancers concentrate all client traffic on nodes in the chosen "local" / "nearest" datacenter, turning the cluster's other DCs into idle hot-standbys and the chosen DC into a saturation bottleneck. Cross-DC latency savings on individual requests are dwarfed by the throughput cliff once the chosen DC's nodes saturate.
+**Problem**: `PreferNearestDC` uses only endpoints in the location selected as nearest by discovery. If application replicas share that location, their load can concentrate on its nodes while capacity elsewhere is unused by those clients. The policy does not provide cross-location fallback when those endpoints become unavailable. Whether locality improves latency depends on the workload and topology; do not promise either a latency improvement or a throughput regression from this initialization alone. Session queries remain attached to the session's node; the policy does not rebalance each query within an existing session.
 
-**Fix**: drop the `WithBalancer(...)` option (or pass `balancers.RandomChoice()` explicitly — that's what `balancers.Default()` returns). `RandomChoice` picks an endpoint at random per request and spreads load evenly across every available node in the cluster.
+**Fix**: use the Go default (`balancers.Default()` returns `balancers.RandomChoice()`) as the baseline when locality is not required: drop `WithBalancer(...)` or pass `RandomChoice()` explicitly. If locality is intentional, verify the selected location's capacity and failure behavior with representative load, keep the choice configurable, and consider `PreferNearestDCWithFallBack` when cross-location fallback is required. That variant uses other locations only when all nearer endpoints are unavailable; it does not spread normal traffic across all locations. `PreferLocalDC` is deprecated in favor of `PreferNearestDC`; renaming it preserves the restriction and does not by itself fix a capacity or failover problem. Locality is a supported policy, not a blanket production anti-pattern.
 
-**Source**: `ydb-platform/ydb-go-sdk/balancers/balancers.go` — `PreferLocalDC` is marked `// Deprecated: use PreferNearestDC instead`; both have the same balancing semantics. <https://github.com/ydb-platform/ydb-go-sdk/blob/master/balancers/balancers.go>.
+**Source**: SDK policy semantics and defaults in <https://github.com/ydb-platform/ydb-go-sdk/blob/987aa9c180ff6622e4249ec714b926d93d46230a/balancers/balancers.go>; supported locality recipe in <https://ydb.tech/docs/en/recipes/ydb-sdk/balancing-prefer-local>; session affinity in <https://ydb.tech/docs/en/recipes/ydb-sdk/balancing>.
 
 ### RULE-GO-09: Transaction begin as a separate RPC
 
@@ -115,7 +124,7 @@ YDB supports two transaction styles. *Interactive* — the developer writes `beg
 **What to look for**:
 
 - *Interactive*: `s.BeginTransaction(ctx, ...)` or `s.Begin(ctx, ...)` returning a `tx` handle, followed by `tx.Exec(...)` / `tx.Query(...)` (Query Service) or `tx.Execute(...)` (Table Service).
-- *Non-interactive*: `db.Query().DoTx(...)` (or `db.Table().DoTx(...)`) on a driver opened without `ydb.WithLazyTx(true)`.
+- *Non-interactive Query Service*: `db.Query().DoTx(...)` on a driver opened without `ydb.WithLazyTx(true)` and without a per-call `query.WithLazyTx(true)` override. These options configure Query Service; do not apply them to `db.Table().DoTx(...)`.
 
 **Problem**: the explicit begin is a standalone RPC that does no work — it just opens the transaction. Fusing it into the first query's RPC removes one round-trip per transaction. On a high-frequency OLTP path that's a measurable share of total latency and load.
 
@@ -124,7 +133,9 @@ YDB supports two transaction styles. *Interactive* — the developer writes `beg
 - *Interactive*: drop the standalone `s.BeginTransaction(...)` and let the begin ride on the first query.
   - Table Service: the first call is `tx, result, err := s.Execute(ctx, table.TxControl(table.BeginTx(table.WithSerializableReadWrite())), firstQuery, params)` — `txControl` is the positional second argument; the returned `tx` is then used for subsequent `tx.Execute(...)` calls within the transaction (single-shot autocommit also exists: add `table.CommitTx()` to the same `TxControl` if the transaction has just one statement).
   - Query Service: `s.Query(ctx, firstQuery, query.WithTxControl(tx.NewControl(tx.BeginTx(tx.WithSerializableReadWrite()))), query.WithParameters(...))`.
-- *Non-interactive*: open the driver with `ydb.WithLazyTx(true)` (or pass `query.WithLazyTx(true)` as a per-call `DoTxOption`). `DoTx` then defers begin to the first query inside the closure.
+- *Non-interactive Query Service*: open the driver with `ydb.WithLazyTx(true)` (or pass `query.WithLazyTx(true)` as a per-call `DoTxOption`). The SDK still manages begin, commit and rollback; lazy begin changes when begin is sent, not transaction ownership or atomicity. Keep an already present `query.WithCommit()` on the last statement: it addresses the commit side independently.
+
+Explain the RPC cost of the proposed change. For one successful attempt with `N` statement RPCs and commit already fused into the last statement, a separate begin costs `N+1` transaction RPCs; lazy begin reduces this to `N`. A two-statement transaction therefore uses two instead of three. This saves one begin RPC per transaction, not necessarily the same fraction of end-to-end latency. Session acquisition, discovery, retries and any additional RPCs are outside this count; measure the actual hot path.
 
 **Source**: `Session.Execute(ctx, *TransactionControl, sql, *params.Params, ...)` returns `(Transaction, Result, error)` — <https://github.com/ydb-platform/ydb-go-sdk/blob/master/table/table.go>. Canonical multi-statement form: <https://github.com/ydb-platform/ydb-go-sdk/blob/master/table/example_test.go> (`Example_lazyTransaction`). `ydb.WithLazyTx` driver option: <https://github.com/ydb-platform/ydb-go-sdk/blob/master/options.go>; per-call `query.WithLazyTx`: <https://github.com/ydb-platform/ydb-go-sdk/blob/master/query/client.go>.
 
@@ -143,6 +154,8 @@ Same interactive / non-interactive split as RULE-GO-09, applied to the commit si
 **Problem**: an explicit commit is a standalone RPC that does no work — it just terminates the transaction. Fusing it into the last query's RPC removes one round-trip per transaction. The doubly-wrong case adds redundant work on top: `DoTx` would have committed on return-nil anyway, so the explicit call is both useless and an extra round-trip.
 
 **Fix**: fuse the commit into the last query's RPC.
+
+Prefer Query Service when it supports the required functionality. For existing Table Service code, recommend migration to Query Service where equivalent functionality is available, preserving the transaction's atomicity, typed parameters, caller context and replay safety. The Table Service correction below applies when retaining the existing implementation for compatibility; it is not the default API recommendation for new query code.
 
 - Query Service: pass `query.WithCommit()` as an `ExecuteOption` to the last `tx.Exec(...)` / `tx.Query(...)` of the closure.
 - Table Service (multi-statement interactive transaction): pass `options.WithCommit()` (from `github.com/ydb-platform/ydb-go-sdk/v3/table/options`) as an `ExecuteDataQueryOption` to the last `tx.Execute(ctx, sql, params, options.WithCommit())` — the commit flag rides on that RPC and the transaction terminates without a separate `tx.CommitTx`. For a single-statement Table Service transaction, fold both begin and commit into one `s.Execute(ctx, table.TxControl(table.BeginTx(...), table.CommitTx()), sql, params)`.

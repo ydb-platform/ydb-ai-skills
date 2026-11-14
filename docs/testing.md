@@ -1,209 +1,361 @@
 # Testing skills
 
-Goal: build a **compatibility matrix** — for each `(provider, model)`, measure how well our installable skills work when loaded into a coding-agent-style system prompt. Identifies the minimum model per vendor family that still passes.
+Response-quality cases are authored once, in
+`skills/<skill>/evals/scenarios.json`. Activation cases live alongside them in
+`activations.json`. These JSON files travel with the skills and are also
+read by the public Promptfoo adapter. There are no generated eval copies to
+refresh after an edit. See [the schemas](schemas.md) for fields and grading
+semantics.
 
-The tool is [promptfoo](https://www.promptfoo.dev). One declarative `promptfooconfig.yaml` at the repo root drives everything.
+## What each run measures
 
-## What this tests
+| Run | Solver context | What it checks |
+| --- | --- | --- |
+| Preloaded matrix, `promptfooconfig.yaml` | Skill instructions and resources embedded in the prompt | Response quality on 66 text/planning scenarios; no tool execution |
+| Bare comparison, `promptfooconfig.bare.yaml` | No preloaded skill material | A separate baseline for those same 66 scenarios |
+| Selector matrix, `promptfooconfig.routing.yaml` | Skill descriptions only | Which single primary skill the model selects |
+| Claude runtime, `promptfooconfig.agent.yaml` | Installed packages in an isolated temporary workspace | Actual Skill-tool selection and runtime-specific outcome checks |
+| Offline Codex, `promptfooconfig.codex.yaml` | Installed packages in an isolated temporary workspace | 66 text/planning scenarios, with local skill reads and no network |
+| Online Codex, `promptfooconfig.codex-online.yaml` | Installed packages with network retrieval enabled | The one live documentation-verification scenario |
 
-Every eval runs this shape:
+The preloaded matrix is a useful upper-bound experiment, not a substitute for
+runtime selection. The selector's single answer and the set of skills an agent
+actually loads are different observations: an optional companion may be valid
+even when it is not the primary selection. Keep activation results, response
+quality, and deterministic outcome checks separate.
 
-- **System prompt:** the installable skills' content embedded into one system message. `ydb-core` is loaded as `SKILL.md` plus its `references/balancing.md`, `references/session-lifecycle.md`, `references/embed/go.md`, and `rules/embed/go.md`. `ydb-table` is loaded as `SKILL.md` plus its `references/cli.md`, `references/working-with-data.md`, `references/query-parameters.md`, `references/embed/java.md`, `references/embed/go.md`, `references/embed/cpp.md`, `rules/embed/java.md`, `rules/embed/go.md`, `rules/embed/cpp.md`, `references/embed/python.md`, and `rules/embed/python.md` — i.e. the full body of each skill, as if the agent had read every Load-Sources entry.
-- **User prompt:** supplied by the test case (`tests/<skill>/<case>.yaml`).
-- **Grader:** `anthropic/claude-haiku-4.5` judges each `llm-rubric` assertion against a criterion block written in plain English.
+Sharing the case files does not make these environments identical. Compare
+results only with the model, judge, context, case set, and runtime settings
+recorded.
 
-This approximates the *ceiling* per model — every loadable file is fully in context. A model that fails this can't work in a real runtime (Claude Code, Codex, Cursor, etc.) where the agent additionally has to decide which skill to load and which references to read.
+The public installer normally installs `ydb-core` alongside `ydb-table`.
+Native checks of that installation must include both packages from the same
+source revision, while keeping `ydb-table` as the activation target. Reading
+only core must not count as table activation. Testing table alone is a separate
+isolation experiment corresponding to installation with `--no-core`; record it
+as such rather than treating it as the default installation.
 
-Runtime-specific behavior (how Claude Code chooses skills vs. how Codex does) is **not** tested here. That requires installing each runtime and running against it, which is a manual exercise — see the [known gap](#runtime-level-testing-known-gap) below.
+## Canonical cases and the Promptfoo adapter
 
-## Setup
+Edit canonical JSON directly. [`tests/adapters/read-native-evals.cjs`](../tests/adapters/read-native-evals.cjs)
+loads response scenarios into Promptfoo in memory, using each scenario's `prompt`
+and `expectations`. `tests/runtime/scenario-checks.json` adds deterministic
+assertions and metric labels keyed by `skill:name`; it contains no duplicate
+prompts or quality rubrics. The mandatory rule-ID check is part of the native
+whole rubric and is also checked deterministically through `additional_checks`;
+this extra assertion must not replace the quality rubric. `tests/runtime/routing.json` identifies canonical
+activation cases and their primary targets for the selector experiment.
+Runtime fixtures in `tests/agent/` remain separate tests of agent behavior.
 
-One-time:
+Most core/table quality rubrics keep alternatives, partial credit and explicit
+failure conditions together in one expectation. These rubrics require an overall
+score of at least 0.8 and no explicit failure condition, expressed as a binary
+PASS or FAIL. Preserve the stated alternatives and partial-credit allowances;
+do not turn every bullet into a separate mandatory criterion. An exact rule ID
+is mandatory when the case explicitly requires it.
+
+The three `ydb-docs` scenarios keep independent requirements in separate
+expectations, all of which must pass. New scenarios should use clear PASS
+criteria. The JSON contract has no numeric threshold field; any partial-credit
+policy belongs in the expectation text.
+
+## Review meaning before changing a failed case
+
+Check the intended user outcome before changing either the skill or its test.
+A lookup plan should give actionable URLs and selection steps without claiming
+that retrieval happened. Actual verification should retrieve evidence or explain
+why it could not be established. A network prohibition allows local file reads;
+do not conflate local search with web search. Accept equivalent official sources
+and paths when the request does not prescribe one exact route.
+
+The docs quality suite separates two no-network lookup plans from one actual
+source-verification task. Its activation suite requires docs for explicit lookup
+requests and forbids it for unrelated products/tasks. General YDB tasks can use
+docs as an optional companion and are evaluated for their primary target in the
+separate selector matrix, not as forbidden docs activations.
+
+The general deadline-policy request belongs to `ydb-core` and is checked by
+its activation suite and the primary selector. Table's deadline/cancellation
+rules apply to data-access work and SDK audits; related reference material
+does not expand the skill to every standalone client-policy question.
+A request spanning client policy and actual query work may use both skills.
+
+General introductions/comparisons and connection-only requests require
+`ydb-core` and must not activate `ydb-table`. Their original negative table
+cases are retained. The absence of core does not broaden table's scope.
+A mixed task that includes actual query/schema work or an SDK code/configuration
+audit may use table together with core; the presence of a possibly useful
+reference alone does not make a pure introduction or setup request a table task.
+
+Local Docker setup requires `ydb-core` and must not activate `ydb-table`.
+YT-only YQL requests must select `none` and must not activate any YDB skill.
+The activation suites retain the original YT case with the explicit
+"this is not about YDB" clarification. Additional natural YT variants remain
+diagnostic experiments outside the mandatory suite. Determine applicability
+from the description before opening the skill: a shared query language is not enough.
+Reading the body merely to rule out an unrelated skill is still an activation
+under the native contract. A passing primary-selector check does not replace
+these runtime checks.
+
+The CLI quality suite checks proposed workflows and commands. It does not run
+against a database or require an installed CLI. A correct plan includes discovery
+through version/help, schema inspection where necessary, EXPLAIN before relevant
+execution and confirmation for destructive changes. It must not invent the
+schema or data. These cases do not certify the order of actual database calls.
+Actual execution needs a separately prepared environment and grading of tool
+calls and results.
+
+When prompts, criteria, or the evaluated case set change, record that revision
+and run a new baseline. Do not count a case removed for a semantic reason as a
+newly passing case or compare the new percentage directly with the old one.
+
+## Focused runs
+
+Start with static validation and adapter tests; these do not use a model.
+For a changed skill, run one relevant activation case before a response-quality
+case if routing is uncertain. The `ydb-docs:lookup-offline` request is present
+in both case types under ID `2133047914`, so they can be checked separately.
+An activation check asks whether the skill loaded; a scenario asks whether the
+answer meets the requirements. A run with an invalid judge verdict is an
+evaluation error, not a reliable content FAIL.
+
+Then run only the changed scenarios and a small selection of cross-skill
+regressions. Reserve a full suite on one fixed agent/model for a release or CI
+budget; do not start with the complete model matrix on a personal quota.
+Without that full run, report which cases remain unverified.
+
+## Deterministic checks first
+
+These repository checks make no model calls and need only Python:
+
+```bash
+# Complete repository validation, also available as npm run validate.
+python3 scripts/validate-skills.py
+
+# Narrower checks for diagnosing eval data or coverage failures.
+python3 scripts/validate-evals.py
+python3 scripts/eval-coverage.py --check
+```
+
+`validate-evals.py` checks the canonical JSON contract: scenario and activation
+fields, unique case IDs, positive and negative activation examples, and runtime
+metadata references. It also rejects duplicate legacy response-case sources.
+It validates test definitions without running an agent or judging an answer.
+
+`validate-skills.py` is the full entry point. It checks package frontmatter,
+resource links, rule prefixes, unfinished author markers, language boundaries,
+and generated description freshness. It then invokes `validate-evals.py` and
+`eval-coverage.py --check`. Coverage checks declared behavior mappings and rule
+coverage against the canonical scenarios. Coverage measures the presence of
+tests, not whether a model passes them.
+
+### When the checks run
+
+- `npm run validate` explicitly runs `validate-skills.py`, including the eval
+  and coverage checks above. Either validator can also be run directly.
+- `install.sh` runs `validate-skills.py` before copying or linking skills when
+  both the validator and `python3` are available; a failure aborts installation.
+- `npm run test:tools` and `npm run test:adapters` explicitly run the Python and
+  JavaScript test suites for repository tooling. Validation does not run them.
+- `npm run eval:codex`, `npm run eval:codex:online` and `npm run eval:claude` explicitly start model-backed
+  runs. They do not run the static validators or tooling tests first.
+
+This repository currently has no GitHub Actions workflow or build-system
+target that invokes these checks on pull requests. The checks must be run
+explicitly or through the installer; merely shipping the scripts does not
+block a GitHub PR. Required status checks are configured separately in GitHub.
+
+## Public runtime workspaces
+
+`scripts/run-promptfoo.py` creates separate temporary solver and judge
+workspaces outside the repository. It copies all three skill packages,
+excluding `evals/`, test code, and grading answers, and exposes the packages
+through `.agents/skills` and `.claude/skills`. It sets `YDB_EVAL_WORKSPACE`
+and `YDB_EVAL_JUDGE_WORKSPACE` for the selected config, forwards Promptfoo
+arguments, and cleans up the temporary directories after the run.
+
+Use the npm wrappers below instead of invoking these runtime configs directly.
+Do not run the solver from the repository root: it can otherwise read test
+cases, expected outputs, grader material, or the repository's authoring
+`CLAUDE.md`. Workspace separation reduces accidental leakage; the runtime's
+tool and filesystem permissions still determine what the agent can access.
+
+## Public API matrix
+
+The preloaded matrix uses an OpenAI-compatible endpoint. Set the endpoint's
+credentials explicitly; the default config uses OpenRouter:
 
 ```bash
 export OPENROUTER_API_KEY="<token>"
+# Optional endpoint override used by the main matrix:
+export OPENROUTER_API_BASE_URL="https://openrouter.ai/api/v1"
+npx promptfoo@latest eval -c promptfooconfig.yaml
+npx promptfoo@latest view
 ```
 
-The matrix uses `OPENROUTER_API_BASE_URL` from the environment, defaulting to
-`https://openrouter.ai/api/v1` — see the header comment in [`promptfooconfig.yaml`](../promptfooconfig.yaml).
+Both HTTP matrices and offline Codex explicitly exclude
+`ydb-docs:verify-source-chain`, which needs live retrieval tools. The loader
+prints the excluded case; a 66-case result is not coverage of all 67 scenarios.
+The opt-in online profile below runs the remaining case from the same canonical
+JSON, without a duplicate test definition.
 
-promptfoo runs via `npx` — no local install needed:
-
-```bash
-npx promptfoo@latest eval         # run all tests across all providers
-npx promptfoo@latest view         # open the matrix in the browser
-```
-
-## Speed knobs
-
-Default concurrency is set to **12** in each `promptfooconfig*.yaml` via
-`evaluateOptions.maxConcurrency`. On a healthy OpenRouter key this
-finishes the full matrix in roughly a third of the time of the
-promptfoo default (4). If your key's monthly limit caps single-request
-size or rate, lower concurrency to avoid clustered 402s:
-
-```bash
-npx promptfoo@latest eval -j 4    # CLI override for slower keys
-```
-
-Two providers benefit from extra config to avoid burning tokens on
-internal reasoning:
-
-- **Moonshot Kimi K2.6** — reasoning mode is on by default and consumes
-  the whole `max_tokens` budget on thinking before emitting any
-  visible answer. We set `reasoning: { enabled: false }` on this
-  provider so the budget goes to the actual response.
-- **Google Gemini 3.1 Pro (preview)** — same problem in principle, but
-  the OpenRouter route to Gemini rejects `reasoning: { enabled: false }`
-  with HTTP 400 ("Reasoning is mandatory for this endpoint"). Live
-  with the thinking budget; `max_tokens: 2048` is just enough.
-
-Other models on the matrix don't accept the `reasoning` parameter at
-all and return HTTP 400 if you set it — do not blanket-apply it.
-
-For a subset (faster iteration while writing a new skill or test):
-
-```bash
-# single provider (regex match on provider id)
-npx promptfoo@latest eval --filter-providers 'qwen3-coder'
-
-# single test (regex match on the test's `description` field)
-npx promptfoo@latest eval --filter-pattern 'keyset pagination'
-
-# first N tests only
-npx promptfoo@latest eval --filter-first-n 3
-
-# combine: one test on one provider
-npx promptfoo@latest eval \
-  --filter-pattern 'Cloud auth' \
-  --filter-providers 'anthropic/claude-haiku-4.5'
-```
-
-Results are stored in `~/.promptfoo/` and rendered as a matrix: rows = models, columns = test cases, cells = pass/fail + grader reasoning.
-
-## Adding a test
-
-1. Copy an existing file under `tests/<skill>/` as a starting point — structure is `description`, `vars.user_prompt`, `assert`.
-2. Write the `user_prompt` as a realistic user turn. Avoid toy examples — model size matters less on trivial prompts.
-3. Write the `llm-rubric` criteria as bullet points the grader can check against the skill content. Every criterion should be something the grader can verify from the skill body alone. Do not introduce facts that aren't in any SKILL.md — the test would be impossible to pass on principle.
-4. Run once with a cheap model and read the grader's reasoning. If the criteria are too loose (everything passes) or too strict (everything fails), tighten / relax them.
-5. Commit once the rubric gives stable results across two runs.
-
-Worked example — a minimal outcome test:
-
-```yaml
-description: Query · Keyset pagination in YQL + Go
-
-vars:
-  user_prompt: |
-    Write a YQL query and the Go code to paginate a `users` table by
-    `created_at` (Timestamp) and `id` (Uint64) — 50 rows per page.
-
-assert:
-  - type: llm-rubric
-    value: |
-      The response should:
-      - Use keyset pagination: `WHERE (created_at, id) > ...`. Avoid `OFFSET`.
-      - Bind values as typed parameters — no raw string interpolation.
-      - Wrap the Go query in a session-retry scope (db.Query().Do(...)).
-      Partial credit if pagination is correct but Go wrapper is missing.
-```
-
-## Adding a model
-
-Edit `promptfooconfig.yaml`. Copy one of the existing provider rows:
-
-```yaml
-- id: openai:chat:<vendor>/<model-slug>
-  label: <Human-friendly label>
-  config: *openrouter
-```
-
-The `<vendor>/<model-slug>` must match what OpenRouter exposes. Check the live list at https://openrouter.ai/models.
-
-## Reading the matrix
-
-`npx promptfoo@latest view` opens an HTML matrix.
-
-- **Green cell (pass)** — the grader judged the response to satisfy every criterion. Sanity-check by clicking the cell and reading the reasoning; occasionally the grader is too generous.
-- **Red cell (fail)** — the grader flagged at least one criterion as unmet. Read the reasoning to see whether this is a genuine failure or a too-strict rubric.
-- **Yellow / partial** — one or more criteria failed but others passed; the test opted into partial credit via the rubric wording.
-
-Per-model summary: pass rate column on the right. This is what drives the "minimum model per family" decision.
-
-## When to bump the model set
-
-- A new major model ships and is available on `/openrouter`. Add a row, re-run.
-- A model gets deprecated. Remove the row.
-- A customer asks "does our skill work on model X?" and X is not in the matrix. Add it, commit the matrix run output to `matrix.md` (optional — see below).
-
-## Committing matrix results
-
-Not done by default. The matrix changes every time any skill or test changes, so committing full results would be noisy. For a committed A/B snapshot see [`matrix-baseline.md`](../matrix-baseline.md). Ad-hoc export: `npx promptfoo@latest eval --output matrix.md --format markdown`.
-
-## Static validator
-
-Independent of the promptfoo matrix, [`scripts/validate-skills.py`](../scripts/validate-skills.py) enforces structural invariants over `skills/` — SKILL.md frontmatter shape, no `TODO(author)` markers, language-agnostic top-level `references/` files, relative-link resolution, and that every `RULE-<PREFIX>-<NN>` ID uses a prefix registered in [`docs/authoring.md`](authoring.md). It runs as a pre-flight inside `install.sh` (failure aborts the install) and is also runnable standalone:
-
-```bash
-python3 scripts/validate-skills.py
-```
-
-Exit code 0 = all checks passed; 1 = at least one violation, printed to stderr with file path and reason. Use this before opening a PR to catch the cheap mistakes without burning a promptfoo run.
-
-## Routing matrix
-
-A second promptfoo config — `promptfooconfig.routing.yaml` — tests the
-selector behavior instead of the ceiling. The system prompt contains only
-each skill's `description:` field (extracted from `SKILL.md` frontmatter
-by `scripts/extract-descriptions.py` into `tests/routing/descriptions.md`);
-no skill body is loaded. The model is asked to reply with one token — the
-slug of the skill that should fire, or `none`.
-
-This approximates what Claude Code / Cursor / Codex do internally when they
-decide which skill to load. It catches two failure modes the ceiling matrix
-can't see:
-
-- **False negatives** — `description:` is too narrow; valid requests don't
-  trigger the skill at all.
-- **False positives** — `description:` is too broad; the skill loads on
-  unrelated requests (worse than not loading — the agent reads irrelevant
-  context).
-
-Run it the same way as the main matrix, with `-c`:
+These are API-backed runs and can consume both solver and grader credits. Read
+the selected config's provider and grading configuration before a large run.
+The description-only routing matrix uses deterministic assertions rather than
+an LLM judge, but its selector model still uses the configured API:
 
 ```bash
 npx promptfoo@latest eval -c promptfooconfig.routing.yaml
 ```
 
-Asserts are deterministic regex (no LLM grader) — cheap to re-run after
-any `description:` edit. `scripts/validate-skills.py` calls
-`extract-descriptions.py --check` and fails if `tests/routing/descriptions.md`
-is stale relative to the SKILL.md frontmatter.
+For a focused run, limit both the provider and cases:
 
-## Runtime-level testing (known gap)
+```bash
+npx promptfoo@latest eval -c promptfooconfig.yaml \
+  --filter-providers 'qwen' --filter-first-n 3 -j 1
+```
 
-This setup tests models. It does not test runtimes — Claude Code / Cursor / Windsurf / Codex / Gemini CLI each have their own skill-loading mechanics (description-first routing, varying system-prompt construction, different tool sets) that can change the outcome from what the matrix shows.
+Use `--filter-pattern` to match a case description. Run repeated uncached trials
+when measuring stability; a single successful response is not evidence of a
+reliable activation or safety boundary. Inspect failed responses and grader
+reasoning before changing a test. A failing criterion may reveal either a skill
+problem or ambiguity in the criterion.
 
-Runtime-level testing requires installing each runtime and running against it with the skill installed. That is manual today:
+## Local agent profiles
 
-1. Install skills into the target runtime (`./install.sh --agent=<name>`).
-2. Spin up the runtime with a target model.
-3. Paste a prompt from `tests/` into the runtime's chat.
-4. Eye-check the response.
+Install dependencies and run the repository checks first:
 
-A non-trivial runtime-testing harness would need per-runtime drivers (subprocess calls or embedded automation). Deferred.
+```bash
+npm install
+npm run validate
+npm run test:tools
+npm run test:adapters
+```
 
-## What is NOT included
+The offline Codex config runs 66 canonical response-quality scenarios with separate Codex
+app-server solver and judge sessions using the same authentication route. With the
+local CLI configured for a personal login and no API-key override, it uses
+that account; it does not silently fall back to an OpenRouter or another API
+judge. Local runs can consume the account's usage allowance. The runner explicitly selects `gpt-6.1-sol` with `medium` reasoning for both
+roles by default. Override these together with `--model` and
+`--reasoning-effort`; the active chat's model and personal Codex model defaults
+do not select the eval model. Promptfoo is pinned to the tested version in the
+runner rather than resolving `latest` on every run.
 
-- **CI workflow.** Promptfoo runs locally against an OpenAI-compatible endpoint. CI wiring would require that endpoint to be reachable from CI and an API key provisioned as a secret — out of scope right now.
-- **Cost tracking.** The matrix runs every provider × every test. Use `--filter-providers` / `--filter-pattern` during iteration to keep the spend low.
-- **Trigger-only tests.** The current layout always loads all installable skills. If you need to measure "does the model correctly pick ydb-table given only the descriptions?" — that's a second-stage rig, not built here.
+The profile starts the local Codex CLI's app-server with a read-only sandbox
+and `on-request` approvals. Requests for additional command/file permissions
+are declined. Each solver or judge turn has a three-minute timeout. Configured
+runtime policies remain in force.
+
+Before model calls, the runner discovers inherited MCP servers and external
+skills, then disables them for both roles. It disables Apps, plugins, hooks,
+memories, bundled skills and project instruction content as well. The same
+overrides apply to CLI startup and each app-server thread, so the provider
+cannot silently restore the user's tools when creating a thread. Personal
+configuration and authentication files are not rewritten. Codex still loads
+global user instructions from its user-level `AGENTS.md`; the preflight records
+their sources and hashes. Review those instructions for eval-specific material
+before treating a run as independent.
+
+Solver instructions restrict local reads and searches to the temporary
+workspace. The read-only sandbox is not by itself an OS boundary against
+reading other local repositories; inspect the recorded actions as well. A
+quality PASS alone does not certify isolation. Use `--preflight-only` to check
+the effective runtime configuration and tool/skill inventory without starting
+a model turn.
+
+```bash
+# One scenario first; arguments after -- are forwarded to Promptfoo.
+npm run eval:codex -- --filter-first-n 1
+
+# A selected scenario; use its name or description in the pattern.
+npm run eval:codex -- --filter-pattern '^ydb-core:onboarding ·' \
+  --no-share --output /tmp/ydb-onboarding.json
+
+# An explicit model and a focused case; no complete suite rerun.
+python3 scripts/run-promptfoo.py --config promptfooconfig.codex.yaml \
+  --model gpt-6.1-sol --reasoning-effort medium \
+  --artifacts-dir /tmp/ydb-jpa-eval \
+  -- --filter-pattern '^ydb-table:java-rule-jv-05-jpa-version ·' --no-cache
+
+# Check effective configuration without a model call.
+python3 scripts/run-promptfoo.py --config promptfooconfig.codex.yaml \
+  --preflight-only --artifacts-dir /tmp/ydb-codex-preflight
+
+# Opt-in network retrieval for the one live documentation scenario.
+npm run eval:codex:online
+
+# Separate Claude Code activation/outcome fixtures, using its local SDK login.
+npm run eval:claude -- --filter-first-n 1
+```
+
+The online profile enables HTTP retrieval for its solver, while built-in web
+search stays disabled. Fetch page text, preferably a site's Markdown view, in
+command output so the judge can inspect the actual source contents. A search
+result or an open-page event without the page body cannot substantiate a claim.
+The judge remains offline. Existing account and runtime access policies still
+apply. An honest retrieval failure is a valid outcome where the rubric permits
+it, but does not establish successful source-reading coverage.
+
+The Codex judge checks the complete canonical expectations. Passing requires
+the required expectations to pass. Different judge implementations can produce
+different verdicts for the same prompt. Inspect the judge's reasons when a
+response falls near the rubric's acceptance boundary.
+
+Codex quality assertions receive the final answer together with the solver's
+recorded actions and results. Exact-text assertions still examine only the final
+answer, so text seen in a tool result cannot satisfy a required rule-ID mention.
+Missing action metadata is an evaluation error, not evidence that no commands
+were run. Large command outputs are bounded for judge transport, with an
+explicit omission marker, original size, hash and retained ranges. The final
+answer is unchanged and the complete evidence is saved separately. Omitted
+text and its hash do not prove source claims or that an action did not occur.
+If even the bounded evidence is too large, grading fails explicitly. Tool
+evidence helps the judge assess retrieval claims; the CLI planning suite still
+evaluates advice rather than a live execution experiment.
+
+Use a new `--artifacts-dir` for each run to retain the configuration preflight,
+isolation manifest, full evidence and Promptfoo results outside the disposable
+workspaces. Without
+a custom Promptfoo `--output`, the runner writes `results.json` there. Preserve
+the original failed/error result when fixing the runtime or changing a rubric;
+a focused rerun is a new measurement, not an overwrite of the earlier verdict.
+
+Quality PASS alone does not prove a skill was loaded. In a saved Promptfoo
+JSON report, inspect `results.results[0].response.raw` (a JSON-encoded Codex
+turn): a successful skill read must have `status: completed`, exit code `0`,
+and the expected skill text in its command output. A failed read or runtime
+configuration error must not be reported as a successful skill activation.
+
+The Claude runtime suite uses the real Skill tool and checks activation apart
+from final-answer outcomes. Its config restricts tools for the offline
+fixtures. Codex has its own tool events and runtime contract; do not assume it
+emits Claude's Skill-call signal.
+
+API-backed model comparisons remain a separate explicit choice. A local solver
+login is not automatically a credential for an unrelated API judge. Read the
+selected configuration before choosing that route.
+
+## Reporting results
+
+Record the skill and case revision, installed packages, solver/judge identities,
+runtime profile, repeat count, and failures. Separate structural validation,
+coverage, activation, and response quality in the report. Inspect at least a
+sample of passing explanations as well as failures: a generous judge can hide
+a regression.
+
+Ad-hoc results need not be committed. Keep a baseline snapshot only when it helps
+a comparison, and label it with the evaluation setup.
+
+[`matrix-baseline.md`](../matrix-baseline.md) uses a different case set and grading
+setup; its percentages are not directly comparable with the current suite.
+`scripts/grader-agreement.py` accepts only legacy single-rubric exports and
+rejects the current canonical format. It cannot validate judge agreement for
+this suite.
 
 ## See also
 
-- [promptfoo docs](https://www.promptfoo.dev/docs/intro) — the framework itself.
-- [promptfoo OpenAI-compat provider](https://www.promptfoo.dev/docs/providers/openai/) — the provider type all our models use.
-- [`promptfooconfig.yaml`](../promptfooconfig.yaml) — the matrix config.
-- [`prompts/coding-agent.yaml`](../prompts/coding-agent.yaml) — the shared system prompt.
-- [`docs/authoring.md`](authoring.md) — how to write a skill; conventions that tests check against.
+- [Authoring conventions](authoring.md)
+- [Eval schemas](schemas.md)
+- [Promptfoo documentation](https://www.promptfoo.dev/docs/intro)
+- [Preloaded matrix configuration](../promptfooconfig.yaml)

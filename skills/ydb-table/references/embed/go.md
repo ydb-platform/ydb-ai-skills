@@ -13,7 +13,7 @@ The only YDB Go SDK is **`github.com/ydb-platform/ydb-go-sdk/v3`**. The same pac
 - a **native** API with the modern Query Service (`db.Query().Do/DoTx(...)`) and the legacy Table Service (`db.Table().Do/DoTx(...)`),
 - a **`database/sql`** driver registered as `"ydb"` (blank-import `_ "github.com/ydb-platform/ydb-go-sdk/v3"`) for code that needs the stdlib interface.
 
-Default new code to the native Query Service. The Table Service is in legacy mode and has a 1000-row default result cap (surfaced as an error on `s.Execute` in v3 by default, restored to v2-style silent truncation if `ydb.WithIgnoreTruncated` is set on the driver — see <https://github.com/ydb-platform/ydb-go-sdk/blob/master/MIGRATION_v2_v3.md>). Connection-string format and authentication environment variables: see [`../../../ydb-core/SKILL.md#connecting`](../../../ydb-core/SKILL.md#connecting). Worked examples for both surfaces: <https://github.com/ydb-platform/ydb-go-sdk/tree/master/examples>. `database/sql` specifics: <https://github.com/ydb-platform/ydb-go-sdk/blob/master/SQL.md>.
+Default new code to the native Query Service. The Table Service is in legacy mode and has a 1000-row default result cap (surfaced as an error on `s.Execute` in v3 by default, restored to v2-style silent truncation if `ydb.WithIgnoreTruncated` is set on the driver — see <https://github.com/ydb-platform/ydb-go-sdk/blob/master/MIGRATION_v2_v3.md>). Connection-string format and authentication environment variables: see <https://ydb.tech/docs/en/concepts/connect>. Worked examples for both surfaces: <https://github.com/ydb-platform/ydb-go-sdk/tree/master/examples>. `database/sql` specifics: <https://github.com/ydb-platform/ydb-go-sdk/blob/master/SQL.md>.
 
 ## Query execution
 
@@ -44,6 +44,8 @@ Three load-bearing pieces:
 - **All data processing happens inside the closure.** Assign to outer variables only on the success path — the line that returns `nil`. Anything assigned earlier survives across retry attempts and produces wrong values.
 
 Source: <https://github.com/ydb-platform/ydb-go-sdk> README "Example Usage".
+
+`ParamsBuilder` is a value builder: each `.Param(...).Uint64(...)`, `.Timestamp(...)`, or other typed setter returns the updated builder. When adding parameters conditionally, assign that result back to the variable; discarding it leaves the new parameter out of `Build()`. Chaining typed setters also preserves the result. Source: [builder](https://github.com/ydb-platform/ydb-go-sdk/blob/master/internal/params/builder.go) and [typed setters](https://github.com/ydb-platform/ydb-go-sdk/blob/master/internal/params/parameters.go).
 
 ## Request deadline and cancellation
 
@@ -104,7 +106,7 @@ YDB has two transaction styles, and `ydb-go-sdk/v3` supports both:
 
 Worked non-interactive example: <https://github.com/ydb-platform/ydb-go-sdk/blob/master/examples/transaction/query/main.go>.
 
-For the transaction-mode list (`SerializableRW`, `SnapshotRO`, `StaleRO`, `OnlineRO`) and the consequence for application-level optimistic locking, see [`../working-with-data.md`](../working-with-data.md).
+For the transaction-mode list (`SerializableRW`, `SnapshotRO`, `StaleRO`, `OnlineRO`) and the consequence for application-level optimistic locking, see `references/working-with-data.md`.
 
 ## Retries
 
@@ -120,47 +122,58 @@ Source: <https://github.com/ydb-platform/ydb-go-sdk/blob/master/retry/mode.go>.
 
 ## Long scans / resumable reads
 
-One `s.Query(ctx, "SELECT ... FROM big_table WHERE <wide predicate>")` inside a single `Do` closure is one retry unit — a transient failure mid-stream replays the whole read. Cut the read into keyset-paginated batches: caller-side cursor over the primary key, each iteration is its own `Do`. See [`../working-with-data.md`](../working-with-data.md) → "Reading many rows" for the YDB-level recipe and the tuple-order / NULL / `OFFSET` caveats.
+One `s.Query(ctx, "SELECT ... FROM big_table WHERE <wide predicate>")` inside a single `Do` closure is one retry unit — a transient failure mid-stream replays the whole read. Cut the read into keyset-paginated batches: caller-side cursor over the primary key, each iteration is its own `Do`. See `references/working-with-data.md` → "Reading many rows" for the YDB-level recipe and the tuple-order / NULL / `OFFSET` caveats.
+
+For a non-null composite primary key `(created_at, id)`, carry **both** fields in the cursor and compare them in that order. A timestamp alone cannot distinguish rows sharing the same timestamp. The first page has no cursor predicate; do not substitute a fabricated minimum key. Separate pages are separate transactions, not one shared snapshot.
 
 ```go
-type row struct {
-    id      uint64
-    payload string
+type rowKey struct {
+    CreatedAt time.Time
+    ID        uint64
 }
 
-var cursor uint64
+var after *rowKey
 const batch = uint64(1000)
 for {
-    var page []row
+    var page []rowKey
     err := db.Query().Do(ctx, func(ctx context.Context, s query.Session) error {
-        var local []row
-        res, err := s.Query(ctx,
-            `SELECT id, payload FROM t
-             WHERE id > $cursor
-             ORDER BY id
-             LIMIT $batch;`,
-            query.WithParameters(ydb.ParamsBuilder().
-                Param("$cursor").Uint64(cursor).
-                Param("$batch").Uint64(batch).
-                Build()),
-        )
+        params := ydb.ParamsBuilder().Param("$batch").Uint64(batch)
+        q := "SELECT created_at, id FROM events"
+        if after != nil {
+            params = params.Param("$created_at").Timestamp(after.CreatedAt)
+            params = params.Param("$id").Uint64(after.ID)
+            q += " WHERE (created_at, id) > ($created_at, $id)"
+        }
+        q += " ORDER BY created_at, id LIMIT $batch"
+        res, err := s.Query(ctx, q, query.WithParameters(params.Build()))
         if err != nil { return err }
         defer func() { _ = res.Close(ctx) }()
-        // iterate res into local — see Query execution above for the scan shape
-        page = local
+        var local []rowKey
+        for rs, err := range res.ResultSets(ctx) {
+            if err != nil { return err }
+            for row, err := range rs.Rows(ctx) {
+                if err != nil { return err }
+                var key rowKey
+                if err := row.Scan(&key.CreatedAt, &key.ID); err != nil { return err }
+                local = append(local, key)
+            }
+        }
+        if err := res.Close(ctx); err != nil { return err }
+        page = local // publish only after this attempt has drained successfully
         return nil
     }, query.WithIdempotent())
     if err != nil { return err }
     if len(page) == 0 { break }
     // process page
-    cursor = page[len(page)-1].id
+    last := page[len(page)-1]
+    after = &last
     if uint64(len(page)) < batch { break }
 }
 ```
 
-`local` is built inside the closure and assigned to the outer `page` only on success — the same contract documented under `Query execution` above. `query.WithIdempotent()` is correct because each batch is a key-ranged SELECT. The cursor lives in caller memory; persist it externally to resume across process restarts (no SDK checkpoint API).
+`local` is rebuilt inside each retry attempt. Publish it to `page` only after the stream is drained without error. Keep the complete cursor in caller memory and persist it externally if reads must resume after process restarts.
 
-Canonical upstream form with a compound primary key and a helper function: <https://github.com/ydb-platform/ydb-go-sdk/blob/master/examples/pagination/main.go>.
+Sources: [SDK pagination example](https://github.com/ydb-platform/ydb-go-sdk/blob/master/examples/pagination/cities.go), [YDB pagination](https://ydb.tech/docs/en/dev/paging), and the typed parameter builder linked above.
 
 ## Bulk upsert
 
@@ -173,10 +186,10 @@ err := db.Table().BulkUpsert(ctx,
 )
 ```
 
-For when the bulk API is the right call versus `AS_TABLE` inside a transaction — and when it is forbidden (synchronous secondary indexes, attached changefeeds) — see [`../working-with-data.md`](../working-with-data.md).
+For when the bulk API is the right call versus `AS_TABLE` inside a transaction — and when it is forbidden (synchronous secondary indexes, attached changefeeds) — see `references/working-with-data.md`.
 
 Source: <https://github.com/ydb-platform/ydb-go-sdk/blob/master/examples/opensource_night2024/main.go>.
 
 ## Connection
 
-See [`../../../ydb-core/SKILL.md#connecting`](../../../ydb-core/SKILL.md#connecting).
+See <https://ydb.tech/docs/en/concepts/connect>.

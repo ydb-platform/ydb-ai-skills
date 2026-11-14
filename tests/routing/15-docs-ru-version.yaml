@@ -1,9 +1,0 @@
-description: Routing · 15-docs-ru-version
-
-vars:
-  user_prompt: |
-    Найди официальную документацию YDB 26.1 по транзакциям на русском и дай ссылки.
-
-assert:
-  - type: regex
-    value: ^\s*ydb-docs\s*$

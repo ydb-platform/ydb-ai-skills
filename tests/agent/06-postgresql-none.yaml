@@ -1,0 +1,10 @@
+description: Agent boundary · PostgreSQL-only task uses neither YDB skill
+vars:
+  user_prompt: Write a PostgreSQL trigger that copies updated rows into an audit table. This project does not use YDB.
+assert:
+  - type: not-skill-used
+    metric: activation-precision
+    value: ydb-core
+  - type: not-skill-used
+    metric: activation-precision
+    value: ydb-table

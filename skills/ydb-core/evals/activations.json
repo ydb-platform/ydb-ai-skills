@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "skill_name": "ydb-core",
+  "cases": [
+    {
+      "id": 1943444,
+      "prompt": "I've never used YDB before. Can you give me a 3-minute intro —\nwhat it is, what problems it solves, and how it differs from\nPostgreSQL?",
+      "should_activate": true,
+      "note": "Routing · Onboarding question → ydb-core This request requires ydb-core activation."
+    },
+    {
+      "id": 405013215,
+      "prompt": "I need to connect to a hosted YDB cluster from a Go service.\nWhat connection string format does YDB use and which env vars\ndo I set for service-account auth?",
+      "should_activate": true,
+      "note": "Routing · Setup / connection question → ydb-core This request requires ydb-core activation."
+    },
+    {
+      "id": 1157819430,
+      "prompt": "How do I write a PostgreSQL trigger that fires on UPDATE and\nlogs the changed row to a separate audit table?",
+      "should_activate": false,
+      "note": "Routing · Unrelated PostgreSQL question → none This request should not activate ydb-core."
+    },
+    {
+      "id": 70502633,
+      "prompt": "Use YDB CLI to list the objects under `/Root/app` and describe the\n`orders` table. I am already connected with profile `prod`.",
+      "should_activate": true,
+      "note": "Routing · YDB CLI scheme inspection → ydb-core This request requires ydb-core activation."
+    },
+    {
+      "id": 528648311,
+      "prompt": "What is the general YDB best practice for propagating an upstream request\ndeadline and cancellation through session acquisition, retries, and RPCs?\nI want one end-to-end budget instead of resetting the timeout per attempt.\nThere is no query or application code to review; this is a cross-cutting client policy.",
+      "should_activate": true,
+      "note": "Routing · general YDB deadline propagation → ydb-core This request requires ydb-core activation."
+    },
+    {
+      "id": 503872993,
+      "prompt": "Find the YQL documentation for querying YT tables on Hahn; this is not about YDB.",
+      "should_activate": false,
+      "note": "Routing · 17-yql-yt-none This request should not activate ydb-core."
+    },
+    {
+      "id": 1290417410,
+      "prompt": "I want a local single-node YDB on my laptop and a connection string\nfor a Python smoke test. Which Docker image and ports should I use?",
+      "should_activate": true,
+      "note": "Routing · Local YDB Docker setup → ydb-core This request requires ydb-core activation."
+    },
+    {
+      "id": 947204090,
+      "prompt": "In PostgreSQL, how can I speed up LIMIT/OFFSET pagination for an\nadmin page without changing databases?",
+      "should_activate": false,
+      "note": "Routing · PostgreSQL-only pagination → none This request should not activate ydb-core."
+    },
+    {
+      "id": 1713661359,
+      "prompt": "Review this Go HTTP client retry loop. It retries 503 responses with\nexponential backoff and does not use any database SDK.",
+      "should_activate": false,
+      "note": "Routing · Generic Go HTTP retries → none This request should not activate ydb-core."
+    },
+    {
+      "id": 2052011815,
+      "prompt": "How do I bind a Kubernetes ServiceAccount to a Role so a pod can list\nConfigMaps in its namespace? This is unrelated to any database.",
+      "should_activate": false,
+      "note": "Routing · Kubernetes service account → none This request should not activate ydb-core."
+    },
+    {
+      "id": 1825452386,
+      "prompt": "Design a ClickHouse PARTITION BY and ORDER BY expression for an events\ntable queried by tenant and month. We do not use YDB here.",
+      "should_activate": false,
+      "note": "Routing · ClickHouse partition design → none This request should not activate ydb-core."
+    }
+  ]
+}

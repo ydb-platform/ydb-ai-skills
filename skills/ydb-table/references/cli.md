@@ -1,15 +1,19 @@
 # Running SQL with YDB CLI
 
-Use `ydb sql` for query execution. Pair this reference with [`ydb-core`'s CLI workflow](../../ydb-core/SKILL.md#cli) and load [`query-parameters.md`](query-parameters.md) whenever values enter the query.
+Use `ydb sql` for query execution. Pair this reference with the separate `ydb-core` skill's CLI workflow when that skill is installed, and load `references/query-parameters.md` whenever values enter the query.
+
+The [official command reference](https://ydb.tech/docs/en/reference/ydb-cli/commands?version=main) marks `table query execute`, `table query explain`, `yql`, and `scripting yql` as deprecated query entry points. Use `ydb sql` and `ydb sql --explain` in new commands, including commands launched from scripts or subprocess wrappers. When migrating an old command, check the current `sql` help for its query, parameter, transaction and output options rather than copying legacy flags. If a verified compatibility constraint prevents migration, explain it and recommend an upgrade where possible instead of silently selecting a legacy command. Other operations under `ydb table` are separate commands; their presence does not justify using a deprecated query entry point.
 
 ## Workflow
 
-1. Verify the installed interface with `ydb version`, `ydb --help`, and `ydb sql --help`. Use `ydb sql -hh` before relying on options omitted from short help.
+For advice-only requests, including command reviews without execution, describe the steps below instead of running them. Do the same when the user explicitly forbids CLI execution. Keep discovery, validation, and confirmation gates in the proposed sequence, and distinguish documented command behavior from checks actually performed. Do not invoke `ydb` or claim that a plan was retrieved in an advice-only response.
+
+1. For live use, run all three discovery commands before composing the final database command or executing it: `ydb version`, `ydb --help`, and `ydb sql --help`. `ydb version` alone is not sufficient. Use `ydb sql -hh` before relying on options omitted from short help.
 2. Inspect every referenced table whose schema is not already known with `ydb scheme describe <path>`. Do not guess column names, types, or primary-key order.
-3. For a filter whose actual values are unknown, do not guess. Constrain discovery by a known primary-key range, suitable index, or another input restriction learned from the schema. Use `--explain` before a potentially large discovery query; if the plan can scan a large table, warn about the cost and obtain approval before executing it.
-4. Keep values outside SQL text. Declare CLI parameters in the query and bind them with `--param`, `--input-file`, or an input stream.
+3. For a filter whose actual values are unknown, do not guess. Constrain discovery by a known primary-key range, suitable index, or another input restriction learned from the schema. If no usable restriction is available, ask for a key/range or consider a global discovery query. Use `--explain` before any potentially large discovery query; if its plan can scan a large table, explain the cost and obtain approval before execution. If the necessary plan cannot be obtained, stop and report the limitation; do not execute the query to find out whether it is safe.
+4. Keep values outside SQL text. Declare CLI parameters in the query and bind them with `--param`, `--input-file`, or an input stream. This also applies to advice-only templates with an unknown schema or value: leave the discovered type and JSON value as placeholders, while keeping the value itself a bound parameter, as shown below.
 5. Validate unfamiliar built-ins, joins, windows, casts, or multi-statement scripts with `ydb sql --explain` before execution. Iterate on validation errors without executing the query.
-6. Execute only after validation succeeds and the user asked to run the query. Show the exact query and connection target before DDL or DML and obtain explicit confirmation.
+6. Execute only after validation succeeds and the user asked to run the query. For DDL or DML, first show the exact query, connection target, and effect, then stop. Execute only after the user explicitly confirms that displayed operation in a subsequent turn; an initial request to modify data is not that confirmation. Apply this gate to mutating queries run with `--explain-analyze` as well as normal execution.
 7. Use `LIMIT` to bound returned rows, not as a claim that scan volume or server work is bounded. Bound input through keys or indexes, or inspect the plan and disclose a possible full scan. Use a machine-readable `--format` only when the result will be parsed; use an export workflow rather than printing a large result into the agent context.
 
 ## Command shapes
@@ -29,7 +33,7 @@ ydb -p <profile> sql \
   --param '$id=42'
 ```
 
-Use one `--param` per simple value. The part after `=` is JSON whose conversion is driven by `DECLARE`; see [`query-parameters.md`](query-parameters.md) for YDB type encodings. For example, timestamps and decimals are JSON strings:
+Use one `--param` per simple value. The part after `=` is JSON whose conversion is driven by `DECLARE`; see `references/query-parameters.md` for YDB type encodings. For example, timestamps and decimals are JSON strings:
 
 ```bash
 ydb -p <profile> sql -f query.sql \
@@ -47,12 +51,36 @@ ydb -p <profile> sql -f query.sql --format json-unicode
 
 Replace the example profile only with connection options already supplied or approved by the user. Do not silently select a default, development, or production target.
 
+### Templates before schema and value discovery
+
+An unknown schema does not require a runnable query yet. Keep identifier and type placeholders until discovery, but represent filter values as parameters rather than SQL literal placeholders:
+
+```sql
+DECLARE $filter AS <DISCOVERED_TYPE>;
+
+SELECT <DISCOVERED_COLUMNS>
+FROM `<CONFIRMED_TABLE_PATH>`
+WHERE <DISCOVERED_FILTER_COLUMN> = $filter
+ORDER BY <DISCOVERED_ORDER_COLUMN> <ORDER_DIRECTION>
+LIMIT <REQUESTED_ROW_LIMIT>;
+```
+
+After discovering the schema, ordering and exact stored value, replace the angle-bracket placeholders and bind `$filter` separately:
+
+```bash
+ydb -p <profile> sql --explain -f query.sql --param '$filter=<JSON_VALUE>'
+# Execute only after successful plan inspection and the applicable safety gates:
+ydb -p <profile> sql -f query.sql --param '$filter=<JSON_VALUE>'
+```
+
+These are non-runnable templates until the placeholders are resolved. `<JSON_VALUE>` is the discovered value encoded as JSON for its declared type, not a YQL literal. Column names, table paths, types and ordering syntax cannot be supplied through value parameters; obtain them from schema discovery and the requested ordering. Keep `$filter` in the query even after its value is known. The [parameterized-query reference](https://ydb.tech/docs/en/reference/ydb-cli/parameterized-query-execution) documents the `DECLARE`/`--param` interface.
+
 ## Parameter sources and files
 
 Choose the least fragile supported source:
 
 - Use repeated `--param` for a few scalar values.
-- Use one JSON input stream for many or composite values. In an agent or CI non-TTY subprocess, use `--input-file - < params.json`; a named `--input-file params.json` requires stdin to be a TTY/PTY in current CLI releases. Object keys are parameter names without `$`; `List`, `Struct`, `Tuple`, optional, temporal, decimal, binary, and document values follow [`query-parameters.md`](query-parameters.md).
+- Use one JSON input stream for many or composite values. In an agent or CI non-TTY subprocess, use `--input-file - < params.json`; a named `--input-file params.json` requires stdin to be a TTY/PTY in current CLI releases. Object keys are parameter names without `$`; `List`, `Struct`, `Tuple`, optional, temporal, decimal, binary, and document values follow `references/query-parameters.md`.
 - Use `csv` or `tsv` for row-shaped scalar data. Prefer keeping the header in the file; it supplies parameter names without `$`. For a headerless file, `--input-columns` must use the selected format's delimiter: comma for CSV and a literal tab for TSV. Type conversion still comes from `DECLARE`.
 - Use `raw` only for one `String` or `Utf8` value and name it with `--input-param-name`.
 
@@ -146,9 +174,9 @@ Each adaptive batch is an independent execution and transaction. If a later batc
 ## Gotchas
 
 - **A SQL command is not inherently read-only.** `ydb sql` accepts DDL, DML, and multi-statement queries; classify the query text before execution.
-- **CLI parameters still need `DECLARE`.** The CLI uses declarations to match and convert input values; see [`query-parameters.md`](query-parameters.md).
+- **CLI parameters still need `DECLARE`.** The CLI uses declarations to match and convert input values; see `references/query-parameters.md`.
 - **Input and output formats are different option sets.** `--format parquet` controls query results; it does not make Parquet or Arrow a SQL parameter input.
-- **Unbounded streaming can fill the context.** The CLI does not impose a read-volume limit, so add a query limit for exploration instead of relying on output truncation downstream.
+- **Unbounded output can fill the context.** Bound returned rows for exploration instead of relying on downstream output truncation. A small `LIMIT` does not by itself bound scanned rows or server work.
 - **Bare `ydb` is interactive.** Keep agent workflows non-interactive unless the user explicitly asks to enter the interactive terminal.
 
 Sources: <https://ydb.tech/docs/en/reference/ydb-cli/sql>, <https://ydb.tech/docs/en/reference/ydb-cli/parameterized-query-execution>, <https://ydb.tech/docs/en/reference/ydb-cli/commands/scheme-describe>, and the YDB CLI AI-mode implementation under <https://github.com/ydb-platform/ydb/tree/0c0d3f432c737269b0b91a2ec93cf76a8b76d00d/ydb/public/lib/ydb_cli/commands/interactive/ai>.
