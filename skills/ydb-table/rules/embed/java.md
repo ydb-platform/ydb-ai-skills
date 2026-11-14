@@ -167,6 +167,6 @@ public void insertBatch(List<Token> batch) {
 
 **Problem**: each coordinate is sent as a list element and converted on the server, although the vector can be sent as one binary `String` value.
 
-**Fix**: follow the current recommended approach in the [YDB vector-search recipe](https://ydb.tech/docs/en/recipes/ydb-sdk/vector-search?version=main) (Java tab) to serialize the vector on the client. Bind it as YQL `String` and use it directly for storage or `Knn` distance functions. Keep the YQL converter for vectors created in YQL; other vector types require their own formats.
+**Fix**: serialize the vector on the client and include the [YDB vector-search recipe](https://ydb.tech/docs/en/recipes/ydb-sdk/vector-search?version=main) in the finding, pointing to its Java tab for the supported implementation. Bind it as YQL `String` and use it directly for storage or `Knn` distance functions. Explain that the YQL converter still applies to vectors created in YQL; other vector types require their own formats.
 
 **Source**: <https://ydb.tech/docs/en/recipes/ydb-sdk/vector-search?version=main> (Java recommended approach); <https://ydb.tech/docs/en/yql/reference/udf/list/knn#functions-convert>.
