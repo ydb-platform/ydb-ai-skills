@@ -29,11 +29,13 @@ List<Token> tokens = repository.findAllById(ids);
 
 ### RULE-JV-02: JDBC batching not configured
 
+**Finding heading**: **RULE-JV-02 — JDBC batching not configured**. If the supplied configuration may be overridden elsewhere, say that the batch size is missing from the shown settings and ask the user to verify the effective value.
+
 **Severity**: High
 
 **What to look for**: bulk writes without a positive `hibernate.jdbc.batch_size` (Spring Boot: `spring.jpa.properties.hibernate.jdbc.batch_size`).
 
-**Problem**: JDBC batching is disabled by default. A positive batch size enables grouping; `hibernate.order_inserts` and `hibernate.order_updates` can improve grouping but are not prerequisites.
+**Problem**: JDBC batching is disabled by default. Set the batch size above 1 to group multiple statements.
 
 **Fix**: configure and measure a suitable batch size, for example:
 
@@ -41,7 +43,7 @@ List<Token> tokens = repository.findAllById(ids);
 spring.jpa.properties.hibernate.jdbc.batch_size=1000
 ```
 
-Consider the ordering options and benchmark their effect. Check identifier generation: Hibernate disables insert batching for identity-generated identifiers.
+After enabling batching, benchmark optional ordering for the relevant operations: `hibernate.order_inserts` for inserts and `hibernate.order_updates` for updates. Check identifier generation: Hibernate disables insert batching for identity-generated identifiers.
 
 **Source**: <https://docs.hibernate.org/orm/6.6/userguide/html_single/#batch>.
 
