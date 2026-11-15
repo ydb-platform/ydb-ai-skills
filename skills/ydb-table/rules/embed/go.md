@@ -227,6 +227,6 @@ If the call also iterates rows, draining by iteration to EOF is valid; stats may
 
 **Problem**: the SDK sends individual list elements and YDB converts them to the binary FloatVector format on every call, although the client can send that format directly as one `String` value.
 
-**Fix**: follow the current recommended approach in the [YDB vector-search recipe](https://ydb.tech/docs/en/recipes/ydb-sdk/vector-search?version=main) (Go tab) to serialize the vector on the client. Bind it as YQL `String` and use it directly in the `Knn` distance function or stored column. Keep `Knn::ToBinaryStringFloat` when the vector is constructed in YQL; other vector types require their own formats.
+**Fix**: serialize the vector on the client and include the [YDB vector-search recipe](https://ydb.tech/docs/en/recipes/ydb-sdk/vector-search?version=main) in the finding, pointing to its Go tab for the supported implementation. Bind it as YQL `String` and use it directly in the `Knn` distance function or stored column. Explain that `Knn::ToBinaryStringFloat` remains valid for vectors constructed within YQL. Other vector types require their own formats.
 
 **Source**: <https://ydb.tech/docs/en/recipes/ydb-sdk/vector-search?version=main>.
