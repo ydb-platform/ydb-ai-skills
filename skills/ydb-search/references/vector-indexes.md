@@ -60,7 +60,24 @@ For multiple categories, partial prefixes, or additional filters, verify support
 ## Lifecycle and verification
 
 - Load representative data before building. Building on an empty table produces one cluster and no useful search acceleration.
-- In the documented update path for 25.3–26.3, completed indexes assign new/modified rows to existing clusters; they do not retrain centroids. The 25.1 pages warn that indexes do not track later changes, and the 25.2 pages disagree about updates; see [version compatibility](version-compatibility.md). When updates are supported, distribution changes can reduce recall and unbalance query work. Build a replacement when needed, then switch indexes using the documented [index rename/replacement operation](https://ydb.tech/docs/en/reference/ydb-cli/commands/secondary_index?version=v26.3#rename).
+- In the documented update path for 25.3–26.3, completed indexes assign new/modified rows to existing clusters; they do not retrain centroids. On builds supporting `autoupdate`, this is the behavior when it is omitted or `true`; `false` disables maintenance as described below. The 25.1 pages warn that indexes do not track later changes, and the 25.2 pages disagree about updates; see [version compatibility](version-compatibility.md). When updates are supported, distribution changes can reduce recall and unbalance query work. Build a replacement when needed, then switch indexes using the documented [index rename/replacement operation](https://ydb.tech/docs/en/reference/ydb-cli/commands/secondary_index?version=v26.3#rename).
 - Concurrent writes during construction are not consistently reflected in the built vector index. If the application needs a fully consistent build, coordinate a write pause for its duration; writes are not paused automatically.
 - Use `BulkUpsert` before creating synchronous indexes and supported SQL writes afterward; first verify indexed-write support on early targets. Tables with vector indexes do not support TTL. See [bulk loading](https://ydb.tech/docs/en/dev/batch-upload?version=v26.3).
 - A non-executing explain should show access to the requested index rather than an unintended base-table scan. Base-table lookups can still be appropriate when the index does not cover needed columns. Exact search intentionally scans; label it accordingly.
+
+### Disabling automatic updates
+
+On builds supporting this option, add `autoupdate=false` to the vector index's `WITH` settings at creation. For the shared schema, a frozen-index variation is:
+
+```yql
+ALTER TABLE documents ADD INDEX vec_frozen_idx
+GLOBAL USING vector_kmeans_tree ON (embedding) COVER (embedding, title)
+WITH (distance=cosine, vector_type="float", vector_dimension=3,
+      clusters=2, levels=1, autoupdate=false);
+```
+
+The initial build still indexes existing data. Later SQL writes modify the base table and other maintained indexes, but leave this vector index unchanged, including on `INSERT`, `UPSERT`, `REPLACE`, `UPDATE`, and `DELETE`. Search remains available against the stored index data: new rows are absent, and changed vectors, filter values, covered payloads, and deletions are not reflected in the index. A covering query can return stale values; base-table lookups do not repair the stale candidate selection. Do not promise fresh ANN or hybrid vector-branch results.
+
+`ALTER TABLE documents REBUILD INDEX vec_frozen_idx;` rebuilds from the table and **preserves `autoupdate=false`**, so subsequent writes again leave the rebuilt index unchanged. On supporting builds, explicitly use `REBUILD INDEX vec_frozen_idx WITH (autoupdate=true)` to rebuild and restore automatic maintenance. Rebuilding still requires the construction-consistency precautions above.
+
+Source: upstream `main` tests [`VectorIndexAutoupdate` and `VectorIndexAutoupdateCreateTable`](https://github.com/ydb-platform/ydb/blob/04e081e623244fe86a09513a4123ffdbfcdba6c4/ydb/core/kqp/ut/indexes/vector/kqp_indexes_vector_ut.cpp#L303), covering prefixed and non-prefixed indexes, writes, search, and rebuild settings. This establishes development behavior, not availability throughout 25.1–26.3; verify `autoupdate` and `REBUILD INDEX` support on the exact target build.

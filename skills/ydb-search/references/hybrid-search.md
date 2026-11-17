@@ -2,7 +2,7 @@
 
 Hybrid search fuses candidate rankings from existing indexes on one table. For lexical plus semantic retrieval, use `fulltext_relevance` on the text and `vector_kmeans_tree` on the embedding. There is no separate hybrid index type.
 
-Sources: [hybrid guide](https://ydb.tech/docs/en/dev/hybrid-search?version=v26.3) and [HybridRank syntax](https://ydb.tech/docs/en/yql/reference/syntax/select/hybrid_search?version=v26.3). Hybrid search requires a single-column primary key and support for the selected index types on the target database.
+Sources: [hybrid guide](https://ydb.tech/docs/en/dev/hybrid-search?version=v26.3) and [HybridRank syntax](https://ydb.tech/docs/en/yql/reference/syntax/select/hybrid_search?version=v26.3). Verify support for the selected index types and primary-key shape on the target build. Upstream `main` tests cover composite keys; the single-column restriction in the 26.3 documentation is version-specific. See [primary-key compatibility](version-compatibility.md#limits-that-need-a-release-specific-answer) for evidence and release boundaries.
 
 **Release selection:** native `HybridRank` is documented in 26.3, and **26.3.1.16 RC lists it as disabled by default**. Verify enablement before using the native query. For 26.2 with standalone full-text support, retrieve vector and lexical candidates separately and fuse their rankings in the application. Earlier documentation does not establish this native hybrid contract. See [version compatibility](version-compatibility.md).
 
@@ -46,7 +46,7 @@ The [26.3 hybrid guide](https://ydb.tech/docs/en/dev/hybrid-search.md?version=v2
 When a query fails, inspect:
 
 - Whether hybrid search is supported and enabled on the target cluster.
-- A single-column primary key; standalone full-text support for composite keys does not remove this hybrid restriction.
+- Primary-key support in the target hybrid implementation, including full-text arbitrary-key support when needed. Do not reject composite keys solely because the 26.3 documentation describes an older restriction.
 - Both indexes ready, correct scored columns, compatible vector metric, and `fulltext_relevance` for BM25.
 - Ambiguous matches resolved with `Indexes`, and tuple lengths matching the number of branches.
 - Explicit `Limits` with a parameterized outer limit, and the unwrapped `HybridRank` sort key.
