@@ -11,11 +11,11 @@ semantics.
 
 | Run | Solver context | What it checks |
 | --- | --- | --- |
-| Preloaded matrix, `promptfooconfig.yaml` | Skill instructions and resources embedded in the prompt | Response quality on 66 text/planning scenarios; no tool execution |
-| Bare comparison, `promptfooconfig.bare.yaml` | No preloaded skill material | A separate baseline for those same 66 scenarios |
+| Preloaded matrix, `promptfooconfig.yaml` | Skill instructions and resources embedded in the prompt | Response quality on 70 text/planning scenarios; no tool execution |
+| Bare comparison, `promptfooconfig.bare.yaml` | No preloaded skill material | A separate baseline for those same 70 scenarios |
 | Selector matrix, `promptfooconfig.routing.yaml` | Skill descriptions only | Which single primary skill the model selects |
 | Claude runtime, `promptfooconfig.agent.yaml` | Installed packages in an isolated temporary workspace | Actual Skill-tool selection and runtime-specific outcome checks |
-| Offline Codex, `promptfooconfig.codex.yaml` | Installed packages in an isolated temporary workspace | 66 text/planning scenarios, with local skill reads and no network |
+| Offline Codex, `promptfooconfig.codex.yaml` | Installed packages in an isolated temporary workspace | 70 text/planning scenarios, with local skill reads and no network |
 | Online Codex, `promptfooconfig.codex-online.yaml` | Installed packages with network retrieval enabled | The one live documentation-verification scenario |
 
 The preloaded matrix is a useful upper-bound experiment, not a substitute for
@@ -35,7 +35,16 @@ only core must not count as table activation. Testing table alone is a separate
 isolation experiment corresponding to installation with `--no-core`; record it
 as such rather than treating it as the default installation.
 
-`ydb-search` is loaded with its release compatibility, vector, full-text, hybrid, and SDK references, including all five language pages and the shared SQL assets. Its cases under `tests/ydb-search/` exercise early-release vector lifecycle limits, standalone full-text query shape, hybrid candidate limits, and 26.3 enablement/schema/prefix requirements. Run just these cases with `--filter-pattern 'Search ·'`; routing cases are in `tests/routing/18-*` through `21-*`. Source inspection and static validation do not substitute for running the model matrix or executing SQL against a matching server.
+The preloaded matrix includes `ydb-search` with its release compatibility,
+vector, full-text, hybrid, and SDK references, all five language pages, and the
+shared SQL assets. Its canonical `skills/ydb-search/evals/scenarios.json` cases
+exercise early-release vector lifecycle limits, standalone full-text query
+shape, hybrid candidate limits, and 26.3 enablement/schema/prefix requirements.
+Run these cases with `--filter-pattern 'ydb-search:'`. Search selector cases use
+canonical activation prompts through `tests/runtime/routing.json`; explicit
+search-documentation lookup remains docs-primary. Source inspection and static
+validation do not substitute for model evaluations or SQL execution against a
+matching server.
 
 ## Canonical cases and the Promptfoo adapter
 
@@ -170,7 +179,7 @@ block a GitHub PR. Required status checks are configured separately in GitHub.
 ## Public runtime workspaces
 
 `scripts/run-promptfoo.py` creates separate temporary solver and judge
-workspaces outside the repository. It copies all three skill packages,
+workspaces outside the repository. It copies all four skill packages,
 excluding `evals/`, test code, and grading answers, and exposes the packages
 through `.agents/skills` and `.claude/skills`. It sets `YDB_EVAL_WORKSPACE`
 and `YDB_EVAL_JUDGE_WORKSPACE` for the selected config, forwards Promptfoo
@@ -197,7 +206,7 @@ npx promptfoo@latest view
 
 Both HTTP matrices and offline Codex explicitly exclude
 `ydb-docs:verify-source-chain`, which needs live retrieval tools. The loader
-prints the excluded case; a 66-case result is not coverage of all 67 scenarios.
+prints the excluded case; a 70-case result is not coverage of all 71 scenarios.
 The opt-in online profile below runs the remaining case from the same canonical
 JSON, without a duplicate test definition.
 
@@ -234,7 +243,7 @@ npm run test:tools
 npm run test:adapters
 ```
 
-The offline Codex config runs 66 canonical response-quality scenarios with separate Codex
+The offline Codex config runs 70 canonical response-quality scenarios with separate Codex
 app-server solver and judge sessions using the same authentication route. With the
 local CLI configured for a personal login and no API-key override, it uses
 that account; it does not silently fall back to an OpenRouter or another API

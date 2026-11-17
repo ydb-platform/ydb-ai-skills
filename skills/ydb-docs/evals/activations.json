@@ -73,6 +73,12 @@
       "prompt": "Without accessing the network, explain how you would find the official\nRussian YDB 26.1 documentation for transactions. Do not answer the\ntransaction question from memory.\n",
       "should_activate": true,
       "note": "Offline documentation lookup plans also require ydb-docs. Same request as the lookup-offline response scenario; no external retrieval is needed to load the local skill."
+    },
+    {
+      "id": 25544697,
+      "prompt": "Find the official YDB 26.1 documentation for vector indexes in Russian.\nI only need documentation links, not an implementation or generated SQL.\n",
+      "should_activate": true,
+      "note": "Routing · 21-search-docs"
     }
   ]
 }

@@ -259,6 +259,38 @@
       "cases": [
         "ydb-table:java-rule-jv-08-client-floatvector"
       ]
+    },
+    {
+      "id": "search.fulltext-ranking",
+      "skill": "ydb-search",
+      "weight": 2,
+      "cases": [
+        "ydb-search:fulltext-ranking"
+      ]
+    },
+    {
+      "id": "search.hybrid-candidates",
+      "skill": "ydb-search",
+      "weight": 2,
+      "cases": [
+        "ydb-search:hybrid-candidates"
+      ]
+    },
+    {
+      "id": "search.hybrid-compatibility",
+      "skill": "ydb-search",
+      "weight": 3,
+      "cases": [
+        "ydb-search:hybrid-compatibility"
+      ]
+    },
+    {
+      "id": "search.vector-lifecycle",
+      "skill": "ydb-search",
+      "weight": 3,
+      "cases": [
+        "ydb-search:vector-lifecycle"
+      ]
     }
   ]
 }

@@ -1,0 +1,54 @@
+{
+  "skill_name": "ydb-search",
+  "description": "Canonical search response-quality scenarios migrated from the legacy YAML cases without changing prompts or rubrics.",
+  "evals": [
+    {
+      "id": 656334235,
+      "name": "fulltext-ranking",
+      "category": "fulltext",
+      "prompt": "In YDB 26.2.1.14, articles has id Uint64 as its primary key, body Utf8, and a\nfulltext_plain index ft_idx on body. This query fails:\n  SELECT id, FulltextScore(body, $q) AS score\n  FROM articles\n  WHERE score > 0 OR FulltextMatch(body, $q)\n  ORDER BY score DESC LIMIT 10;\nI want BM25 results matching at least half of the optional query terms.\nThe query text has no + prefixes; preserve those term semantics.\nGive the corrected index choice and parameterized SQL. Do not execute it.\n",
+      "expected_output": "Corrected parameterized BM25 query with the relevance index, VIEW, and preserved optional-term semantics.",
+      "files": [],
+      "expectations": [
+        "Require fulltext_relevance for BM25 and show a query through that index\nusing VIEW. Repeat the identical FulltextScore expression in SELECT and\nWHERE ... > 0, with \"Or\" AS DefaultOperator and \"50%\" AS MinimumShouldMatch.\nDo not use the SELECT alias in WHERE or combine scoring with FulltextMatch\nvia SQL OR. Sort the score descending. Distinguish query-term Or semantics\nfrom SQL OR around full-text predicates. Bind the query text as a parameter.\nDo not add + prefixes or require a mandatory term: with Or and no +, all\nsupplied terms are optional and MinimumShouldMatch applies to all of them.\n"
+      ],
+      "covers": "Search · Full-text ranking query repair"
+    },
+    {
+      "id": 1179750547,
+      "name": "hybrid-candidates",
+      "category": "hybrid",
+      "prompt": "On a YDB server with HybridRank enabled, documents has primary key id Uint64,\nbody Utf8 and embedding String containing 768-dimensional FloatVectors.\nReady indexes are ft_a and ft_b (both fulltext_relevance on body), and vec_idx\n(vector_kmeans_tree, cosine, on embedding). Write SQL using ft_b with 100 text\ncandidates, 200 vector candidates, vector weight 2, text weight 1, and final\nresult count $limit. The query text and encoded vector are parameters.\nExplain the three different limits/probing controls. Do not run anything.\n",
+      "expected_output": "A valid native hybrid query with explicit per-branch candidate limits, distinct probing controls, and tenant scoping preserved.",
+      "files": [],
+      "expectations": [
+        "Read documents without VIEW. Use HybridRank as the entire ORDER BY key with\na FulltextScore branch and cosine Knn branch. Use positionally matching\nWeights, Indexes selecting ft_b and vec_idx, and Limits selecting 100 and 200.\nBind query text, binary String query vector, and outer $limit. Do not copy\nthe standalone WHERE FulltextScore > 0 into the hybrid query or add another\nsort key. Set KMeansTreeSearchTopSize explicitly. Explain that it controls\nvector probing, Limits controls candidates before fusion, and the outer\nLIMIT controls output rows. Explicit Limits permits parameterized LIMIT.\n"
+      ],
+      "covers": "Search · Hybrid branch selection and parameterized limit"
+    },
+    {
+      "id": 2058007511,
+      "name": "hybrid-compatibility",
+      "category": "hybrid",
+      "prompt": "We use YDB 26.3.1.16 RC with its default features and PRIMARY KEY (tenant, id).\nI want native HybridRank with\nfull-text ON (tenant, body) and vector ON (tenant, embedding), always filtered\nto tenant = $tenant. The versioned docs have a page for every feature.\nAfter addressing the primary key, can I extend the vector index to\nON (tenant, region, embedding) while filtering only tenant? Explain the\nschema, index, and feature requirements before giving deployable DDL.\nPreserve tenant scoping.\n",
+      "expected_output": "Version-specific enablement, primary-key, and prefix guidance without an unsupported schema migration or deployable DDL.",
+      "files": [],
+      "expectations": [
+        "Explain that 26.3.1.16 RC documents native hybrid search, filtered full-text\nindexes, and arbitrary full-text primary keys as disabled by default; feature\npages alone do not establish enablement. The 26.3 documentation describes a\nsingle-column hybrid primary-key restriction; do not claim that restriction\napplies universally. Upstream main tests composite-key hybrid fusion, but do\nnot establish its first released patch. Verify support in the actual target\nbuild and full-text arbitrary-key enablement before using the supplied key;\ndo not prescribe a destructive key migration solely from the older docs.\nState that the 26.3 hybrid guide excludes prefixed vector indexes, so adding\nmore equality predicates is not sufficient to make this a documented native\nhybrid path. Use an unprefixed vector index for the documented shape, or\nrequire independent proof of an extended target's capabilities. Preserve\ntenant scoping; do not silently remove the filter. Verify enablement and ready\nindexes before native execution. Standalone full-text support for composite\nkeys alone does not prove target hybrid support. No cluster configuration change or\ndestructive schema migration should be executed.\n"
+      ],
+      "covers": "Search · YDB 26.3 hybrid enablement and prefix compatibility"
+    },
+    {
+      "id": 2035377109,
+      "name": "vector-lifecycle",
+      "category": "vector",
+      "prompt": "On YDB 25.1, I plan to create an empty documents table with a vector_kmeans_tree\ncosine index, BulkUpsert a million 768-dimensional float embeddings, then\nquery ORDER BY Knn::CosineDistance(embedding, $q) DESC LIMIT 10 without VIEW.\nThe index covers only title. A teammate says SQL UPSERT after the build will\nalways keep ANN results fresh. Fix the plan, explain how to assess recall and\nhandle continued writes, and tell me whether the fulltext/hybrid examples\napply to this release. Write guidance only.\n",
+      "expected_output": "A corrected YDB 25.1 vector loading and query plan, with release-specific update limits and a meaningful recall baseline.",
+      "files": [],
+      "expectations": [
+        "The answer must load representative data before building the vector index,\nand place BulkUpsert before index creation because synchronous indexes do\nnot support it. Verify vector-index availability and the exact 25.1 build;\nintroduction is documented in 25.1.2.7 RC. Do not promise later writes are\nsupported or automatically reflected in the 25.1 index: the guide warns\nthat updates need rebuilding, and the DDL page also warns against mutations.\nRequire target verification or use an unindexed/exact-search or validated\nrebuild workflow for changing data. It must show indexed search with\nVIEW, cosine distance ascending, an explicit KMeansTreeSearchTopSize, and\nan encoded binary String query vector matching dimension 768. Covering the\nembedding as well as title avoids the vector lookup. Recall should be\ncompared with an exact baseline using the same filters. Do not prescribe\nfulltext indexes or native HybridRank as documented 25.1 capabilities.\n"
+      ],
+      "covers": "Search · YDB 25.1 vector lifecycle and recall"
+    }
+  ]
+}

@@ -115,7 +115,7 @@ skills/                          Surface-aligned skills (universal format)
   ydb-core/                      SKILL.md + references/ + rules/ + canonical eval JSON
   ydb-docs/                      SKILL.md + canonical eval JSON
   ydb-table/                     SKILL.md + references/ + rules/ + canonical eval JSON
-  ydb-search/                    Search references + SDK examples in references/embed/ + shared SQL assets
+  ydb-search/                    Search references + SDK examples + shared SQL assets + canonical eval JSON
 promptfooconfig.yaml             Preloaded API compatibility matrix
 promptfooconfig.codex.yaml       Local Codex solver and judge over canonical scenarios
 promptfooconfig.agent.yaml       Claude Code runtime selection and outcome fixtures
@@ -167,8 +167,8 @@ They consume the selected account's model allowance. The preloaded multi-model
 API matrix remains an explicit alternative with its own API credentials and
 grading configuration.
 
-There are 67 quality scenarios and 43 activation cases. The offline Codex and
-HTTP matrix profiles run 66 quality scenarios and explicitly exclude the one
+There are 71 quality scenarios and 56 activation cases. The offline Codex and
+HTTP matrix profiles run 70 quality scenarios and explicitly exclude the one
 requiring live source retrieval; the opt-in online Codex profile runs that case.
 CLI scenarios check proposed workflows and commands, without a database or CLI
 execution. These runs do not certify a live YDB integration.

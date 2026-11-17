@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "skill_name": "ydb-search",
+  "cases": [
+    {
+      "id": 1864286290,
+      "prompt": "Design a YDB vector_kmeans_tree index for 768-dimensional embeddings.\nShow an ANN query and explain how to tune recall and rebuild after data changes.\n",
+      "should_activate": true,
+      "note": "Routing · 18-vector-search"
+    },
+    {
+      "id": 2109513425,
+      "prompt": "Add full-text search to a YDB articles table. I need BM25 ranking and\nsubstring matching. Which indexes and FulltextScore queries should I use?\n",
+      "should_activate": true,
+      "note": "Routing · 19-fulltext-search"
+    },
+    {
+      "id": 1274174609,
+      "prompt": "Write YDB SQL that combines lexical and semantic retrieval with HybridRank,\nweights the vector branch twice as much, and takes a parameterized LIMIT.\n",
+      "should_activate": true,
+      "note": "Routing · 20-hybrid-search"
+    },
+    {
+      "id": 25544697,
+      "prompt": "Find the official YDB 26.1 documentation for vector indexes in Russian.\nI only need documentation links, not an implementation or generated SQL.\n",
+      "should_activate": false,
+      "note": "Explicit documentation lookup is docs-primary; no implementation or SQL is requested."
+    },
+    {
+      "id": 656334235,
+      "prompt": "In YDB 26.2.1.14, articles has id Uint64 as its primary key, body Utf8, and a\nfulltext_plain index ft_idx on body. This query fails:\n  SELECT id, FulltextScore(body, $q) AS score\n  FROM articles\n  WHERE score > 0 OR FulltextMatch(body, $q)\n  ORDER BY score DESC LIMIT 10;\nI want BM25 results matching at least half of the optional query terms.\nThe query text has no + prefixes; preserve those term semantics.\nGive the corrected index choice and parameterized SQL. Do not execute it.\n",
+      "should_activate": true,
+      "note": "Search · Full-text ranking query repair"
+    },
+    {
+      "id": 1179750547,
+      "prompt": "On a YDB server with HybridRank enabled, documents has primary key id Uint64,\nbody Utf8 and embedding String containing 768-dimensional FloatVectors.\nReady indexes are ft_a and ft_b (both fulltext_relevance on body), and vec_idx\n(vector_kmeans_tree, cosine, on embedding). Write SQL using ft_b with 100 text\ncandidates, 200 vector candidates, vector weight 2, text weight 1, and final\nresult count $limit. The query text and encoded vector are parameters.\nExplain the three different limits/probing controls. Do not run anything.\n",
+      "should_activate": true,
+      "note": "Search · Hybrid branch selection and parameterized limit"
+    },
+    {
+      "id": 2058007511,
+      "prompt": "We use YDB 26.3.1.16 RC with its default features and PRIMARY KEY (tenant, id).\nI want native HybridRank with\nfull-text ON (tenant, body) and vector ON (tenant, embedding), always filtered\nto tenant = $tenant. The versioned docs have a page for every feature.\nAfter addressing the primary key, can I extend the vector index to\nON (tenant, region, embedding) while filtering only tenant? Explain the\nschema, index, and feature requirements before giving deployable DDL.\nPreserve tenant scoping.\n",
+      "should_activate": true,
+      "note": "Search · YDB 26.3 hybrid enablement and prefix compatibility"
+    },
+    {
+      "id": 2035377109,
+      "prompt": "On YDB 25.1, I plan to create an empty documents table with a vector_kmeans_tree\ncosine index, BulkUpsert a million 768-dimensional float embeddings, then\nquery ORDER BY Knn::CosineDistance(embedding, $q) DESC LIMIT 10 without VIEW.\nThe index covers only title. A teammate says SQL UPSERT after the build will\nalways keep ANN results fresh. Fix the plan, explain how to assess recall and\nhandle continued writes, and tell me whether the fulltext/hybrid examples\napply to this release. Write guidance only.\n",
+      "should_activate": true,
+      "note": "Search · YDB 25.1 vector lifecycle and recall"
+    },
+    {
+      "id": 1157819430,
+      "prompt": "How do I write a PostgreSQL trigger that fires on UPDATE and\nlogs the changed row to a separate audit table?",
+      "should_activate": false,
+      "note": "This request is outside YDB search: another product or a task unrelated to search indexes and ranking."
+    },
+    {
+      "id": 503872993,
+      "prompt": "Find the YQL documentation for querying YT tables on Hahn; this is not about YDB.",
+      "should_activate": false,
+      "note": "This request is outside YDB search: another product or a task unrelated to search indexes and ranking."
+    },
+    {
+      "id": 1713661359,
+      "prompt": "Review this Go HTTP client retry loop. It retries 503 responses with\nexponential backoff and does not use any database SDK.",
+      "should_activate": false,
+      "note": "This request is outside YDB search: another product or a task unrelated to search indexes and ranking."
+    },
+    {
+      "id": 1825452386,
+      "prompt": "Design a ClickHouse PARTITION BY and ORDER BY expression for an events\ntable queried by tenant and month. We do not use YDB here.",
+      "should_activate": false,
+      "note": "This request is outside YDB search: another product or a task unrelated to search indexes and ranking."
+    }
+  ]
+}
