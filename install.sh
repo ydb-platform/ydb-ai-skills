@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # YDB Skills Installer
-# Installs YDB skills (ydb-core, ydb-table, ydb-docs) for
+# Installs YDB skills (ydb-core, ydb-table, ydb-search, ydb-docs) for
 # AI coding agents. Supports: Claude Code, Cursor, Windsurf, GitHub Copilot,
 # Codex CLI, Roo Code, Gemini CLI, Amp, Kiro, Trae, and generic .agents/.
 
@@ -11,7 +11,7 @@ VERSION="0.3.0"
 
 # ── Skills list ─────────────────────────────────────────────────────────────
 
-SKILLS=(ydb-core ydb-table ydb-docs)
+SKILLS=(ydb-core ydb-table ydb-search ydb-docs)
 
 # ydb-core is the baseline onboarding/router skill. Any surface skill selection
 # auto-includes ydb-core unless --no-core is passed — other skills deep-link
@@ -56,7 +56,7 @@ Options:
   --link                Use symlinks instead of copying (default if source is local)
   --copy                Always copy files (default for remote install)
   --skills=LIST         Install specific skills only (default: all)
-                         Skills: ydb-core, ydb-table, ydb-docs
+                         Skills: ydb-core, ydb-table, ydb-search, ydb-docs
   --no-core             Skip auto-inclusion of ydb-core when --skills is set
                          (only respected when --skills does not already list it)
   --list                Show supported agents and exit

@@ -9,6 +9,8 @@ Writing YQL against YDB tables, designing schemas to back those queries, and aud
 
 SQL/YQL query and schema work applies regardless of the application's host language. Language-specific SDK/ORM audits cover Go, C++ and Java/JDBC/ORM; Python coverage is limited to FloatVector parameter handling. Other SDK-specific audits, including C#/JS/TS and other Python features, are outside the maintained rule set. For those tasks, use official SDK documentation and state the coverage limit.
 
+For vector/full-text index design and search ranking (`vector_kmeans_tree`, `FulltextMatch`, `FulltextScore`, `HybridRank`), use `ydb-search` when installed. Keep SDK binding, CLI execution, and general table work here. If it is absent, consult the official YDB search documentation.
+
 ## Workflow
 
 1. **Classify the task.** Write a new query or schema, execute SQL with YDB CLI, audit existing code, convert from another SQL dialect, or read an `EXPLAIN`.

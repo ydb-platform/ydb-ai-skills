@@ -148,5 +148,29 @@
     "id": 1729618281,
     "description": "Routing · Versioned English YDB reference → ydb-docs",
     "primary_target": "ydb-docs"
+  },
+  {
+    "skill": "ydb-search",
+    "id": 1864286290,
+    "description": "Routing · 18-vector-search",
+    "primary_target": "ydb-search"
+  },
+  {
+    "skill": "ydb-search",
+    "id": 2109513425,
+    "description": "Routing · 19-fulltext-search",
+    "primary_target": "ydb-search"
+  },
+  {
+    "skill": "ydb-search",
+    "id": 1274174609,
+    "description": "Routing · 20-hybrid-search",
+    "primary_target": "ydb-search"
+  },
+  {
+    "skill": "ydb-docs",
+    "id": 25544697,
+    "description": "Routing · 21-search-docs",
+    "primary_target": "ydb-docs"
   }
 ]
