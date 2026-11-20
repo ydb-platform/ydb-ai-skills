@@ -41,12 +41,12 @@ Two or more scoring branches are supported, including additional vector columns 
 
 If the application extends the schema with tenant data, preserve its `WHERE tenant = $tenant` predicate. General predicates are reapplied after candidate lookup, so small pools can leave fewer rows than requested. Increasing pools may help; measure the result and do not promise exact filtered top-k from ANN.
 
-The [26.3 hybrid guide](https://ydb.tech/docs/en/dev/hybrid-search.md?version=v26.3#limitations) explicitly excludes prefixed vector indexes. Use the non-prefixed `vec_idx` in the shared assets for the documented native path; do not infer support from standalone filtered vector indexes. If an extended target has independently verified support for hybrid index prefixes, bind all required prefix columns by equality and verify the plan. Predicates under SQL `OR` do not establish those equalities. Prefixed relevance indexes also require enabled filtered full-text support and compact full-text indexes.
+The [26.3 hybrid guide](https://ydb.tech/docs/en/dev/hybrid-search.md?version=v26.3#limitations) excludes prefixed vector indexes, but the exact **26.3.1.16 RC implementation** supports a nonempty contiguous leading vector prefix once hybrid search is enabled and the table has a single-column primary key. For `ON (tenant, region, embedding)`, `WHERE tenant = $tenant` is sufficient for the vector branch in that RC. Full-text branches require equality on every prefix column and enabled filtered full-text and compact relevance support. See [release-specific source evidence](version-compatibility.md#limits-that-need-a-release-specific-answer); do not generalize the RC's leading-prefix rule to other builds. The shared assets retain non-prefixed `vec_idx`. Predicates under SQL `OR` do not establish prefix equalities.
 
 When a query fails, inspect:
 
 - Whether hybrid search is supported and enabled on the target cluster.
-- Primary-key support in the target hybrid implementation, including full-text arbitrary-key support when needed. Do not reject composite keys solely because the 26.3 documentation describes an older restriction.
+- Primary-key support in the target hybrid implementation: 26.3.1.16 RC requires a single-column key even with arbitrary full-text keys enabled; verified newer implementations can support composite keys.
 - Both indexes ready, correct scored columns, compatible vector metric, and `fulltext_relevance` for BM25.
 - Ambiguous matches resolved with `Indexes`, and tuple lengths matching the number of branches.
 - Explicit `Limits` with a parameterized outer limit, and the unwrapped `HybridRank` sort key.

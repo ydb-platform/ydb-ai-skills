@@ -8,7 +8,8 @@ The `@ydbjs/query` client accepts a trusted SQL string as well as a tagged templ
 import { readFileSync } from 'node:fs'
 import { Driver } from '@ydbjs/core'
 import { query } from '@ydbjs/query'
-import { fromJs } from '@ydbjs/value'
+import { List } from '@ydbjs/value/list'
+import { Struct } from '@ydbjs/value/struct'
 import { Bytes, Text, Uint64 } from '@ydbjs/value/primitive'
 
 const DIMENSION = 3 // Match add-vector-index.sql and the embedding model.
@@ -26,14 +27,14 @@ function encodeVector(vector) {
 
 async function upsertDocuments(sql, documents, signal) {
   if (documents.length === 0) return
-  const items = documents.map(doc => ({
+  const items = documents.map(doc => new Struct({
     id: new Uint64(BigInt(doc.id)),
     title: new Text(doc.title),
     body: new Text(doc.body),
     embedding: new Bytes(encodeVector(doc.embedding)),
   }))
   await sql(loadSql('upsert.sql'))
-    .parameter('items', fromJs(items))
+    .parameter('items', new List(...items))
     .idempotent(true)
     .signal(signal)
 }
@@ -55,7 +56,7 @@ async function search(sql, mode, { vector, text = '', limit = 10n, signal }) {
 }
 ```
 
-`Bytes` maps to YQL `String`, `Text` to `Utf8`, and `Uint64` accepts `bigint`. Pass IDs as `bigint` or decimal strings if they can exceed the exact integer range of a JavaScript `number`. `fromJs(items)` retains the explicit value types inside the list of structs; the empty-batch guard avoids inferring a row type from an empty array.
+`Bytes` maps to YQL `String`, `Text` to `Utf8`, and `Uint64` accepts `bigint`. Pass IDs as `bigint` or decimal strings if they can exceed the exact integer range of a JavaScript `number`. Explicit `Struct` rows inside `List` preserve non-optional fields for the shared table's `NOT NULL` columns. In `@ydbjs/value` 6.0.8, [`fromJs` on an array of plain objects](https://github.com/ydb-platform/ydb-js-sdk/blob/%40ydbjs/value%406.0.8/packages/value/src/index.ts#L201-L257) wraps their fields in `Optional`, even when the values use primitive wrappers. The empty-batch guard avoids a list without a row type.
 
 ## Connection and invocation
 
@@ -66,7 +67,7 @@ async function runExample(connectionString, driverOptions, signal) {
   const driver = new Driver(connectionString, driverOptions)
   const sql = query(driver)
   try {
-    await driver.ready()
+    await driver.ready(signal)
     await sql(loadSql('create-table.sql')).signal(signal)
     await upsertDocuments(sql, [
       { id: 1n, title: 'YDB', body: 'distributed database', embedding: [1, 0, 0] },
@@ -87,6 +88,6 @@ async function runExample(connectionString, driverOptions, signal) {
 }
 ```
 
-Provision only a new demo table with this sequence; existing applications run schema migrations separately. The caller supplies an `AbortSignal` covering the operation; propagate its cancellation/deadline. Replace the toy vectors with model output, and use `exact` for the baseline. Query failures reject the awaited promise; handle them at the request boundary.
+Provision only a new demo table with this sequence; existing applications run schema migrations separately. The caller supplies an `AbortSignal` covering the operation; pass it to [`driver.ready(signal)`](https://github.com/ydb-platform/ydb-js-sdk/blob/%40ydbjs/query%406.3.0/packages/core/src/driver.ts#L277-L290) as well as the queries so cancellation/deadlines cover discovery. Replace the toy vectors with model output, and use `exact` for the baseline. Query failures reject the awaited promise; handle them at the request boundary.
 
-API grounding: `ydb-js-sdk` source under `packages/query/src/` defines string queries, `.parameter()`, `.idempotent()`, `.signal()`, and asynchronous client disposal; `packages/value/src/` defines the primitive wrappers and `fromJs` conversion. These details supplement the vector recipe's tagged-template examples.
+API grounding: `ydb-js-sdk` source under `packages/query/src/` defines string queries, `.parameter()`, `.idempotent()`, `.signal()`, and asynchronous client disposal; `packages/value/src/` defines the primitive wrappers and explicit `Struct`/`List` constructors. These details supplement the vector recipe's tagged-template examples.
