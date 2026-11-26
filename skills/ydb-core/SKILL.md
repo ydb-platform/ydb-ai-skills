@@ -10,7 +10,7 @@ Orientation + router for YDB. Always loaded when the skill fires.
 
 ## overview
 
-YDB — open-source distributed SQL DBMS. Repo: https://github.com/ydb-platform/ydb. Docs: https://ydb.tech/docs/en/ (source in repo under `ydb/docs/` — read from there if the rendered site lags).
+YDB is open-source distributed SQL DBMS. Repo: https://github.com/ydb-platform/ydb. Docs: https://ydb.tech/docs/en/ (source in repo under `ydb/docs/` — read from there if the rendered site lags).
 
 All four below live in one database namespace as schema objects — path-addressable (`/db/path/to/x`), listable via `ydb scheme ls`:
 
