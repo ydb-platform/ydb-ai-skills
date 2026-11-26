@@ -1,6 +1,7 @@
 ---
 name: ydb-core
 description: "Read this skill before answering YDB introductions and comparisons with other databases, setup, SDK/integration selection, CLI namespace operations or general client-policy questions, including advice-only requests. Covers local Docker setup (image, ports, and database endpoint); local/hosted connection strings, TLS, authentication, service-account credentials and environment variables; CLI discovery and safe `ydb scheme` operations; client-side balancing, session lifecycle under rolling restart, and end-to-end deadline, cancellation and retry budgets. Covers Go driver/session lifecycle reviews. For Go, C++ and Java/JDBC/ORM code/configuration reviews, also read ydb-table and its matching rules; Python audit coverage there is FloatVector parameters only. Use ydb-table for SQL/query execution and query-oriented schema design. Use specialist skills for topics or coordination, and ydb-docs for standalone documentation lookup. Questions unrelated to YDB are outside scope."
+
 ---
 
 # YDB Core
