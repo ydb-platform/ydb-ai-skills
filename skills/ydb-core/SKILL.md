@@ -42,6 +42,7 @@ Router to specialist skills:
 | Skill | When the question is about |
 |---|---|
 | `ydb-table` | writing SQL, schema design for query patterns, execution (SDK or CLI), optimization, `EXPLAIN`, secondary indexes, parameterization, SQL-to-YQL conversion; reviewing existing Go, C++ or Java/JDBC/ORM code or configuration, including driver initialization, retries and balancing; reviewing Python FloatVector parameter handling |
+| `ydb-search` | vector and full-text index design, nearest-neighbor search, BM25, hybrid search with `HybridRank`, search recall and index lifecycle |
 | `ydb-topics` | producing/consuming YDB topics, the Kafka-compat endpoint, changefeed configuration on the producer side |
 | `ydb-coordination` | distributed locks, semaphores, leader election |
 
