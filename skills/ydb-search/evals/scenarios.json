@@ -6,7 +6,7 @@
       "id": 656334235,
       "name": "fulltext-ranking",
       "category": "fulltext",
-      "prompt": "In YDB 26.2.1.14, articles has id Uint64 as its primary key, body Utf8, and a\nfulltext_plain index ft_idx on body. This query fails:\n  SELECT id, FulltextScore(body, $q) AS score\n  FROM articles\n  WHERE score > 0 OR FulltextMatch(body, $q)\n  ORDER BY score DESC LIMIT 10;\nI want BM25 results matching at least half of the optional query terms.\nThe analyzer produces three optional terms for this request.\nThe query text has no + prefixes; preserve those term semantics.\nGive the corrected index choice and parameterized SQL. Explain your threshold\nfor three terms and how \"Or\" AS DefaultOperator differs from the SQL OR in\nthe original WHERE clause. Do not execute the query.\n",
+      "prompt": "In YDB 26.2.1.14, articles has id Uint64 as its primary key, body Utf8, and a\nfulltext_plain index ft_idx on body. This query fails:\n  SELECT id, FulltextScore(body, $q) AS score\n  FROM articles\n  WHERE score > 0 OR FulltextMatch(body, $q)\n  ORDER BY score DESC LIMIT 10;\nI want BM25 results matching at least half of the optional query terms.\nThe analyzer produces three optional terms for this request.\nThe query text has no + prefixes; preserve those term semantics.\nGive the corrected index choice and parameterized SQL. Explain your threshold\nfor three terms, including how a 50% threshold would be rounded, and how \"Or\" AS DefaultOperator differs from the SQL OR in\nthe original WHERE clause. Do not execute the query.\n",
       "expected_output": "Corrected parameterized BM25 query with the relevance index, VIEW, and preserved optional-term semantics.",
       "files": [],
       "expectations": [
@@ -18,7 +18,7 @@
       "id": 1179750547,
       "name": "hybrid-candidates",
       "category": "hybrid",
-      "prompt": "On a YDB server with HybridRank enabled, documents has primary key id Uint64,\nbody Utf8 and embedding String containing 768-dimensional FloatVectors.\nReady indexes are ft_a and ft_b (both fulltext_relevance on body), and vec_idx\n(vector_kmeans_tree, cosine, on embedding). Write SQL using ft_b with 100 text\ncandidates, 200 vector candidates, vector weight 2, text weight 1, and final\nresult count $limit. The query text and encoded vector are parameters.\nExplain the three different limits/probing controls. Do not run anything.\n",
+      "prompt": "On a YDB server with HybridRank enabled, documents has primary key id Uint64,\nbody Utf8 and embedding String containing 768-dimensional FloatVectors.\nReady indexes are ft_a and ft_b (both fulltext_relevance on body), and vec_idx\n(vector_kmeans_tree, cosine, on embedding). Write SQL using ft_b with 100 text\ncandidates, 200 vector candidates, vector weight 2, text weight 1, and final\nresult count $limit. The query text and encoded vector are parameters.\nSet vector probing explicitly in the SQL. Explain the difference between\nvector probing, candidate limits before fusion, and the final output limit.\nDo not run anything.\n",
       "expected_output": "A valid native hybrid query with explicit per-branch candidate limits and distinct probing controls.",
       "files": [],
       "expectations": [
@@ -42,7 +42,7 @@
       "id": 2035377109,
       "name": "vector-lifecycle",
       "category": "vector",
-      "prompt": "On YDB 25.1, I plan to create an empty documents table with a vector_kmeans_tree\ncosine index, BulkUpsert a million 768-dimensional float embeddings, then\nquery ORDER BY Knn::CosineDistance(embedding, $q) DESC LIMIT 10 without VIEW.\nThe index covers only title. A teammate says SQL UPSERT after the build will\nalways keep ANN results fresh. Fix the plan, explain how to assess recall and\nhandle continued writes, and tell me whether the fulltext/hybrid examples\napply to this release. Write guidance only.\n",
+      "prompt": "On YDB 25.1, I plan to create an empty documents table with a vector_kmeans_tree\ncosine index, BulkUpsert a million 768-dimensional float embeddings, then\nquery ORDER BY Knn::CosineDistance(embedding, $q) DESC LIMIT 10 without VIEW.\nThe index covers only title. A teammate says SQL UPSERT after the build will\nalways keep ANN results fresh. Fix the load and index plan, and show the corrected ANN query with a concrete\nKMeansTreeSearchTopSize setting in the SQL. Explain how to assess recall and\nhandle continued writes, and tell me whether the fulltext/hybrid examples\napply to this release. Do not execute anything.\n",
       "expected_output": "A corrected YDB 25.1 vector loading and query plan, with release-specific update limits and a meaningful recall baseline.",
       "files": [],
       "expectations": [
