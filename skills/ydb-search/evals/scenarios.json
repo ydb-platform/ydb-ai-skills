@@ -6,7 +6,7 @@
       "id": 656334235,
       "name": "fulltext-ranking",
       "category": "fulltext",
-      "prompt": "In YDB 26.2.1.14, articles has id Uint64 as its primary key, body Utf8, and a\nfulltext_plain index ft_idx on body. This query fails:\n  SELECT id, FulltextScore(body, $q) AS score\n  FROM articles\n  WHERE score > 0 OR FulltextMatch(body, $q)\n  ORDER BY score DESC LIMIT 10;\nI want BM25 results matching at least half of the optional query terms.\nThe analyzer produces three optional terms for this request.\nThe query text has no + prefixes; preserve those term semantics.\nGive the corrected index choice and parameterized SQL. Do not execute it.\n",
+      "prompt": "In YDB 26.2.1.14, articles has id Uint64 as its primary key, body Utf8, and a\nfulltext_plain index ft_idx on body. This query fails:\n  SELECT id, FulltextScore(body, $q) AS score\n  FROM articles\n  WHERE score > 0 OR FulltextMatch(body, $q)\n  ORDER BY score DESC LIMIT 10;\nI want BM25 results matching at least half of the optional query terms.\nThe analyzer produces three optional terms for this request.\nThe query text has no + prefixes; preserve those term semantics.\nGive the corrected index choice and parameterized SQL. Explain your threshold\nfor three terms and how \"Or\" AS DefaultOperator differs from the SQL OR in\nthe original WHERE clause. Do not execute the query.\n",
       "expected_output": "Corrected parameterized BM25 query with the relevance index, VIEW, and preserved optional-term semantics.",
       "files": [],
       "expectations": [
@@ -19,7 +19,7 @@
       "name": "hybrid-candidates",
       "category": "hybrid",
       "prompt": "On a YDB server with HybridRank enabled, documents has primary key id Uint64,\nbody Utf8 and embedding String containing 768-dimensional FloatVectors.\nReady indexes are ft_a and ft_b (both fulltext_relevance on body), and vec_idx\n(vector_kmeans_tree, cosine, on embedding). Write SQL using ft_b with 100 text\ncandidates, 200 vector candidates, vector weight 2, text weight 1, and final\nresult count $limit. The query text and encoded vector are parameters.\nExplain the three different limits/probing controls. Do not run anything.\n",
-      "expected_output": "A valid native hybrid query with explicit per-branch candidate limits, distinct probing controls, and tenant scoping preserved.",
+      "expected_output": "A valid native hybrid query with explicit per-branch candidate limits and distinct probing controls.",
       "files": [],
       "expectations": [
         "Read documents without VIEW. Use HybridRank as the entire ORDER BY key with\na FulltextScore branch and cosine Knn branch. Use positionally matching\nWeights, Indexes selecting ft_b and vec_idx, and Limits selecting 100 and 200.\nBind query text, binary String query vector, and outer $limit. Do not copy\nthe standalone WHERE FulltextScore > 0 into the hybrid query or add another\nsort key. Set KMeansTreeSearchTopSize explicitly. Explain that it controls\nvector probing, Limits controls candidates before fusion, and the outer\nLIMIT controls output rows. Explicit Limits permits parameterized LIMIT.\n"
