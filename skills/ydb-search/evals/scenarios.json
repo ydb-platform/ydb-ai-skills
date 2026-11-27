@@ -30,7 +30,7 @@
       "id": 2058007511,
       "name": "hybrid-compatibility",
       "category": "hybrid",
-      "prompt": "We use YDB 26.3.1.16 RC with its default features and PRIMARY KEY (tenant, id).\nI want native HybridRank with\nfull-text ON (tenant, body) and vector ON (tenant, embedding), always filtered\nto tenant = $tenant. The versioned docs have a page for every feature.\nAfter addressing the primary key, can I extend the vector index to\nON (tenant, region, embedding) while filtering only tenant? Explain the\nschema, index, and feature requirements before giving deployable DDL.\nPreserve tenant scoping.\n",
+      "prompt": "We use YDB 26.3.1.16 RC with its default features and PRIMARY KEY (tenant, id).\nI want native HybridRank with\nfull-text ON (tenant, body) and vector ON (tenant, embedding), always filtered\nto tenant = $tenant. The versioned docs have a page for every feature.\nAfter addressing the primary key, can I extend the vector index to\nON (tenant, region, embedding) while filtering only tenant?\nExplain the schema and index requirements. For this exact RC, state the default\nstatus of native hybrid search, full-text filter columns, and arbitrary full-text\nprimary keys, then say which capabilities the proposed schema needs. Explain\nwhat must be verified on the cluster before deploying DDL and which index\nbuilds must be ready before running the query. If you show DDL, make its\nprerequisites explicit. Preserve tenant scoping. Do not execute anything.\n",
       "expected_output": "Exact-RC enablement, single-column hybrid primary-key, and branch-specific prefix requirements, preserving tenant scoping without unsafe DDL.",
       "files": [],
       "expectations": [
