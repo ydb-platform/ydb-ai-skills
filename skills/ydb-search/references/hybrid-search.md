@@ -4,7 +4,9 @@ Hybrid search fuses candidate rankings from existing indexes on one table. For l
 
 Sources: [hybrid guide](https://ydb.tech/docs/en/dev/hybrid-search?version=v26.3) and [HybridRank syntax](https://ydb.tech/docs/en/yql/reference/syntax/select/hybrid_search?version=v26.3). Verify support for the selected index types and primary-key shape on the target build. Upstream `main` tests cover composite keys; the single-column restriction in the 26.3 documentation is version-specific. See [primary-key compatibility](version-compatibility.md#limits-that-need-a-release-specific-answer) for evidence and release boundaries.
 
-**Release selection:** native `HybridRank` is documented in 26.3, and **26.3.1.16 RC lists it as disabled by default**. Verify enablement before using the native query. For 26.2 with standalone full-text support, retrieve vector and lexical candidates separately and fuse their rankings in the application. Earlier documentation does not establish this native hybrid contract. See [version compatibility](version-compatibility.md).
+In **26.3.1.16 RC**, native hybrid search, filtered full-text indexes, and arbitrary full-text primary keys are disabled by default. A hybrid query on a single `Uint64` primary key still needs hybrid search enabled. Adding filter columns to its relevance index also needs filtered full-text and compact relevance support. Enabling arbitrary full-text keys leaves the RC hybrid optimizer's single-column key requirement in place. Confirm the required features on the cluster before proposing deployable DDL. Once both index builds are ready, the native query can use them. [Release defaults and optimizer constraints](version-compatibility.md#limits-that-need-a-release-specific-answer)
+
+For 26.2 with standalone full-text support, retrieve vector and lexical candidates separately and fuse their rankings in the application. Earlier documentation does not establish the native hybrid contract.
 
 ## Runnable example
 
